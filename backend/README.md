@@ -40,7 +40,16 @@ src/main/resources/
    constraint rejects overlaps for `PENDING`/`CONFIRMED`; the resulting violation
    surfaces as `409 Conflict`.
 
+## Built so far
+
+- Maven project on Java 21 / Spring Boot 3.5, Docker Compose stack, multi-stage image
+- OpenAPI, CORS, and environment-only configuration — no credential is in the repo
+- `V1__baseline.sql`: the whole v1 schema, including the GiST exclusion constraint that
+  rejects a booking overlapping another one's buffers (`ExclusionConstraintIT` proves it
+  against a real Postgres)
+
 ## Not built yet
 
-Maven project, entities, migrations, and the availability engine.
-Build order is tracked in the local project brief (see `docs/`, not committed yet).
+Entities, auth, the availability engine, and every endpoint. `SecurityConfig` currently
+permits everything and is replaced when auth lands. Build order is tracked in the local
+project brief (see `docs/`, not committed yet).

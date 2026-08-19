@@ -3,7 +3,10 @@
 A booking platform where any service business (clinic, salon, tutor, coach, studio)
 defines its availability rules and takes online appointments with deposit payments.
 
-> **Status:** scaffolding — structure and boundaries only, no application code yet.
+> **Status:** backend foundation in place — Maven project, a Docker Compose stack
+> (Postgres, MailHog, API), Swagger UI, and a Flyway baseline whose exclusion
+> constraint makes double booking impossible at the database level. No domain
+> endpoints yet.
 
 ## Repository layout
 
@@ -15,7 +18,7 @@ Appointment_booking/
 ├── backend/          Spring Boot 3 / Java 21 REST API      → deploys to Railway/Render
 ├── frontend/         React 18 + TypeScript + Vite SPA      → deploys to Vercel
 ├── docs/             UML diagrams, spec, architecture notes
-└── docker-compose.yml (to come) — api, web, postgres, mailhog
+└── docker-compose.yml — api, postgres, mailhog (web joins with the frontend)
 ```
 
 | | Backend | Frontend |
@@ -31,6 +34,21 @@ double-booking constraint are backend concerns that must hold regardless of clie
 Keeping the SPA to a pure consumer of a documented REST API means the API can be
 tested, versioned and deployed on its own — and it makes the boundary obvious to
 anyone reading the repo.
+
+## Running it locally
+
+```bash
+cp .env.example .env      # placeholders are fine for local work
+docker compose up         # postgres + mailhog + api
+```
+
+| | |
+|---|---|
+| API health | <http://localhost:8080/actuator/health> |
+| Swagger UI | <http://localhost:8080/swagger-ui.html> |
+| MailHog | <http://localhost:8025> |
+
+Requires Docker, and a JDK 21 plus Maven if you want to build outside the container.
 
 ## Documentation
 
