@@ -1,0 +1,9 @@
+target/
+.mvn/
+*.iml
+.idea/
+.git/
+.env
+.env.*
+!.env.example
+README.md

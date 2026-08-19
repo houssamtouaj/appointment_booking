@@ -42,8 +42,10 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
-application-local.yml
-application-local.properties
+# application-local.yml IS committed: it only points at the Compose services and
+# holds no credentials. Personal overrides belong in application-local-<name>.yml.
+application-local-*.yml
+application-local-*.properties
 *.pem
 *.key
 

@@ -1,0 +1,24 @@
+# =====================================================================================
+# Profile `local` — the app running on the host (IDE or `mvn spring-boot:run`) against the
+# Docker Compose services. Inside the api container this profile is NOT active: Compose
+# passes DB_URL and MAIL_HOST as environment variables instead.
+#
+# Still no secrets here. DB_PASSWORD comes from the environment either way.
+#   mvn spring-boot:run -Dspring-boot.run.profiles=local
+# =====================================================================================
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/slotflow
+    username: slotflow
+  mail:
+    host: localhost
+    port: 1025
+
+logging:
+  level:
+    com.slotflow: debug
+    org.flywaydb.core.internal.command: debug
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173,http://127.0.0.1:5173
