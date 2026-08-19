@@ -22,9 +22,10 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # `none` until the Flyway baseline exists (plan 02), then `validate` forever:
-      # validating against an empty schema fails startup.
-      ddl-auto: none
+      # Flyway owns the schema; Hibernate is only allowed to check that the mapping and
+      # the tables agree. This stays `validate` forever — a mismatch must fail on startup,
+      # not halfway through a request.
+      ddl-auto: validate
     properties:
       hibernate:
         jdbc.time_zone: UTC
