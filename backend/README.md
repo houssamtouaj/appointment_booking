@@ -40,6 +40,36 @@ src/main/resources/
    constraint rejects overlaps for `PENDING`/`CONFIRMED`; the resulting violation
    surfaces as `409 Conflict`.
 
+## Domain model
+
+Entities validate against the Flyway schema on every startup (`ddl-auto: validate`), so a
+mapping and its table cannot drift. `SchemaMappingIT` is the acceptance test: the most
+important thing it asserts is that the context starts at all.
+
+Conventions that hold for every entity:
+
+| Convention | Why |
+|---|---|
+| `UUID` ids generated in Java, not by the database | A whole aggregate can be wired up in memory and flushed once |
+| `implements Persistable` via `AbstractEntity` | With an assigned id, `save()` would otherwise `merge()` every new row — a wasted `SELECT` and a detached return value |
+| `@Enumerated(STRING)` everywhere | Ordinals are a future outage; the round trip is asserted on **raw SQL**, not through JPA |
+| Foreign keys as plain `UUID` fields, no `@ManyToOne` | The engine works on ids and ranges; object graphs buy N+1s across a 30-day window and nothing else |
+| `Instant` for `timestamptz`; `LocalTime`/`LocalDate`/`DayOfWeek` for recurring rules | "09:00 on Tuesdays" is a wall-clock concept that has to survive a DST change |
+| Behaviour on entities, not only getters | The transition matrix, the policy windows and the buffer arithmetic are unit-testable in milliseconds with no Spring context |
+| Auditing through the injected `Clock` | `created_at` is as pinnable as everything else, which is what makes the expiry-sweeper tests possible |
+| No public setter for `id`, `createdAt` or `status` | Status changes go through guarded transitions; the rest is history |
+
+`@Version` is on `Booking` alone — the one row a scheduled sweeper, a Stripe webhook and a
+human can all reach at the same moment.
+
+`StaffService` is an explicit join entity with an `@IdClass`, not a `@ManyToMany`: the
+assignment is read from both directions ("what does this person do?" and "who can do this?"),
+and cascading a many-to-many is how deleting a service ends up deleting a staff member.
+
+`TenantOwned` is implemented by `Business`, `User`, `ServiceOffering`, `Booking` and
+`AvailabilityOverride`. It is the type the tenant guard checks against, so adding a new
+tenant-scoped entity cannot mean forgetting to add it to a guard.
+
 ## The error contract
 
 Every error response in this API — including a 500 and including one written by a servlet
@@ -92,10 +122,12 @@ class that would need to know.
   against a real Postgres)
 - The cross-cutting layer above: one error shape, `PageResponse`, the injected `Clock` that
   makes every time-dependent test possible, rate limiting and request correlation
+- The domain model above: eleven entities, their repositories, and the behaviour the later
+  plans call — booking transitions, policy windows, buffer arithmetic, deposit rounding
 
 ## Not built yet
 
-Entities, auth, the availability engine, and every endpoint. `SecurityConfig` currently
+Auth, the availability engine, and every endpoint. `SecurityConfig` currently
 permits everything and is replaced when auth lands — which is also when 401 and 403 raised
 *inside* the security filter chain start using the problem shape above, via an explicit
 `AuthenticationEntryPoint` and `AccessDeniedHandler`. Build order is tracked in the local
