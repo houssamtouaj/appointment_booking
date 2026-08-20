@@ -69,6 +69,23 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     /** Webhook idempotency (plan 11): one booking per Checkout session, so replay is harmless. */
     Optional<Booking> findByStripeSessionId(String stripeSessionId);
 
+    /**
+     * What a staff member still has on their calendar, used by plan 06 to warn an owner before
+     * deactivating them.
+     *
+     * <p>Deactivation deliberately leaves these bookings alone: they belong to real customers who
+     * agreed a time with a named person, and silently cancelling or reassigning them is worse than
+     * the awkward state of an appointment held by someone who can no longer log in. So the owner is
+     * told what they are about to strand, and decides.
+     */
+    default List<Booking> findUpcomingActiveForStaff(UUID staffId, Instant from) {
+        return findByStaffIdAndStatusInAndStartsAtGreaterThanEqualOrderByStartsAtAsc(
+                staffId, BookingStatus.blocking(), from);
+    }
+
+    List<Booking> findByStaffIdAndStatusInAndStartsAtGreaterThanEqualOrderByStartsAtAsc(
+            UUID staffId, Collection<BookingStatus> statuses, Instant from);
+
     // ---------------------------------------------------------------------------------
     //  the scheduled jobs
     // ---------------------------------------------------------------------------------

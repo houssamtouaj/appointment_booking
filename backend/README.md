@@ -38,7 +38,9 @@ same package, and `AvailabilityException` reads as a throwable.
 
 1. **Never expose entities.** Controllers return DTOs mapped with MapStruct.
 2. **Tenant scope comes from the token.** Every admin query filters by the
-   `business_id` in the JWT — never from a request parameter. Cross-tenant → `403`.
+   `business_id` in the JWT — never from a request parameter. A cross-tenant **read**
+   is `404`, a cross-tenant **write** is `403`; see [Tenant isolation](#tenant-isolation)
+   for why the two differ.
 3. **UTC on the wire and at rest.** `timestamptz` columns, `Instant` in Java;
    timezone conversion happens in the client.
 4. **The database is the final arbiter of double booking.** A GiST exclusion
@@ -205,6 +207,92 @@ leaves them alive has accomplished nothing.
 Rate limiting sits in front of all of this (see below), and deliberately ahead of Spring
 Security: BCrypt at strength 12 makes an unlimited login endpoint a CPU amplifier.
 
+## Tenant isolation
+
+The tenant id is the `bid` claim of the access token. Not a path variable, not a query
+parameter, not a body field — a caller who could name their own tenant would not need to
+attack anything.
+
+Two mechanisms, in this order:
+
+1. **Repositories take `businessId` as a parameter.** `findByIdAndBusinessId`,
+   `findByBusinessId`, `countByBusinessIdAndRoleAndActiveTrue`. A foreign row is never
+   loaded, rather than loaded and then rejected — and the scoping is in the method signature
+   instead of in a `WHERE` clause somebody has to remember.
+2. **`TenantContext` guards the paths that legitimately load by id first.** It reads the
+   principal the JWT filter put in the `SecurityContext` and offers
+   `requireOwned` / `requireOwnedForWrite` over the `TenantOwned` interface, so there is no
+   per-entity overload to forget when a twelfth entity arrives.
+
+The two guards throw different exceptions on purpose:
+
+| Path | Verdict | Why |
+|---|---|---|
+| read | `404 NOT_FOUND` | A foreign id must be indistinguishable from a nonexistent one. `403` confirms the row is real, which turns any admin endpoint into an existence oracle: iterate ids, collect the 403s, and another tenant's data is mapped without a single field being read |
+| write | `403 ACCESS_DENIED` | A write attempt is not a survey, and the honest answer is more useful — the caller is authenticated and is being refused |
+
+`CrossTenantTestBase` is the harness that makes "every admin endpoint has a cross-tenant
+test" affordable: a subclass lists its endpoints and inherits both assertions.
+`StaffCrossTenantIT` is the first subclass; plans 07–13 each add one.
+
+Each case names **two** paths — the one reaching into the other tenant and the equivalent one
+inside its own. The second is the control, and it is not decoration: a cross-tenant read test
+asserts a `404`, and a mistyped path returns `404` for everyone, so without the paired
+positive call a subclass with a typo in its URL passes forever while testing nothing. That is
+the failure mode that makes a security test worse than no test, because it is believed.
+
+## Staff and invitations
+
+An invitation is a `User` row created inactive with a null password hash, **plus** a
+first-class `staff_invitation` holding the hashed token — not a bare emailed link. That is
+what makes it listable, resendable, expirable and consumable exactly once, and it closes open
+question #1 in `docs/README.md`.
+
+| Method | Path | Auth |
+|---|---|---|
+| `GET` | `/api/staff` | OWNER, STAFF |
+| `GET` | `/api/staff/{id}` | OWNER, STAFF |
+| `POST` | `/api/staff/invite` | OWNER |
+| `POST` | `/api/staff/{id}/invite/resend` | OWNER |
+| `PATCH` | `/api/staff/{id}` | OWNER, or STAFF on themselves |
+| `GET` | `/api/public/invitations/{token}` | public |
+| `POST` | `/api/public/invitations/{token}/accept` | public |
+| `GET` | `/api/public/businesses/{slug}/staff?serviceId=` | public (D9) |
+
+`GET /api/staff/{id}` is the one endpoint here the plan did not list. It is what the staff
+detail screen reads, and it is also the read path a cross-tenant test needs in order to assert
+a `404` at all.
+
+Rules worth knowing:
+
+- **Accepting is idempotent-by-refusal.** A second accept is `410 INVITATION_CONSUMED`, never
+  a `500` and never a silent success — a silent success would be a password reset for an
+  account already in use, reachable by anyone who kept the original mail. An unknown token is
+  `404`, a spent or expired one `410`: for the person holding the link, one is a typo and the
+  other means "you have already done this".
+- **Resending supersedes.** Without it, every "I never got the mail, send it again" leaves
+  another live key to the account for a week.
+- **Addresses are globally unique (D13).** Inviting someone who already has an account
+  anywhere is `409 EMAIL_TAKEN`.
+- **Roles are checked where the rule lives.** `@PreAuthorize("hasRole('OWNER')")` for
+  owner-only operations; "an owner, or a staff member acting on themselves" is in the service,
+  because no URL pattern or annotation can express it. A staff member who sends `role` or
+  `active` is refused rather than having it quietly dropped.
+- **Deactivation, decided and written down.** It blocks login immediately, revokes the
+  member's refresh tokens, and removes them from the public staff list — and **leaves their
+  future bookings intact**, visible in the admin calendar. Silently cancelling or reassigning
+  a real customer's appointment is worse than the awkward state, so the `PATCH` response
+  carries a warning naming how many bookings are affected and when the first one is, and the
+  owner decides. Their access token still works for up to fifteen minutes, the same documented
+  window as everywhere else.
+- **The last active owner cannot be deactivated *or* demoted** → `409 LAST_OWNER`. A business
+  with no active owner has nobody who can invite one.
+- **The public staff DTO is written by hand.** `PublicStaffResponse` is id and display name;
+  reusing the admin record would publish every field it ever grows, and the leak would arrive
+  through a change to a class nobody was thinking about at the time.
+  `PublicStaffEndpointIT` asserts the absence of an email address **on the raw JSON**, because
+  a test that maps the response back into a DTO cannot fail when a sixth field appears.
+
 ## Pagination
 
 `?page=&size=` with `size` defaulting to 20 and clamped to 100, returning
@@ -278,10 +366,16 @@ is visibly a test about buffers.
 - The test harness above: one shared container, a movable clock, and fixture builders
 - The auth stack above: registration in one transaction, refresh rotation with reuse
   detection, password reset, and the problem-detail 401/403 from inside the filter chain
+- Tenant isolation: the `bid` claim, `TenantContext`, and `CrossTenantTestBase` — the harness
+  every later admin plan extends
+- Staff and invitations: invite, resend, accept, deactivation semantics, and the public
+  booking-page staff list (D9)
 
 ## Not built yet
 
-The availability engine, the catalog, bookings, payments and the dashboard. Email has no
+The availability engine, the catalog, bookings, payments and the dashboard. Service
+assignments are read everywhere they matter but nothing writes them yet, so `serviceIds` is
+empty until plan 07. Email has no
 transport yet: `NotificationService` is an interface with a logging implementation, so the
 invitation and reset links are read from the api log until plan 12. Build order is tracked in
 the local project brief (see `docs/`, not committed yet).
