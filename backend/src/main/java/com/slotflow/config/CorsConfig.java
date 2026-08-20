@@ -13,8 +13,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  *
  * <p>Credentials are enabled because the refresh token rides in an httpOnly cookie
  * (plan 05), which also rules out a wildcard origin: origins are always an explicit list.
- * Spring Security picks this bean up through {@code http.cors(...)} in
- * {@link SecurityConfig}, so there is exactly one place CORS is configured.
+ * The bean name matters: Spring Security's {@code http.cors(Customizer.withDefaults())}
+ * looks up a bean called {@code corsConfigurationSource} by name, so this is the single
+ * place CORS is configured.
  */
 @Configuration
 public class CorsConfig {

@@ -3,12 +3,12 @@ package com.slotflow.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Placeholder filter chain for wave 1.
@@ -25,10 +25,12 @@ import org.springframework.web.cors.CorsConfigurationSource;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, CorsConfigurationSource corsSource)
-            throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .cors(cors -> cors.configurationSource(corsSource))
+                // Resolves the bean *named* corsConfigurationSource. Injecting it by type
+                // instead is ambiguous: Spring MVC's mvcHandlerMappingIntrospector is also a
+                // CorsConfigurationSource, and the context then fails to start.
+                .cors(Customizer.withDefaults())
                 // No cookie-based session and no server-rendered forms; CSRF tokens would
                 // protect nothing. Revisit in plan 05 when the refresh cookie appears.
                 .csrf(csrf -> csrf.disable())
