@@ -3,7 +3,13 @@
 # Docker Compose services. Inside the api container this profile is NOT active: Compose
 # passes DB_URL and MAIL_HOST as environment variables instead.
 #
-# Still no secrets here. DB_PASSWORD comes from the environment either way.
+# Still no secrets here -- and because this file is committed, that is a rule rather than a
+# habit: it is visible in the repo, so `git status` will not warn you about a password pasted
+# into it. Personal values belong in application-local-<yourname>.yml, which .gitignore covers,
+# or in the environment. DB_PASSWORD comes from the environment either way, and .env is not read
+# by Maven, so load it into the shell first:
+#
+#   set -a; . ./.env; set +a
 #   mvn spring-boot:run -Dspring-boot.run.profiles=local
 # =====================================================================================
 spring:

@@ -313,7 +313,8 @@ class SchemaMappingIT extends IntegrationTest {
         @Test
         @DisplayName("the staff_service composite key works from both directions")
         void compositeKeyIsQueryableBothWays() {
-            assignments.save(new StaffService(owner.getId(), service.getId()));
+            assignments.save(
+                    new StaffService(business.getId(), owner.getId(), service.getId()));
 
             assertThat(assignments.findByServiceId(service.getId())).hasSize(1);
             assertThat(assignments.findByStaffId(owner.getId())).hasSize(1);

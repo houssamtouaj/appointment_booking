@@ -92,7 +92,8 @@ class PublicStaffEndpointIT extends ApiIntegrationTest {
         User colleague = aStaffMemberOf(tenant);
         ServiceOffering massage = services.save(
                 Fixtures.aService().forBusiness(tenant.business()).build());
-        assignments.save(new StaffService(colleague.getId(), massage.getId()));
+        assignments.save(new StaffService(
+                tenant.business().getId(), colleague.getId(), massage.getId()));
 
         mockMvc.perform(get("/api/public/businesses/" + tenant.business().getSlug() + "/staff")
                         .param("serviceId", massage.getId().toString()))
@@ -109,7 +110,8 @@ class PublicStaffEndpointIT extends ApiIntegrationTest {
         User theirStaff = aStaffMemberOf(elsewhere);
         ServiceOffering theirService = services.save(
                 Fixtures.aService().forBusiness(elsewhere.business()).build());
-        assignments.save(new StaffService(theirStaff.getId(), theirService.getId()));
+        assignments.save(new StaffService(
+                elsewhere.business().getId(), theirStaff.getId(), theirService.getId()));
 
         // The intersection with my own team is the isolation: there is no ownership check to forget,
         // because a foreign service simply has no performers inside this business.

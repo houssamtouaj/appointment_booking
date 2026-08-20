@@ -31,11 +31,21 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>The interesting case is {@link #rejectsAnOverlapThatIsOnlyInTheBuffers()}: the two
  * appointments do not touch, and the booking is still refused, because the constraint ranges
  * over the buffer-expanded window (D4) — the same rule the availability engine applies.
+ *
+ * <p>Three of these tests guard the constraints that make that guarantee trustworthy rather than
+ * the exclusion constraint itself. {@link #rejectsABlockedRangeThatIgnoresItsOwnBuffers()} is the
+ * important one: every other test here computes the blocked window with {@link #insertBooking},
+ * so a caller that snapshotted buffers but stored the raw appointment would satisfy the exclusion
+ * constraint and quietly hand back the buffer-overlap this file claims is impossible. That case
+ * inserts the bad row directly, which is the only way to prove the database refuses it.
  */
 class ExclusionConstraintIT extends IntegrationTest {
 
     /** SQLSTATE for exclusion_violation. */
     private static final String EXCLUSION_VIOLATION = "23P01";
+
+    /** SQLSTATE for check_violation. */
+    private static final String CHECK_VIOLATION = "23514";
 
     /** A Monday morning, fixed so failures read the same on every machine. */
     private static final Instant NINE_AM = Instant.parse("2026-03-02T09:00:00Z");
@@ -134,6 +144,64 @@ class ExclusionConstraintIT extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("back-to-back is legal: blocked ranges that touch at an instant do not overlap")
+    void allowsBookingsWhoseBlockedRangesMerelyTouch() {
+        // 09:00-10:00 + 10 minutes of cleanup -> the calendar loses 08:50-10:10.
+        insertBooking(staffId, "CONFIRMED", NINE_AM, 60, 10, 10);
+
+        // 10:20-11:20 with 10 minutes of setup -> needs 10:10-11:30, starting at the exact
+        // instant the first booking's block ends.
+        Instant nextSlot = NINE_AM.plus(80, ChronoUnit.MINUTES);
+
+        assertThat(rangesOverlap(NINE_AM.minus(10, ChronoUnit.MINUTES),
+                NINE_AM.plus(70, ChronoUnit.MINUTES),
+                nextSlot.minus(10, ChronoUnit.MINUTES),
+                nextSlot.plus(70, ChronoUnit.MINUTES)))
+                .as("the two blocked windows must touch and not overlap, or this test proves nothing")
+                .isFalse();
+
+        // tstzrange is half-open by default, so [08:50,10:10) and [10:10,11:30) do not overlap.
+        // Written as '[]' instead, every back-to-back pair the engine offers would fail with
+        // 23P01 at insert time — and no other test here would notice, because no other test
+        // places two bookings whose blocked windows merely meet.
+        assertThatCode(() -> insertBooking(staffId, "CONFIRMED", nextSlot, 60, 10, 10))
+                .doesNotThrowAnyException();
+
+        assertThat(activeBookingCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("D4: a blocked range that ignores the buffers on its own row is refused")
+    void rejectsABlockedRangeThatIgnoresItsOwnBuffers() {
+        // Records a 10 minute buffer on each side, then stores the unwidened appointment as the
+        // blocked window — the mistake plan 10 can make in one forgotten line. It has to fail
+        // here, because booking_no_overlap would otherwise range over 09:00-10:00 and accept a
+        // booking starting at 10:01, which is exactly the buffer overlap D4 forbids.
+        assertThatThrownBy(() -> insertBookingWithBlockedRange(
+                staffId, "CONFIRMED", NINE_AM, 60, 10, 10,
+                NINE_AM, NINE_AM.plus(60, ChronoUnit.MINUTES), null))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .satisfies(thrown -> assertThat(sqlStateOf(thrown)).isEqualTo(CHECK_VIOLATION));
+
+        assertThat(activeBookingCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("D3: a PENDING booking with no expiry is refused, because nothing would release it")
+    void rejectsAPendingBookingWithNoExpiry() {
+        // PENDING holds the slot via booking_no_overlap, and the sweeper finds stale holds with
+        // `expires_at < now()`. NULL < now() is NULL, so a PENDING row without an expiry is a
+        // slot no job will ever release and no CONFIRMED-filtered admin list will ever show.
+        assertThatThrownBy(() -> insertBookingWithBlockedRange(
+                staffId, "PENDING", NINE_AM, 60, 0, 0,
+                NINE_AM, NINE_AM.plus(60, ChronoUnit.MINUTES), null))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .satisfies(thrown -> assertThat(sqlStateOf(thrown)).isEqualTo(CHECK_VIOLATION));
+
+        assertThat(activeBookingCount()).isZero();
+    }
+
+    @Test
     @DisplayName("the constraint is per staff member, not per business")
     void allowsTheSameSlotForAnotherStaffMember() {
         insertBooking(staffId, "CONFIRMED", NINE_AM, 60, 10, 10);
@@ -155,6 +223,30 @@ class ExclusionConstraintIT extends IntegrationTest {
      */
     private UUID insertBooking(UUID staff, String status, Instant startsAt,
                                int durationMinutes, int bufferBefore, int bufferAfter) {
+        Instant endsAt = startsAt.plus(durationMinutes, ChronoUnit.MINUTES);
+        // A PENDING row has to carry an expiry (booking_pending_expiry_chk): the hold is a
+        // deposit in flight, and a hold with no deadline is a slot lost for good.
+        Instant expiresAt = "PENDING".equals(status)
+                ? Instant.now().plus(15, ChronoUnit.MINUTES)
+                : null;
+
+        return insertBookingWithBlockedRange(staff, status, startsAt, durationMinutes,
+                bufferBefore, bufferAfter,
+                startsAt.minus(bufferBefore, ChronoUnit.MINUTES),
+                endsAt.plus(bufferAfter, ChronoUnit.MINUTES),
+                expiresAt);
+    }
+
+    /**
+     * The same insert with the blocked window and the expiry supplied rather than derived, so a
+     * test can store the wrong ones on purpose. Nothing that asserts on the exclusion constraint
+     * should use this — those tests want a correctly computed row, which is what
+     * {@link #insertBooking} guarantees.
+     */
+    private UUID insertBookingWithBlockedRange(UUID staff, String status, Instant startsAt,
+                                               int durationMinutes, int bufferBefore,
+                                               int bufferAfter, Instant blockedFrom,
+                                               Instant blockedTo, Instant expiresAt) {
         UUID id = UUID.randomUUID();
         Instant endsAt = startsAt.plus(durationMinutes, ChronoUnit.MINUTES);
 
@@ -162,14 +254,14 @@ class ExclusionConstraintIT extends IntegrationTest {
                 INSERT INTO booking
                     (id, business_id, service_id, staff_id, guest_name, guest_email,
                      starts_at, ends_at, blocked_from, blocked_to, status, price_cents,
-                     buffer_before_minutes, buffer_after_minutes, cancellation_token)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     buffer_before_minutes, buffer_after_minutes, cancellation_token,
+                     expires_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 id, businessId, serviceId, staff, "Alex Guest", "guest@example.test",
-                utc(startsAt), utc(endsAt),
-                utc(startsAt.minus(bufferBefore, ChronoUnit.MINUTES)),
-                utc(endsAt.plus(bufferAfter, ChronoUnit.MINUTES)),
-                status, 5000L, bufferBefore, bufferAfter, UUID.randomUUID());
+                utc(startsAt), utc(endsAt), utc(blockedFrom), utc(blockedTo),
+                status, 5000L, bufferBefore, bufferAfter, UUID.randomUUID(),
+                expiresAt == null ? null : utc(expiresAt));
         return id;
     }
 

@@ -1,9 +1,9 @@
 package com.slotflow.security;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * The filter chain, and the four decisions in it worth defending.
@@ -75,13 +76,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService,
                                            ProblemAuthenticationEntryPoint entryPoint,
-                                           ProblemAccessDeniedHandler accessDeniedHandler)
+                                           ProblemAccessDeniedHandler accessDeniedHandler,
+                                           @Qualifier("corsConfigurationSource")
+                                           CorsConfigurationSource corsConfigurationSource)
             throws Exception {
         return http
-                // Resolves the bean *named* corsConfigurationSource. Injecting it by type instead is
-                // ambiguous: Spring MVC's mvcHandlerMappingIntrospector is also a
-                // CorsConfigurationSource, and the context then fails to start.
-                .cors(Customizer.withDefaults())
+                // Wired from the qualified bean rather than through Customizer.withDefaults().
+                // withDefaults() looks up a bean *named* corsConfigurationSource and, when it
+                // cannot find one, falls back to Spring MVC's HandlerMappingIntrospector — which
+                // carries no CORS mappings at all. Renaming CorsConfig's @Bean method would
+                // therefore start the context cleanly, pass every test, and reject every preflight
+                // with nothing in the log naming CORS. The qualifier keeps the same by-name
+                // resolution — injecting CorsConfigurationSource by type alone is ambiguous,
+                // because the introspector is one too — and turns that rename into a startup
+                // failure instead.
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

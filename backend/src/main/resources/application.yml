@@ -14,7 +14,11 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/slotflow}
     username: ${DB_USERNAME:slotflow}
-    password: ${DB_PASSWORD:}
+    # DB_PASSWORD is what Compose passes to the api container. POSTGRES_PASSWORD is the
+    # fallback so that a host-side run against the Compose database works after
+    # `set -a; . ./.env` — without it, the documented `mvn spring-boot:run` dies on an empty
+    # password and the message names neither variable.
+    password: ${DB_PASSWORD:${POSTGRES_PASSWORD:}}
     hikari:
       pool-name: slotflow-pool
       maximum-pool-size: ${DB_POOL_MAX:10}

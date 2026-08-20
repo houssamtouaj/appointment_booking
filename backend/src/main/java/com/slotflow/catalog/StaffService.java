@@ -31,6 +31,17 @@ import lombok.NoArgsConstructor;
  * deleting a staff member, and the collection semantics ("replace the whole set") are clearer as
  * explicit rows anyway. The row carries no information of its own, so both sides cascade in the
  * schema.
+ *
+ * <h2>Why there is a business id on a row that carries no information</h2>
+ * Nothing reads {@code businessId} — there is no getter-driven use case for it, and no query
+ * filters on it. It is here because the table's two foreign keys are composite,
+ * {@code (staff_id, business_id)} and {@code (service_id, business_id)}, and that is what makes
+ * "this staff member and this service are in the same tenant" a referential guarantee instead of
+ * an assertion some service class has to remember to make. Assigning another tenant's staff
+ * member to one of our services is not rejected here; it is unrepresentable.
+ *
+ * <p>It is deliberately not part of the {@code @IdClass}: the identity of the row is still the
+ * pair, and the tenant is a fact about that pair rather than part of what makes it unique.
  */
 @Entity
 @Table(name = "staff_service")
@@ -47,11 +58,17 @@ public class StaffService {
     @Column(nullable = false, updatable = false)
     private UUID serviceId;
 
-    public StaffService(UUID staffId, UUID serviceId) {
+    /** The tenant both sides must belong to; see the class javadoc for why it exists. */
+    @Column(nullable = false, updatable = false)
+    private UUID businessId;
+
+    public StaffService(UUID businessId, UUID staffId, UUID serviceId) {
+        this.businessId = businessId;
         this.staffId = staffId;
         this.serviceId = serviceId;
     }
 
+    /** Identity is the pair, matching the primary key; businessId is derived from either half. */
     @Override
     public boolean equals(Object other) {
         return other instanceof StaffService assignment

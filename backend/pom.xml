@@ -215,8 +215,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!-- lets `mvn -Dtest=SomeIT verify` select an IT through failsafe
-                         instead of failing here on an empty surefire selection -->
+                    <!-- lets `mvn -Dit.test=SomeIT verify` reach failsafe instead of failing
+                         here on an empty surefire selection. Note the property name: failsafe
+                         reads `it.test`, surefire reads `test`, and neither substitutes for the
+                         other — `-Dtest=SomeIT verify` filters surefire only and still runs
+                         every IT. Both plugins also set failIfNoSpecifiedTests=false, so a
+                         typo'd selector is a green build that ran nothing: when selecting a
+                         single IT, read the failsafe summary, not the exit code. -->
                     <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
                     <!--
                       Pins the locale for the whole test JVM. Bean-validation messages
