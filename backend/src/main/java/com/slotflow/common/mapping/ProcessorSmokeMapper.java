@@ -10,9 +10,12 @@ import org.mapstruct.Mapper;
  * comes back empty in plan 07, which is an expensive place to find it. This mapper plus
  * {@code ProcessorSmokeMapperTest} turn it into a red unit test instead.
  *
+ * <p>It also references {@link MapperConfig}, so the shared mapper configuration is compiled and
+ * exercised from the moment it exists rather than from whenever the first real mapper lands.
+ *
  * <p>Delete both once real mappers with real assertions exist.
  */
-@Mapper
+@Mapper(config = MapperConfig.class)
 public interface ProcessorSmokeMapper {
 
     ProcessorSmokeTarget toTarget(ProcessorSmokeSource source);

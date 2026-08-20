@@ -115,6 +115,7 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
     @Column(length = 255, unique = true)
     private String stripeSessionId;
 
+    /** {@code text} in the schema, so no length here either: a note is prose. */
     private String notes;
 
     /** The customer's only credential for viewing or cancelling. Unique, and never reissued. */
