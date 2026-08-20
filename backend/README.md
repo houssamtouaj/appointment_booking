@@ -14,11 +14,11 @@ holds its own controller, service, repository, entity and DTOs.
 | `config` | Spring configuration, OpenAPI, CORS, Jackson, scheduling |
 | `security` | JWT issue/verify, refresh-token rotation, method security |
 | `tenant` | Resolves `business_id` from the JWT and enforces isolation |
-| `common` | RFC 7807 error handling, pagination, shared value objects |
+| `common` | RFC 7807 error handling, pagination, shared JPA plumbing |
 | `business` | `Business`, `BookingPolicy` — settings and policy |
-| `catalog` | `Service`, `StaffService` — what can be booked |
+| `catalog` | `ServiceOffering`, `StaffService` — what can be booked |
 | `staff` | `User` in the OWNER/STAFF roles, invitations |
-| `availability` | `WorkingHours`, `AvailabilityException`, `AvailabilityEngine` |
+| `availability` | `WorkingHours`, `AvailabilityOverride`, `AvailabilityEngine` |
 | `booking` | `Booking` lifecycle, conflict handling |
 | `payment` | Stripe Checkout session + webhook |
 | `notification` | Thymeleaf email templates, reminder scheduler |
@@ -28,6 +28,11 @@ src/main/resources/
 ├── db/migration/       Flyway versioned SQL (V1__baseline.sql, ...)
 └── templates/email/    Thymeleaf HTML email templates
 ```
+
+Two names differ between the code and the wire, deliberately. The Java types are
+`ServiceOffering` and `AvailabilityOverride`; the REST paths stay `/api/services` and
+`/api/staff/{id}/exceptions`. A JPA entity called `Service` collides with `@Service` in the
+same package, and `AvailabilityException` reads as a throwable.
 
 ## Rules this side of the boundary enforces
 
@@ -113,6 +118,48 @@ doubles them. That is the honest trade for a single-instance demo. A multi-insta
 swaps the store for `bucket4j-redis` and changes nothing else — `RateLimiter` is the only
 class that would need to know.
 
+## Tests
+
+```
+mvn verify        # everything; needs Docker running
+mvn test          # unit and web-slice tests only, no Docker
+```
+
+| Layer | Tool | What lives there |
+|---|---|---|
+| Pure unit | JUnit 5, no Spring | Entity behaviour, policy windows, buffer arithmetic, the filters |
+| Web slice | `@WebMvcTest` | Status codes, the problem-detail contract, pagination |
+| Integration | `@SpringBootTest` + Testcontainers | Migrations, the exclusion constraint, the entity-to-schema mapping |
+
+**One Postgres container for the whole integration suite**, started from a static initialiser
+in `support/IntegrationTest`. The obvious spelling — `@Testcontainers` plus `@Container` on a
+shared base class — starts and stops the container once per *test class*, which turns a
+40-second suite into an eight-minute one while still passing. Reuse is on, so it survives
+between local runs and is ignored in CI; every test therefore creates its own tenant and
+asserts only on rows it inserted.
+
+**Time is always pinned.** `support/MutableClock` is the primary `Clock` for every
+integration test, so a test can jump forward thirty-one minutes and watch the expiry sweeper
+notice, instead of sleeping. `TestTime.NOW` is Monday 2 March 2026, 09:00 UTC — a Monday
+because that is where a weekly template starts, and March because Europe/Paris changes to
+summer time a few weeks later. A `Thread.sleep` or a real `now()` in a test is a review
+blocker, not a style preference.
+
+**Fixtures are builders**, one static import away:
+
+```java
+import static com.slotflow.support.fixtures.Fixtures.*;
+
+Business clinic  = aBusiness().withTimezone("Europe/Paris").withDeposit(30).build();
+User      dana   = anOwner().forBusiness(clinic).build();
+ServiceOffering massage = aService().forBusiness(clinic)
+        .withDuration(60).withBuffers(10, 10).build();
+Booking   slot   = aBooking().forService(massage).withStaff(dana).inDays(2).build();
+```
+
+Every builder starts from a valid, boring default, so a test that says `withBuffers(10, 10)`
+is visibly a test about buffers.
+
 ## Built so far
 
 - Maven project on Java 21 / Spring Boot 3.5, Docker Compose stack, multi-stage image
@@ -124,6 +171,7 @@ class that would need to know.
   makes every time-dependent test possible, rate limiting and request correlation
 - The domain model above: eleven entities, their repositories, and the behaviour the later
   plans call — booking transitions, policy windows, buffer arithmetic, deposit rounding
+- The test harness above: one shared container, a movable clock, and fixture builders
 
 ## Not built yet
 

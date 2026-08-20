@@ -10,45 +10,35 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+import com.slotflow.support.IntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Proves the claim the README makes: overlapping bookings are impossible, and the database
  * is what makes them impossible.
  *
- * <p>Everything here goes through raw SQL on purpose. There are no entities yet, and more
- * importantly the guarantee under test belongs to Postgres — running it through JPA would
- * only test JPA. The container starts from an empty volume, so V1 has to apply cleanly
- * before a single assertion runs.
+ * <p>Everything here goes through raw SQL on purpose, and it stays that way now that the entities
+ * from plan 03 exist: the guarantee under test belongs to Postgres, and routing it through JPA
+ * would only prove that Hibernate can build an INSERT. The one thing this test must not depend on
+ * is any application code being correct.
  *
  * <p>The interesting case is {@link #rejectsAnOverlapThatIsOnlyInTheBuffers()}: the two
  * appointments do not touch, and the booking is still refused, because the constraint ranges
  * over the buffer-expanded window (D4) — the same rule the availability engine applies.
  */
-@SpringBootTest
-@Testcontainers
-class ExclusionConstraintIT {
+class ExclusionConstraintIT extends IntegrationTest {
 
     /** SQLSTATE for exclusion_violation. */
     private static final String EXCLUSION_VIOLATION = "23P01";
 
     /** A Monday morning, fixed so failures read the same on every machine. */
     private static final Instant NINE_AM = Instant.parse("2026-03-02T09:00:00Z");
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Autowired
     private JdbcTemplate jdbc;

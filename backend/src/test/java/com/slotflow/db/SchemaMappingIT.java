@@ -1,5 +1,11 @@
 package com.slotflow.db;
 
+import static com.slotflow.support.fixtures.Fixtures.aBusiness;
+import static com.slotflow.support.fixtures.Fixtures.aService;
+import static com.slotflow.support.fixtures.Fixtures.aStaffMember;
+import static com.slotflow.support.fixtures.Fixtures.anOverride;
+import static com.slotflow.support.fixtures.Fixtures.anOwner;
+import static com.slotflow.support.fixtures.Fixtures.workingHours;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.slotflow.availability.AvailabilityOverride;
@@ -23,35 +29,27 @@ import com.slotflow.security.PasswordResetToken;
 import com.slotflow.security.PasswordResetTokenRepository;
 import com.slotflow.security.RefreshToken;
 import com.slotflow.security.RefreshTokenRepository;
-import com.slotflow.staff.Role;
 import com.slotflow.staff.StaffInvitation;
 import com.slotflow.staff.StaffInvitationRepository;
 import com.slotflow.staff.User;
 import com.slotflow.staff.UserRepository;
-import java.time.Clock;
+import com.slotflow.support.IntegrationTest;
+import com.slotflow.support.TestTime;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Currency;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * The real acceptance test for plan 03.
@@ -68,16 +66,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * would pass just as happily if the column held {@code 0} instead of {@code PENDING}, which is
  * precisely the failure that turns into an outage the day somebody reorders a Java enum.
  */
-@SpringBootTest
-@Testcontainers
-class SchemaMappingIT {
+class SchemaMappingIT extends IntegrationTest {
 
-    /** A Monday. Pinned so the audit assertions below can be exact rather than approximate. */
-    private static final Instant NOW = Instant.parse("2026-03-02T09:00:00Z");
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    /** The suite-wide instant, which {@link IntegrationTest}'s clock is pinned to. */
+    private static final Instant NOW = TestTime.NOW;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -95,7 +87,7 @@ class SchemaMappingIT {
     @Autowired
     private StaffServiceRepository assignments;
     @Autowired
-    private WorkingHoursRepository workingHours;
+    private WorkingHoursRepository weeklyHours;
     @Autowired
     private AvailabilityOverrideRepository overrides;
     @Autowired
@@ -109,13 +101,15 @@ class SchemaMappingIT {
     private User owner;
     private ServiceOffering service;
 
-    /** A fresh tenant per test, so no test can pass because of another one's rows. */
+    /**
+     * A fresh tenant per test, built with the fixture builders from plan 14 — which is also what
+     * proves they work against a real database rather than only in a unit test.
+     */
     @BeforeEach
     void seedTenant() {
-        business = businesses.save(new Business(uniqueSlug(), "Dana Clinic",
-                ZoneId.of("Europe/Paris"), Currency.getInstance("EUR")));
-        owner = users.save(User.owner(business.getId(), uniqueEmail(), "Dana Okoye", "bcrypt-hash"));
-        service = services.save(new ServiceOffering(business.getId(), "Consultation", 60, 5_000L));
+        business = businesses.save(aBusiness().withTimezone("Europe/Paris").build());
+        owner = users.save(anOwner().forBusiness(business).build());
+        service = services.save(aService().forBusiness(business).build());
     }
 
     @Nested
@@ -127,8 +121,7 @@ class SchemaMappingIT {
         void roleIsStoredAsAName() {
             assertThat(rawValue("app_user", "role", owner.getId())).isEqualTo("OWNER");
 
-            User staff = users.save(
-                    User.invited(business.getId(), uniqueEmail(), "Sam Ferreira", Role.STAFF));
+            User staff = users.save(aStaffMember().forBusiness(business).build());
 
             assertThat(rawValue("app_user", "role", staff.getId())).isEqualTo("STAFF");
         }
@@ -144,11 +137,10 @@ class SchemaMappingIT {
         @Test
         @DisplayName("availability_override.type")
         void overrideTypeIsStoredAsAName() {
-            AvailabilityOverride blocked = overrides.save(AvailabilityOverride.blockedDay(
-                    business.getId(), owner.getId(), LocalDate.of(2026, 12, 25), "Closed"));
-            AvailabilityOverride extra = overrides.save(AvailabilityOverride.extraHours(
-                    business.getId(), owner.getId(), LocalDate.of(2026, 12, 24),
-                    LocalTime.of(18, 0), LocalTime.of(20, 0), "Late night"));
+            AvailabilityOverride blocked = overrides.save(anOverride().forBusiness(business)
+                    .forStaff(owner).on("2026-12-25").wholeDay().build());
+            AvailabilityOverride extra = overrides.save(anOverride().forBusiness(business)
+                    .forStaff(owner).on("2026-12-24").extra().build());
 
             assertThat(rawValue("availability_override", "type", blocked.getId()))
                     .isEqualTo("BLOCKED");
@@ -159,8 +151,8 @@ class SchemaMappingIT {
         @Test
         @DisplayName("working_hours.day_of_week uses the java.time name, not the brief's 0-6 (D16)")
         void dayOfWeekIsStoredAsAName() {
-            WorkingHours hours = workingHours.save(new WorkingHours(
-                    owner.getId(), DayOfWeek.WEDNESDAY, LocalTime.of(9, 0), LocalTime.of(17, 0)));
+            WorkingHours hours = weeklyHours.save(
+                    workingHours().forStaff(owner).on(DayOfWeek.WEDNESDAY).build());
 
             // WEDNESDAY is also the longest name at nine characters, which is what varchar(9) was
             // sized for. If the column were ever narrowed this is the row that would fail.
@@ -244,8 +236,8 @@ class SchemaMappingIT {
         @Test
         @DisplayName("saving a new row persists it rather than merging it")
         void saveUsesPersistNotMerge() {
-            Business fresh = new Business(uniqueSlug(), "Second Clinic",
-                    ZoneId.of("America/New_York"), Currency.getInstance("USD"));
+            Business fresh = aBusiness().withName("Second Clinic")
+                    .withTimezone("America/New_York").withCurrency("USD").build();
             assertThat(fresh.isNew()).isTrue();
 
             Business saved = businesses.save(fresh);
@@ -269,8 +261,8 @@ class SchemaMappingIT {
         @Test
         @DisplayName("the id exists before the row does, so an aggregate can be wired up in memory")
         void idsAreAvailableBeforeInsert() {
-            Business unsaved = new Business(uniqueSlug(), "Third Clinic",
-                    ZoneId.of("Europe/Lisbon"), Currency.getInstance("EUR"));
+            Business unsaved = aBusiness().withName("Third Clinic")
+                    .withTimezone("Europe/Lisbon").build();
 
             // This is the whole reason ids are generated in Java: the policy can reference the
             // business before either row is flushed, so plan 05's registration is one method
@@ -334,8 +326,8 @@ class SchemaMappingIT {
         @Test
         @DisplayName("a business-wide override has a null staff id (D5)")
         void businessWideOverrideHasNoStaff() {
-            AvailabilityOverride closure = overrides.save(AvailabilityOverride.businessWideClosure(
-                    business.getId(), LocalDate.of(2026, 12, 25), "Closed"));
+            AvailabilityOverride closure = overrides.save(anOverride()
+                    .forBusiness(business).businessWide().on("2026-12-25").build());
 
             assertThat(jdbc.queryForObject(
                     "SELECT staff_id FROM availability_override WHERE id = ?",
@@ -355,7 +347,7 @@ class SchemaMappingIT {
             // A window that touches only the buffer, not the appointment. The engine has to see
             // this booking, or it would offer a slot the exclusion constraint then rejects.
             var justTheBuffer = bookings.findActiveForStaffBetween(
-                    java.util.List.of(owner.getId()),
+                    List.of(owner.getId()),
                     booking.getStartsAt().minus(10, ChronoUnit.MINUTES),
                     booking.getStartsAt().minus(5, ChronoUnit.MINUTES));
             assertThat(justTheBuffer).containsExactly(booking);
@@ -363,14 +355,14 @@ class SchemaMappingIT {
             // Half-open at both ends: a window ending exactly where the blocked range begins does
             // not overlap it, which is the same rule tstzrange applies.
             var touchingTheEdge = bookings.findActiveForStaffBetween(
-                    java.util.List.of(owner.getId()),
+                    List.of(owner.getId()),
                     booking.getBlockedFrom().minus(1, ChronoUnit.HOURS),
                     booking.getBlockedFrom());
             assertThat(touchingTheEdge).isEmpty();
 
             booking.cancel();
             bookings.saveAndFlush(booking);
-            assertThat(bookings.findActiveForStaffBetween(java.util.List.of(owner.getId()),
+            assertThat(bookings.findActiveForStaffBetween(List.of(owner.getId()),
                     booking.getBlockedFrom(), booking.getBlockedTo()))
                     .as("a cancelled booking releases its slot immediately")
                     .isEmpty();
@@ -379,7 +371,7 @@ class SchemaMappingIT {
         @Test
         @DisplayName("an empty staff set asks the database nothing")
         void emptyStaffSetShortCircuits() {
-            assertThat(bookings.findActiveForStaffBetween(java.util.List.of(), NOW, NOW.plusSeconds(1)))
+            assertThat(bookings.findActiveForStaffBetween(List.of(), NOW, NOW.plusSeconds(1)))
                     .isEmpty();
         }
 
@@ -415,21 +407,6 @@ class SchemaMappingIT {
     // ---------------------------------------------------------------------------------
     //  helpers
     // ---------------------------------------------------------------------------------
-
-    /**
-     * Pins the clock for the whole context. Overriding the bean rather than mocking a call site
-     * means the auditing provider, and every service written from plan 05 onwards, all see the
-     * same fixed instant.
-     */
-    @TestConfiguration
-    static class FixedClockConfig {
-
-        @Bean
-        @Primary
-        Clock fixedClock() {
-            return Clock.fixed(NOW, ZoneOffset.UTC);
-        }
-    }
 
     private Booking confirmedBooking() {
         return Booking.confirmed(business.getId(), service, owner.getId(),
@@ -489,15 +466,5 @@ class SchemaMappingIT {
     private String rawValue(String table, String column, UUID id) {
         return jdbc.queryForObject(
                 "SELECT %s FROM %s WHERE id = ?".formatted(column, table), String.class, id);
-    }
-
-    /** Slugs are constrained to lowercase and URL-safe; a uuid fragment satisfies both. */
-    private static String uniqueSlug() {
-        return ("biz-" + UUID.randomUUID()).substring(0, 20);
-    }
-
-    /** Emails are globally unique (D13), so every test needs its own. */
-    private static String uniqueEmail() {
-        return "user-" + UUID.randomUUID() + "@example.test";
     }
 }
