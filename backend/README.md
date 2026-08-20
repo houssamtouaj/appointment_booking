@@ -40,6 +40,49 @@ src/main/resources/
    constraint rejects overlaps for `PENDING`/`CONFIRMED`; the resulting violation
    surfaces as `409 Conflict`.
 
+## The error contract
+
+Every error response in this API — including a 500 and including one written by a servlet
+filter — is `application/problem+json` with the same members:
+
+```json
+{
+  "type": "https://slotflow.dev/problems/validation-failed",
+  "title": "Validation failed",
+  "status": 422,
+  "detail": "The request contains invalid fields. See errors for the details.",
+  "instance": "/api/services",
+  "code": "VALIDATION_FAILED",
+  "errors": [{ "field": "durationMinutes", "message": "must be less than or equal to 480" }]
+}
+```
+
+`code` is the stable, machine-readable half and the only part a client should branch on;
+every value it can take is declared in `common/error/ErrorCode.java`. `detail` is prose for
+humans and may be reworded at any time. `errors[]` appears on `422` responses only.
+`requestId` appears on `5xx` responses only, and matches the `X-Request-Id` header that every
+response carries and every log line is stamped with.
+
+`ProblemDetailContractTest` asserts that body **strictly** — an added member or a renamed key
+fails the build, because the React forms parse these exact keys.
+
+## Pagination
+
+`?page=&size=` with `size` defaulting to 20 and clamped to 100, returning
+`{ content, page, size, totalElements, totalPages }`. A raw Spring `Page` is never returned:
+its JSON shape is not a published contract and it leaks `pageable`/`sort` internals.
+
+## Rate limiting
+
+In-memory Bucket4j over the unauthenticated endpoints (D12): 10 logins/min per IP,
+10 other writes/min per IP under `/api/auth/**` and `/api/public/**`, and 5 bookings/hour
+per guest email. Public **reads** are not limited — the booking calendar polls them.
+
+The buckets live in the API process, so the budgets are per instance: a two-container deploy
+doubles them. That is the honest trade for a single-instance demo. A multi-instance deploy
+swaps the store for `bucket4j-redis` and changes nothing else — `RateLimiter` is the only
+class that would need to know.
+
 ## Built so far
 
 - Maven project on Java 21 / Spring Boot 3.5, Docker Compose stack, multi-stage image
@@ -47,9 +90,13 @@ src/main/resources/
 - `V1__baseline.sql`: the whole v1 schema, including the GiST exclusion constraint that
   rejects a booking overlapping another one's buffers (`ExclusionConstraintIT` proves it
   against a real Postgres)
+- The cross-cutting layer above: one error shape, `PageResponse`, the injected `Clock` that
+  makes every time-dependent test possible, rate limiting and request correlation
 
 ## Not built yet
 
 Entities, auth, the availability engine, and every endpoint. `SecurityConfig` currently
-permits everything and is replaced when auth lands. Build order is tracked in the local
+permits everything and is replaced when auth lands — which is also when 401 and 403 raised
+*inside* the security filter chain start using the problem shape above, via an explicit
+`AuthenticationEntryPoint` and `AccessDeniedHandler`. Build order is tracked in the local
 project brief (see `docs/`, not committed yet).

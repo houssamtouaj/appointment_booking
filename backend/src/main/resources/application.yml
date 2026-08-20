@@ -66,6 +66,15 @@ server:
   error:
     include-message: never
     include-stacktrace: never
+  # `none` is the correct default: it makes getRemoteAddr() the real peer, which is what the
+  # rate limiter keys on. A deploy that terminates TLS at a proxy sets this to `framework`, and
+  # must be certain the proxy overwrites X-Forwarded-For rather than appending to a caller's.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+
+logging:
+  pattern:
+    # Every line carries the X-Request-Id echoed to the caller, so a reported 500 is one grep.
+    correlation: "[%X{requestId:-}] "
 
 management:
   endpoints:
@@ -98,6 +107,24 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   mail:
     from: ${MAIL_FROM:no-reply@slotflow.local}
+  # D12. In-memory Bucket4j buckets, so these budgets are per instance: a two-container deploy
+  # doubles them. Honest for a single-instance demo; a real one moves the store to Redis and
+  # changes nothing else. Windows refill smoothly, not in one jump at the end.
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    # Per IP on POST /api/auth/login. Ahead of BCrypt on purpose.
+    login:
+      capacity: 10
+      window: PT1M
+    # Per IP on every other unauthenticated write under /api/auth/** and /api/public/**.
+    public-write:
+      capacity: 10
+      window: PT1M
+    # Per guest email on booking creation; enforced in plan 10's service, not in the filter,
+    # because the address only exists once the body is parsed.
+    guest-booking:
+      capacity: 5
+      window: PT1H
   security:
     jwt:
       # consumed from plan 05 onwards; at least 32 bytes, environment only

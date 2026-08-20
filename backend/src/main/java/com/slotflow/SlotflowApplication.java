@@ -2,6 +2,7 @@ package com.slotflow;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 /**
  * SlotFlow API entry point.
@@ -10,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Every instant is stored and served in UTC.
  */
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class SlotflowApplication {
 
     public static void main(String[] args) {
