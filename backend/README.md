@@ -287,6 +287,10 @@ Rules worth knowing:
   window as everywhere else.
 - **The last active owner cannot be deactivated *or* demoted** → `409 LAST_OWNER`. A business
   with no active owner has nobody who can invite one.
+- **A pending invitee cannot be activated by flipping the flag** → `409`. The invitation is the
+  only route from invited to active, because it is the only route that sets a password;
+  otherwise the result is a user who is active, cannot log in, and is nonetheless listed on the
+  public booking page as somebody a customer can book with.
 - **The public staff DTO is written by hand.** `PublicStaffResponse` is id and display name;
   reusing the admin record would publish every field it ever grows, and the leak would arrive
   through a change to a class nobody was thinking about at the time.

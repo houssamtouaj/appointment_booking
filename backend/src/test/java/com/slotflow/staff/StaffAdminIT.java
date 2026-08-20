@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.slotflow.security.LoginRequest;
 import com.slotflow.support.ApiIntegrationTest;
+import com.slotflow.support.fixtures.Fixtures;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -188,6 +189,24 @@ class StaffAdminIT extends ApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(asJson(new LoginRequest(staff.getEmail(), PASSWORD))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("a pending invitee cannot be activated by flipping the flag")
+    void invitedMembersCannotBeActivatedWithoutAccepting() throws Exception {
+        Tenant tenant = aTenant();
+        User invited = users.save(Fixtures.aStaffMember()
+                .forBusiness(tenant.business())
+                .invited()
+                .build());
+
+        // Otherwise the result is a user who is active with no password: unable to log in, and
+        // listed on the public booking page as someone a customer can book with.
+        patchActive(tenant, invited.getId(), true)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DATA_CONFLICT"));
+
+        assertThat(users.findById(invited.getId()).orElseThrow().isActive()).isFalse();
     }
 
     @Test

@@ -216,7 +216,7 @@ public class StaffAdminService {
         StaffUpdateResponse.DeactivationWarning warning = null;
         if (request.active() != null && request.active() != user.isActive()) {
             if (request.active()) {
-                user.activate();
+                activate(user);
             } else {
                 warning = deactivate(user);
             }
@@ -224,6 +224,23 @@ public class StaffAdminService {
 
         users.save(user);
         return new StaffUpdateResponse(toResponse(user), warning);
+    }
+
+    /**
+     * Reactivates someone who was deactivated — and refuses to activate someone who never
+     * accepted.
+     *
+     * <p>Without that second half, an owner could flip the {@code active} flag on a pending
+     * invitee and produce a user who is active with no password: unable to log in, and yet listed
+     * on the public booking page as somebody a customer can book with. The invitation is the only
+     * route from invited to active, because it is the only route that sets a password.
+     */
+    private void activate(User user) {
+        if (!user.hasPassword()) {
+            throw new ApiException(ErrorCode.DATA_CONFLICT,
+                    "That colleague has not accepted their invitation yet. Resend it instead.");
+        }
+        user.activate();
     }
 
     /**
