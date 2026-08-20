@@ -206,6 +206,46 @@ class BookingTransitionTest {
         }
     }
 
+    @Nested
+    @DisplayName("the Checkout session")
+    class CheckoutSession {
+
+        @Test
+        @DisplayName("a session id is attached once and never replaced")
+        void attachingASecondSessionIsRefused() {
+            Booking pending = bookingIn(BookingStatus.PENDING);
+            pending.attachCheckoutSession("cs_test_first");
+
+            // Overwriting it would leave the first session's webhook with nothing to resolve
+            // through findByStripeSessionId, so a genuine payment event would be dropped in
+            // silence. "One booking per Checkout session" is what makes replay harmless.
+            assertThatThrownBy(() -> pending.attachCheckoutSession("cs_test_second"))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThat(pending.getStripeSessionId()).isEqualTo("cs_test_first");
+        }
+
+        @Test
+        @DisplayName("only a booking still awaiting its deposit can be sent to Checkout")
+        void aConfirmedBookingCannotBeSentToCheckout() {
+            Booking confirmed = bookingIn(BookingStatus.CONFIRMED);
+
+            assertThatThrownBy(() -> confirmed.attachCheckoutSession("cs_test_late"))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThat(confirmed.getStripeSessionId()).isNull();
+        }
+
+        @Test
+        @DisplayName("confirming keeps the session id, so a replayed webhook still resolves")
+        void confirmingKeepsTheSessionId() {
+            Booking pending = bookingIn(BookingStatus.PENDING);
+            pending.attachCheckoutSession("cs_test_first");
+
+            pending.confirm();
+
+            assertThat(pending.getStripeSessionId()).isEqualTo("cs_test_first");
+        }
+    }
+
     // ---------------------------------------------------------------------------------
     //  helpers
     // ---------------------------------------------------------------------------------

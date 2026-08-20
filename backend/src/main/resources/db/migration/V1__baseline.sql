@@ -101,7 +101,8 @@ CREATE TABLE app_user (
     CONSTRAINT app_user_role_chk        CHECK (role IN ('OWNER', 'STAFF')),
     -- Redundant against the primary key, and not decoration: it is the only thing that lets
     -- another table point at (id, business_id) and so inherit "this user is in that tenant" as a
-    -- referential guarantee rather than as an application check. See staff_service and booking.
+    -- referential guarantee rather than as an application check. See staff_service, booking
+    -- and availability_override.
     CONSTRAINT app_user_id_business_key UNIQUE (id, business_id)
 );
 
@@ -201,7 +202,7 @@ CREATE TABLE availability_override (
     business_id uuid         NOT NULL REFERENCES business (id) ON DELETE CASCADE,
     -- NULL = business-wide closure applying to every staff member (D5). "Closed Christmas
     -- Day" is one row that cannot drift as staff join and leave.
-    staff_id    uuid         REFERENCES app_user (id) ON DELETE CASCADE,
+    staff_id    uuid,
     date        date         NOT NULL,
     start_time  time,
     end_time    time,
@@ -209,6 +210,15 @@ CREATE TABLE availability_override (
     reason      varchar(200),
     created_at  timestamptz  NOT NULL DEFAULT now(),
     updated_at  timestamptz  NOT NULL DEFAULT now(),
+
+    -- Composite for the same reason staff_service's two keys are. With a plain (staff_id)
+    -- reference, an override naming another tenant's staff member satisfies every constraint
+    -- on this table and commits -- and the engine reads staff-level overrides by staff id
+    -- alone, so it would then black out that person's calendar in their own business. The
+    -- default MATCH SIMPLE semantics skip the check entirely when staff_id IS NULL, which is
+    -- exactly what a business-wide closure (D5) needs, so the two rules do not fight.
+    CONSTRAINT availability_override_staff_fkey FOREIGN KEY (staff_id, business_id)
+        REFERENCES app_user (id, business_id) ON DELETE CASCADE,
 
     CONSTRAINT availability_override_type_chk  CHECK (type IN ('BLOCKED', 'EXTRA')),
     -- Both null = whole day. One of the two null is a bug, never a meaning.

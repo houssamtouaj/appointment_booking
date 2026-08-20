@@ -7,7 +7,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * The three rate limits from D12, in configuration rather than in constants, so a load test or
  * a demo walkthrough can loosen them without a rebuild.
  *
- * @param enabled     off in most tests: a shared bucket makes test order significant
+ * <p>No fallback values in the constructor, deliberately. The budgets are written down once, in
+ * {@code application.yml}, next to the comment that explains them. A second copy here would mean
+ * tuning the yaml leaves the code stating last month's numbers, and an environment that omits a
+ * block would silently get the stale copy instead of refusing to start.
+ *
+ * @param enabled     switched off for the whole integration suite (see {@code IntegrationTest}):
+ *                    the buckets are per process and keyed by IP, so leaving them on would make
+ *                    test order significant
  * @param login       per client IP on the login endpoint
  * @param publicWrite per client IP on every other unauthenticated write
  * @param guestBooking per guest email address, enforced by plan 10's booking service rather
@@ -21,9 +28,15 @@ public record RateLimitProperties(
         Limit guestBooking) {
 
     public RateLimitProperties {
-        login = login != null ? login : new Limit(10, Duration.ofMinutes(1));
-        publicWrite = publicWrite != null ? publicWrite : new Limit(10, Duration.ofMinutes(1));
-        guestBooking = guestBooking != null ? guestBooking : new Limit(5, Duration.ofHours(1));
+        requireConfigured(login, "app.rate-limit.login");
+        requireConfigured(publicWrite, "app.rate-limit.public-write");
+        requireConfigured(guestBooking, "app.rate-limit.guest-booking");
+    }
+
+    private static void requireConfigured(Limit limit, String property) {
+        if (limit == null) {
+            throw new IllegalArgumentException(property + " must be configured");
+        }
     }
 
     /**

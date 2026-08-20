@@ -17,7 +17,20 @@ import org.springframework.data.jpa.repository.Query;
  */
 public interface AvailabilityOverrideRepository extends JpaRepository<AvailabilityOverride, UUID> {
 
-    /** Staff-level overrides for the whole range, in one query. */
+    /**
+     * Staff-level overrides for the whole range, in one query.
+     *
+     * <p>Guarded the same way {@code BookingRepository.findActiveForStaffBetween} is: an empty
+     * staff set renders {@code in ()}, a query that can only return nothing, and a business whose
+     * staff are all deactivated would send one per availability request.
+     */
+    default List<AvailabilityOverride> findForStaffBetween(
+            Collection<UUID> staffIds, LocalDate from, LocalDate to) {
+        return staffIds.isEmpty()
+                ? List.of()
+                : findByStaffIdInAndDateBetween(staffIds, from, to);
+    }
+
     List<AvailabilityOverride> findByStaffIdInAndDateBetween(
             Collection<UUID> staffIds, LocalDate from, LocalDate to);
 

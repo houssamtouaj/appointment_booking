@@ -14,6 +14,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 
 /**
  * Rate limits the endpoints that create rows and send mail without any authentication (D12).
@@ -33,6 +34,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     /** After request correlation, so the rejection is logged with an id; before security. */
     public static final int ORDER = RequestCorrelationFilter.ORDER + 5;
+
+    /**
+     * Decodes {@code %xx}, strips matrix parameters and collapses duplicate slashes — the same
+     * normalisation the dispatcher applies before it picks a handler. Matching the raw
+     * {@code getRequestURI()} instead is a bypass rather than an untidiness:
+     * {@code /api/auth/%6Cogin} and {@code /api/auth/login;x=1} both reach the real login handler,
+     * and neither is equal to the literal below, so a caller rotating encodings gets an unlimited
+     * login endpoint — which, in front of BCrypt at strength 12, is exactly the CPU amplifier
+     * this filter exists to close.
+     */
+    private static final UrlPathHelper PATHS = UrlPathHelper.defaultInstance;
 
     private static final String LOGIN_PATH = "/api/auth/login";
     private static final String AUTH_PREFIX = "/api/auth/";
@@ -73,7 +85,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     /** {@code null} means "not a limited endpoint": most traffic takes this branch. */
     private static RateLimiter.Scope scopeFor(HttpServletRequest request) {
-        String path = request.getRequestURI();
+        String path = PATHS.getPathWithinApplication(request);
         if (HttpMethod.POST.matches(request.getMethod()) && LOGIN_PATH.equals(path)) {
             return RateLimiter.Scope.LOGIN;
         }

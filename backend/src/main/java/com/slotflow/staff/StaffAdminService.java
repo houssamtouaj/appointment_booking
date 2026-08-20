@@ -98,7 +98,7 @@ public class StaffAdminService {
         }
         List<UUID> ids = team.stream().map(User::getId).toList();
 
-        Map<UUID, List<UUID>> servicesByStaff = assignments.findByStaffIdIn(ids).stream()
+        Map<UUID, List<UUID>> servicesByStaff = assignments.findForStaff(ids).stream()
                 .collect(Collectors.groupingBy(StaffService::getStaffId,
                         Collectors.mapping(StaffService::getServiceId, Collectors.toList())));
         // "Pending" means an invitation exists that is neither used nor expired. An invitation that

@@ -6,6 +6,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.MethodParameter;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
@@ -165,7 +166,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         Problems.addValidationErrors(problem, ex.getAllValidationResults().stream()
                 .flatMap(result -> result.getResolvableErrors().stream()
                         .map(error -> new ValidationError(
-                                result.getMethodParameter().getParameterName(),
+                                parameterName(result.getMethodParameter()),
                                 error.getDefaultMessage())))
                 .toList());
         return handleExceptionInternal(ex, problem, headers,
@@ -215,6 +216,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 ? fieldError.getField()
                 : error.getObjectName();
         return new ValidationError(field, error.getDefaultMessage());
+    }
+
+    /**
+     * {@code getParameterName()} is null unless the class was compiled with {@code -parameters}
+     * (pom.xml supplies it today, and one build-config edit would take it away). A null field is
+     * dropped from the body altogether by {@code NON_NULL} inclusion, leaving the React forms a
+     * message with nothing to attach it to. {@code arg0} is at least Spring's own spelling for an
+     * unnamed parameter, and it is positional.
+     */
+    private static String parameterName(MethodParameter parameter) {
+        String name = parameter.getParameterName();
+        return name != null ? name : "arg" + parameter.getParameterIndex();
     }
 
     /** {@code create.request.durationMinutes} is noise; the client only knows the leaf name. */

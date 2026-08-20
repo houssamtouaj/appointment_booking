@@ -87,6 +87,33 @@ class RateLimitFilterTest {
     }
 
     @Test
+    @DisplayName("a percent-encoded login path spends the login budget like any other")
+    void encodedLoginPathIsStillTheLoginPath() throws Exception {
+        // Spring decodes each path segment before it chooses a handler, so /api/auth/%6Cogin
+        // reaches the real login endpoint. A limiter comparing the raw URI would wave every one of
+        // these through, and an attacker rotating encodings would have an unlimited endpoint in
+        // front of BCrypt.
+        assertThat(callStatus("POST", "/api/auth/%6Cogin")).isEqualTo(HttpStatus.OK.value());
+        assertThat(callStatus("POST", "/api/auth/login")).isEqualTo(HttpStatus.OK.value());
+
+        assertThat(callStatus("POST", "/api/auth/%6Cogin"))
+                .as("the encoded spelling must share the budget, not have one of its own")
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+    }
+
+    @Test
+    @DisplayName("matrix parameters do not buy a fresh login budget either")
+    void matrixParametersAreStrippedBeforeMatching() throws Exception {
+        // The dispatcher treats `;name=value` as segment parameters and strips them; an exact
+        // match against the raw URI does not.
+        assertThat(callStatus("POST", "/api/auth/login;x=1")).isEqualTo(HttpStatus.OK.value());
+        assertThat(callStatus("POST", "/api/auth/login")).isEqualTo(HttpStatus.OK.value());
+
+        assertThat(callStatus("POST", "/api/auth/login;x=2"))
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+    }
+
+    @Test
     @DisplayName("public reads are never limited: the booking calendar polls them")
     void readsPassThrough() throws Exception {
         for (int attempt = 0; attempt < 10; attempt++) {
@@ -106,8 +133,12 @@ class RateLimitFilterTest {
     @Test
     @DisplayName("with the limiter switched off nothing is rejected, whatever the traffic")
     void disabledLimiterLetsEverythingThrough() throws Exception {
+        // The limits are present but irrelevant: `enabled: false` returns before any bucket is
+        // consulted. Not null, because the properties record refuses a missing limit rather than
+        // inventing one.
+        RateLimitProperties.Limit unused = new RateLimitProperties.Limit(1, Duration.ofMinutes(1));
         RateLimitFilter disabled = new RateLimitFilter(
-                new RateLimiter(new RateLimitProperties(false, null, null, null)),
+                new RateLimiter(new RateLimitProperties(false, unused, unused, unused)),
                 new ProblemDetailWriter(new ObjectMapper()));
 
         for (int attempt = 0; attempt < 20; attempt++) {

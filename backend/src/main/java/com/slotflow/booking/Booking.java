@@ -135,6 +135,12 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
     private Booking(UUID businessId, ServiceOffering service, UUID staffId, Instant startsAt,
                     GuestContact guest, String notes, BookingStatus initialStatus,
                     Instant expiresAt) {
+        requireNotNull(businessId, "businessId");
+        requireNotNull(service, "service");
+        requireNotNull(guest, "guest");
+        // After the null checks, not before: a null businessId compares unequal to the service's
+        // own, so this message would otherwise send a reader hunting for a cross-tenant bug that
+        // is not there.
         if (!service.getBusinessId().equals(businessId)) {
             throw new IllegalArgumentException("service belongs to a different business");
         }
@@ -280,9 +286,27 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
     //  payment and notification bookkeeping
     // ---------------------------------------------------------------------------------
 
-    /** One booking per Checkout session, which is what makes webhook replay harmless (plan 11). */
+    /**
+     * One booking per Checkout session, which is what makes webhook replay harmless (plan 11).
+     *
+     * <p>Guarded like every other mutator here, because that sentence is a claim plan 11 relies on
+     * rather than a description. Overwriting the id would leave the first session's webhook with
+     * nothing to resolve through {@code findByStripeSessionId}, so a genuine payment event would be
+     * dropped in silence — and only a booking still holding its slot for a deposit has any business
+     * being sent to Checkout at all.
+     */
     public void attachCheckoutSession(String stripeSessionId) {
-        this.stripeSessionId = stripeSessionId;
+        if (this.stripeSessionId != null) {
+            throw new IllegalStateException("this booking already has a Checkout session");
+        }
+        // IllegalStateException, not IllegalBookingTransitionException: attaching a session is
+        // bookkeeping rather than a move through the matrix, and a 409 naming the same status
+        // twice would say nothing. Same choice as markReminderSent below.
+        if (status != BookingStatus.PENDING) {
+            throw new IllegalStateException(
+                    "only a booking awaiting a deposit can be sent to Checkout");
+        }
+        this.stripeSessionId = requireNotNull(stripeSessionId, "stripeSessionId");
     }
 
     public void recordDepositPaid(long amountCents) {

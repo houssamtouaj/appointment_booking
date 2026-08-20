@@ -68,12 +68,17 @@ public class StaffService {
         this.serviceId = serviceId;
     }
 
-    /** Identity is the pair, matching the primary key; businessId is derived from either half. */
+    /**
+     * Identity is the pair, matching the primary key; businessId is derived from either half.
+     *
+     * <p>Read through the getters, not the fields: a Hibernate proxy is a generated subclass whose
+     * inherited fields are never populated, so a field read would compare against two nulls.
+     */
     @Override
     public boolean equals(Object other) {
         return other instanceof StaffService assignment
-                && staffId.equals(assignment.staffId)
-                && serviceId.equals(assignment.serviceId);
+                && staffId.equals(assignment.getStaffId())
+                && serviceId.equals(assignment.getServiceId());
     }
 
     @Override

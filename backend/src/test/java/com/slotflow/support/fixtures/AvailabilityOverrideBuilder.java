@@ -78,12 +78,8 @@ public final class AvailabilityOverrideBuilder {
         return this;
     }
 
-    /** Extra hours are always a range, so this defaults one if the test did not set it. */
     public AvailabilityOverrideBuilder extra() {
         this.blocked = false;
-        if (startTime == null) {
-            between("18:00", "20:00");
-        }
         return this;
     }
 
@@ -93,6 +89,13 @@ public final class AvailabilityOverrideBuilder {
     }
 
     public AvailabilityOverride build() {
+        // Extra hours are always a range, so default one if the test did not set it. Here and not
+        // in extra(), which would make the builder order-dependent: extra() reading startTime at
+        // call time turns wholeDay().extra() into a silent two-hour override and extra().wholeDay()
+        // into an IllegalArgumentException, from two spellings of the same intent.
+        if (!blocked && startTime == null) {
+            between("18:00", "20:00");
+        }
         if (!blocked) {
             return AvailabilityOverride.extraHours(businessId, staffId, date, startTime, endTime, reason);
         }

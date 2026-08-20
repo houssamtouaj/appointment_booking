@@ -61,13 +61,26 @@ public final class Problems {
     }
 
     /**
+     * Null-tolerant on both members, and that is not defensive padding. A
+     * {@code MessageSourceResolvable} may carry no default message, and a controller parameter has
+     * no name unless the class was compiled with {@code -parameters}. A bare
+     * {@code Comparator.comparing} throws on either — from inside the {@code @ExceptionHandler}
+     * that called it, so the caller gets Boot's fallback error page instead of the 422 this class
+     * exists to guarantee.
+     */
+    private static final Comparator<ValidationError> BY_FIELD_THEN_MESSAGE =
+            Comparator.comparing(ValidationError::field,
+                            Comparator.nullsFirst(Comparator.<String>naturalOrder()))
+                    .thenComparing(ValidationError::message,
+                            Comparator.nullsFirst(Comparator.<String>naturalOrder()));
+
+    /**
      * Sorted, because Hibernate Validator reports violations in an unspecified order and an
      * unsorted {@code errors[]} makes the contract test flake roughly one run in two.
      */
     public static void addValidationErrors(ProblemDetail problem, List<ValidationError> errors) {
         problem.setProperty(ERRORS_PROPERTY, errors.stream()
-                .sorted(Comparator.comparing(ValidationError::field)
-                        .thenComparing(ValidationError::message))
+                .sorted(BY_FIELD_THEN_MESSAGE)
                 .toList());
     }
 

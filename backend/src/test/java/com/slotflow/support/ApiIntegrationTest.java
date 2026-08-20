@@ -20,7 +20,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -28,26 +27,24 @@ import org.springframework.test.web.servlet.MvcResult;
  * Base class for a test that drives the API through {@link MockMvc}, with the real security filter
  * chain in front of it.
  *
- * <p>It adds three things to {@link IntegrationTest} and nothing else, so that every subclass keeps
+ * <p>It adds two things to {@link IntegrationTest} and nothing else, so that every subclass keeps
  * sharing one application context:
  *
  * <ul>
  *   <li><b>MockMvc with the security chain applied</b>, which is the point: an authorisation test
  *       that bypasses the filter chain proves nothing about the filter chain.</li>
- *   <li><b>Rate limiting off.</b> The buckets are per process and keyed by IP, so with it on the
- *       eleventh login in a class would fail — and which test that is would depend on execution
- *       order. {@code RateLimitFilterTest} covers the limiter itself, where the assertions can be
- *       exact.</li>
  *   <li><b>A recording notification service</b>, so a test can read an invitation link the way its
  *       recipient would. See {@link RecordingNotificationService}.</li>
  * </ul>
+ *
+ * <p>Rate limiting is off for every integration test, not only the ones that go through MockMvc;
+ * {@link IntegrationTest} switches it off and says why.
  *
  * <p>The tenant helpers below matter more than they look. Container reuse means the database is not
  * empty between runs, so every test builds its own business and asserts only on rows it created —
  * {@code aBusiness()} generates a unique slug and each user a unique email for exactly that reason.
  */
 @AutoConfigureMockMvc
-@TestPropertySource(properties = "app.rate-limit.enabled=false")
 @ContextConfiguration(classes = ApiIntegrationTest.RecordingNotifications.class)
 public abstract class ApiIntegrationTest extends IntegrationTest {
 

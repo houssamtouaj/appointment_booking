@@ -1,32 +1,28 @@
 package com.slotflow.business;
 
+import com.slotflow.common.jpa.AbstractAuditedEntity;
 import com.slotflow.tenant.TenantOwned;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
-import jakarta.persistence.PostLoad;
-import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.domain.Persistable;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * The four numbers that decide which slots a customer is allowed to pick.
  *
  * <p>Exactly one policy per business, enforced by the schema rather than by convention: the
  * primary key <em>is</em> the foreign key, so there is no such thing as a second policy or an
- * orphaned one. That is also why this class does not extend {@code AbstractEntity} — it has no
- * surrogate id of its own to inherit, and inheriting one would map a column that does not exist.
+ * orphaned one. That is also why this class extends {@link AbstractAuditedEntity} and not
+ * {@code AbstractEntity} — it has no surrogate id of its own to inherit, and inheriting one would
+ * map a column that does not exist. Everything else about being a row — auditing, {@code isNew()},
+ * identity — comes from that shared base rather than from a second copy kept in step by hand.
  *
  * <p>The three window methods are the reason this is an entity with behaviour rather than a bag
  * of integers. They are pure functions of a {@code now} that the caller supplies, which makes
@@ -34,10 +30,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  */
 @Entity
 @Table(name = "booking_policy")
-@EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class BookingPolicy implements Persistable<UUID>, TenantOwned {
+public class BookingPolicy extends AbstractAuditedEntity implements TenantOwned {
 
     /** The schema defaults, restated here so {@link #defaultsFor} and the DDL cannot drift apart. */
     private static final int DEFAULT_MIN_LEAD_TIME_HOURS = 2;
@@ -69,18 +64,9 @@ public class BookingPolicy implements Persistable<UUID>, TenantOwned {
     @Column(nullable = false)
     private int slotGranularityMinutes;
 
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private Instant createdAt;
-
     @LastModifiedDate
     @Column(nullable = false)
     private Instant updatedAt;
-
-    // No getter: this is bookkeeping for Spring Data, not state a caller may read.
-    @Transient
-    @Getter(AccessLevel.NONE)
-    private boolean persisted;
 
     public BookingPolicy(UUID businessId, int minLeadTimeHours, int maxAdvanceDays,
                          int cancellationCutoffHours, int slotGranularityMinutes) {
@@ -164,33 +150,12 @@ public class BookingPolicy implements Persistable<UUID>, TenantOwned {
     }
 
     // ---------------------------------------------------------------------------------
-    //  identity — see AbstractEntity for why isNew() is implemented rather than inferred
+    //  identity — everything else comes from AbstractAuditedEntity, which keys off this
     // ---------------------------------------------------------------------------------
 
     @Override
     public UUID getId() {
         return businessId;
-    }
-
-    @Override
-    public boolean isNew() {
-        return !persisted;
-    }
-
-    @PostPersist
-    @PostLoad
-    void markPersisted() {
-        this.persisted = true;
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof BookingPolicy policy && businessId.equals(policy.businessId);
-    }
-
-    @Override
-    public int hashCode() {
-        return businessId.hashCode();
     }
 
     private static int requireAtLeast(int value, int minimum, String field) {

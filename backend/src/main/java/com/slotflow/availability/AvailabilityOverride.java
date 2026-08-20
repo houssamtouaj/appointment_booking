@@ -24,6 +24,15 @@ import lombok.NoArgsConstructor;
  * something true to show. The partial index in V1 exists precisely for this read, which happens
  * on every availability query.
  *
+ * <h2>Why the tenant is on the row as well as the staff member</h2>
+ * {@code (staff_id, business_id)} is a composite foreign key into {@code app_user}, exactly as on
+ * {@code staff_service} and {@code booking}. Nothing here has to check that the staff member is
+ * in this tenant, because a row that says otherwise cannot be written — by this class, by psql or
+ * by anything else. It matters more here than it looks: the engine reads staff-level overrides by
+ * staff id alone, so a cross-tenant row would black out a stranger's calendar in their own
+ * business. A null {@code staff_id} skips the check, which is what makes the D5 closure above
+ * still expressible.
+ *
  * <h2>Both times null means the whole day</h2>
  * One of the two being null is a bug rather than a meaning, and the schema's
  * {@code (start_time IS NULL) = (end_time IS NULL)} check makes that unrepresentable. The

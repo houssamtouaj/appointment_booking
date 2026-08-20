@@ -39,10 +39,9 @@ spring:
     locations: classpath:db/migration
     validate-on-migrate: true
 
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    default-property-inclusion: non_null
+  # Nothing for Jackson here on purpose. The JSON conventions are part of the published contract
+  # and live in config/JacksonConfig.java, whose customiser is applied after this file and would
+  # win anyway: two spellings of the same setting means editing the visible one changes nothing.
 
   mail:
     host: ${MAIL_HOST:localhost}

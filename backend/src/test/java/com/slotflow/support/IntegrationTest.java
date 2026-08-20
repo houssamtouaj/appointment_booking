@@ -8,6 +8,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
@@ -36,6 +37,13 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * asserts only on rows it inserted. No test may count rows in a whole table, and none may assume
  * an empty database.
  *
+ * <h2>Rate limiting is off</h2>
+ * The buckets are per process and keyed by IP, so with the limiter on, which test in a class is
+ * the eleventh login would depend on execution order. It is switched off here rather than in the
+ * MockMvc subclass so that what {@code RateLimitProperties} says about the test suite is true of
+ * all of it. {@code RateLimitFilterTest} covers the limiter itself against its own instance, where
+ * the assertions can be exact.
+ *
  * <h2>One context</h2>
  * Subclasses that add no context configuration of their own share a single application context,
  * because Spring caches contexts by configuration. That is why the clock is here rather than in
@@ -49,6 +57,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 // @ContextConfiguration listing only @TestConfiguration classes is treated as additive rather than
 // as a replacement for the application's own configuration.
 @ContextConfiguration(classes = IntegrationTest.ClockOverride.class)
+@TestPropertySource(properties = "app.rate-limit.enabled=false")
 public abstract class IntegrationTest {
 
     /**

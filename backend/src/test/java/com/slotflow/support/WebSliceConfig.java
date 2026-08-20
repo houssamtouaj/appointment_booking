@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.slotflow.common.error.ProblemDetailWriter;
 import com.slotflow.common.web.RateLimitProperties;
 import com.slotflow.common.web.RateLimiter;
+import java.time.Duration;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -40,8 +41,14 @@ public class WebSliceConfig {
         return new ProblemDetailWriter(objectMapper);
     }
 
+    /**
+     * The budgets are supplied and never consulted: {@code enabled: false} short-circuits before
+     * any bucket exists. They are not null because {@link RateLimitProperties} refuses a missing
+     * limit rather than inventing one — the numbers live in {@code application.yml} alone.
+     */
     @Bean
     RateLimiter rateLimiter() {
-        return new RateLimiter(new RateLimitProperties(false, null, null, null));
+        RateLimitProperties.Limit unused = new RateLimitProperties.Limit(1, Duration.ofMinutes(1));
+        return new RateLimiter(new RateLimitProperties(false, unused, unused, unused));
     }
 }

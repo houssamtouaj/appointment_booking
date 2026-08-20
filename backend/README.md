@@ -58,7 +58,7 @@ Conventions that hold for every entity:
 | Convention | Why |
 |---|---|
 | `UUID` ids generated in Java, not by the database | A whole aggregate can be wired up in memory and flushed once |
-| `implements Persistable` via `AbstractEntity` | With an assigned id, `save()` would otherwise `merge()` every new row — a wasted `SELECT` and a detached return value |
+| `implements Persistable` via `AbstractAuditedEntity` | With an assigned id, `save()` would otherwise `merge()` every new row — a wasted `SELECT` and a detached return value |
 | `@Enumerated(STRING)` everywhere | Ordinals are a future outage; the round trip is asserted on **raw SQL**, not through JPA |
 | Foreign keys as plain `UUID` fields, no `@ManyToOne` | The engine works on ids and ranges; object graphs buy N+1s across a 30-day window and nothing else |
 | `Instant` for `timestamptz`; `LocalTime`/`LocalDate`/`DayOfWeek` for recurring rules | "09:00 on Tuesdays" is a wall-clock concept that has to survive a DST change |
@@ -73,9 +73,9 @@ human can all reach at the same moment.
 assignment is read from both directions ("what does this person do?" and "who can do this?"),
 and cascading a many-to-many is how deleting a service ends up deleting a staff member.
 
-`TenantOwned` is implemented by `Business`, `User`, `ServiceOffering`, `Booking` and
-`AvailabilityOverride`. It is the type the tenant guard checks against, so adding a new
-tenant-scoped entity cannot mean forgetting to add it to a guard.
+`TenantOwned` is implemented by `Business`, `User`, `ServiceOffering`, `Booking`,
+`AvailabilityOverride` and `BookingPolicy`. It is the type the tenant guard checks against, so
+adding a new tenant-scoped entity cannot mean forgetting to add it to a guard.
 
 ## The error contract
 

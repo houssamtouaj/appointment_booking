@@ -61,8 +61,20 @@ public class RateLimiter {
         }
     }
 
+    /**
+     * A bucket and the capacity it was built with, kept together so the eviction sweep can ask
+     * whether a bucket is full without parsing the scope back out of the composite key — a string
+     * round trip per entry per sweep, and one that throws if the key format is ever changed.
+     */
+    private record Budget(Bucket bucket, long capacity) {
+
+        boolean isFull() {
+            return bucket.getAvailableTokens() >= capacity;
+        }
+    }
+
     private final RateLimitProperties properties;
-    private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
+    private final Map<String, Budget> buckets = new ConcurrentHashMap<>();
 
     public RateLimiter(RateLimitProperties properties) {
         this.properties = properties;
@@ -79,7 +91,8 @@ public class RateLimiter {
             return Decision.pass();
         }
         ConsumptionProbe probe = buckets
-                .computeIfAbsent(scope + "|" + key, ignored -> newBucket(scope))
+                .computeIfAbsent(scope + "|" + key, ignored -> newBudget(scope))
+                .bucket()
                 .tryConsumeAndReturnRemaining(1);
         if (probe.isConsumed()) {
             return Decision.pass();
@@ -88,13 +101,14 @@ public class RateLimiter {
         return Decision.reject(probe.getNanosToWaitForRefill());
     }
 
-    private Bucket newBucket(Scope scope) {
+    private Budget newBudget(Scope scope) {
         RateLimitProperties.Limit limit = limitFor(scope);
-        return Bucket.builder()
+        Bucket bucket = Bucket.builder()
                 .addLimit(bandwidth -> bandwidth
                         .capacity(limit.capacity())
                         .refillGreedy(limit.capacity(), limit.window()))
                 .build();
+        return new Budget(bucket, limit.capacity());
     }
 
     private RateLimitProperties.Limit limitFor(Scope scope) {
@@ -109,24 +123,20 @@ public class RateLimiter {
      * Drops buckets that are back at full capacity, which is exactly the set that would answer
      * the next request identically to a brand new one. Without this the map grows once per
      * distinct IP forever, which is a slow leak on a public endpoint.
+     *
+     * <p>{@code removeIf} compares the mapping before it drops it, so a bucket a concurrent
+     * request has just installed under the same key survives. What the sweep cannot see is a token
+     * taken from a full bucket in the instant after it read the count — that caller gets it back
+     * from the bucket the next request creates. A token or two every five minutes is the price of
+     * a map that does not grow forever; the alternative is holding a lock across every
+     * consumption.
      */
     @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
     void evictIdleBuckets() {
         int before = buckets.size();
-        buckets.entrySet().removeIf(entry ->
-                entry.getValue().getAvailableTokens() >= capacityOf(entry.getKey()));
+        buckets.entrySet().removeIf(entry -> entry.getValue().isFull());
         if (before != buckets.size()) {
             log.debug("Evicted {} idle rate-limit buckets, {} remain", before - buckets.size(), buckets.size());
         }
-    }
-
-    private long capacityOf(String compositeKey) {
-        Scope scope = Scope.valueOf(compositeKey.substring(0, compositeKey.indexOf('|')));
-        return limitFor(scope).capacity();
-    }
-
-    /** Test seam: forget every bucket so one test's traffic cannot fail the next one. */
-    public void reset() {
-        buckets.clear();
     }
 }
