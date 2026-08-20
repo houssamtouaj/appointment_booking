@@ -23,6 +23,17 @@ public final class Problems {
     public static final String ERRORS_PROPERTY = "errors";
     public static final String REQUEST_ID_PROPERTY = "requestId";
 
+    /**
+     * The {@code detail} on every {@code 422}, shared rather than repeated because two very
+     * different producers emit it: the MVC binder's own failures, handled in
+     * {@link GlobalExceptionHandler}, and a service that rejects a field the binder cannot check —
+     * an unknown IANA zone id, for instance. A client that keys off {@code detail} instead of
+     * {@code code} is already doing the wrong thing, but it should at least not see two spellings
+     * of the same sentence.
+     */
+    public static final String VALIDATION_DETAIL =
+            "The request contains invalid fields. See errors for the details.";
+
     private Problems() {
     }
 

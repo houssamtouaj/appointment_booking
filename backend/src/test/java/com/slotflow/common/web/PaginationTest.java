@@ -25,7 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
  * that grows forever is a one-line denial of service, and it is the kind of request a client
  * sends by accident while trying to "just get them all".
  */
-@WebMvcTest
+// See ProblemDetailContractTest: scoped to the probe controller so the real ones stay out.
+@WebMvcTest(controllers = PaginationTest.ProbeController.class)
 @Import({PaginationTest.ProbeController.class, PaginationConfig.class, JacksonConfig.class,
         WebSliceConfig.class})
 class PaginationTest {

@@ -46,9 +46,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    private static final String VALIDATION_DETAIL =
-            "The request contains invalid fields. See errors for the details.";
-
     /**
      * Anything the application threw on purpose. The code, the status and any extra members
      * all come off the exception, so adding an error case later is a new {@link ErrorCode}
@@ -90,7 +87,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<Object> handleConstraintViolation(
             ConstraintViolationException ex, WebRequest request) {
-        ProblemDetail problem = Problems.of(ErrorCode.VALIDATION_FAILED, VALIDATION_DETAIL);
+        ProblemDetail problem = Problems.of(ErrorCode.VALIDATION_FAILED, Problems.VALIDATION_DETAIL);
         Problems.addValidationErrors(problem, ex.getConstraintViolations().stream()
                 .map(violation -> new ValidationError(leafPath(violation), violation.getMessage()))
                 .toList());
@@ -147,7 +144,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex, HttpHeaders headers,
             HttpStatusCode status, WebRequest request) {
-        ProblemDetail problem = Problems.of(ErrorCode.VALIDATION_FAILED, VALIDATION_DETAIL);
+        ProblemDetail problem = Problems.of(ErrorCode.VALIDATION_FAILED, Problems.VALIDATION_DETAIL);
         Problems.addValidationErrors(problem, ex.getBindingResult().getAllErrors().stream()
                 .map(GlobalExceptionHandler::toValidationError)
                 .toList());
@@ -164,7 +161,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleHandlerMethodValidationException(
             HandlerMethodValidationException ex, HttpHeaders headers,
             HttpStatusCode status, WebRequest request) {
-        ProblemDetail problem = Problems.of(ErrorCode.VALIDATION_FAILED, VALIDATION_DETAIL);
+        ProblemDetail problem = Problems.of(ErrorCode.VALIDATION_FAILED, Problems.VALIDATION_DETAIL);
         Problems.addValidationErrors(problem, ex.getAllValidationResults().stream()
                 .flatMap(result -> result.getResolvableErrors().stream()
                         .map(error -> new ValidationError(

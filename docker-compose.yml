@@ -56,6 +56,8 @@ services:
       MAIL_PORT: 1025
       MAIL_FROM: ${MAIL_FROM:-no-reply@slotflow.local}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env — see .env.example}
+      REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-false}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:5173}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8080}

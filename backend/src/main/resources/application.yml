@@ -125,12 +125,29 @@ app:
     guest-booking:
       capacity: 5
       window: PT1H
+  # Where the SPA is served from. Only used to build the links in outbound mail — the reset
+  # link and the invitation link — which until plan 12 are written to the log instead.
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
   security:
     jwt:
-      # consumed from plan 05 onwards; at least 32 bytes, environment only
+      # at least 32 bytes, environment only; the app refuses to start without it
       secret: ${JWT_SECRET:}
       access-token-ttl: PT15M
       refresh-token-ttl: P7D
+    # The refresh token's transport: httpOnly cookie, SameSite=Lax, scoped to /api/auth.
+    # The name and path are constants in RefreshTokenCookie; only these two vary by environment.
+    refresh-cookie:
+      # true wherever a browser reaches the API over TLS. False on plain-HTTP localhost, or the
+      # browser silently drops the cookie and every refresh fails with no visible cause.
+      secure: ${REFRESH_COOKIE_SECURE:false}
+      same-site: Lax
+    # D6: single-use, one hour. Plan 06: invitations last a week.
+    password-reset-ttl: PT1H
+    invitation-ttl: P7D
+    # 10-12 in production. The test suite drops it to 4 (see the surefire argLine in pom.xml):
+    # BCrypt is deliberately slow, and a suite that logs in a hundred times pays for it.
+    bcrypt-strength: ${BCRYPT_STRENGTH:12}
   stripe:
     # consumed from plan 11 onwards
     secret-key: ${STRIPE_SECRET_KEY:}

@@ -47,7 +47,10 @@ import org.springframework.web.bind.annotation.RestController;
  * OpenAPI document and in the deployed demo. Nested and unannotated at the class level means
  * component scanning cannot reach it, so it exists here and nowhere else.
  */
-@WebMvcTest
+// Scoped to the probe controller. Without `controllers = ...` a slice test registers every
+// @RestController on the classpath, so from plan 05 onwards this test would need AuthService and a
+// database to assert the shape of a 422 — and the slice would stop being a slice.
+@WebMvcTest(controllers = ProblemDetailContractTest.ProbeController.class)
 @Import({ProblemDetailContractTest.ProbeController.class, JacksonConfig.class, WebSliceConfig.class})
 class ProblemDetailContractTest {
 

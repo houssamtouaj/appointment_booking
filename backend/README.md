@@ -101,6 +101,110 @@ response carries and every log line is stamped with.
 `ProblemDetailContractTest` asserts that body **strictly** — an added member or a renamed key
 fails the build, because the React forms parse these exact keys.
 
+## Auth
+
+### Tokens
+
+| Token | Lifetime | Where it lives | How it is stored |
+|---|---|---|---|
+| Access | 15 min | client memory only | not stored — it is a signed JWT |
+| Refresh | 7 days | httpOnly cookie, `Path=/api/auth` | SHA-256 hash in `refresh_token` |
+| Password reset | 1 h, single use | emailed link | SHA-256 hash in `password_reset_token` |
+| Invitation | 7 days, single use | emailed link | SHA-256 hash in `staff_invitation` |
+
+The access token is HS256 with a `JWT_SECRET` of at least 32 bytes, read from the
+environment; the application refuses to start without one rather than 500ing on the first
+login. Its claims are `sub` (user id), **`bid` (business id — the tenant boundary)**, `role`,
+`iat`, `exp` and `jti`.
+
+Nothing in the API revokes an access token, and that is the design rather than an omission:
+a valid signature is a valid request, with no database round trip. The cost is a window —
+a deactivated user, or one whose role just changed, keeps their old rights until the token
+expires. Fifteen minutes bounds it, `/api/auth/refresh` is where the change lands, and
+`logout` says so explicitly: the refresh token dies immediately, the access token has up to
+fifteen minutes left. The token is also the *only* source of role and tenant for a request.
+Reading either back from the database on some paths and not others is how two parts of one
+codebase come to disagree about who is calling.
+
+### Refresh rotation with reuse detection
+
+Every refresh revokes the presented token, issues a successor, and links the two through
+`replaced_by`. A refresh token is therefore usable exactly once, and the chain is a session's
+history.
+
+That chain is what makes theft visible. A token that is already revoked can only be presented
+by someone holding a copy — the legitimate client rotated and discarded it. So a replay is not
+a plain 401: it revokes **every live token for that user** and returns `401 REFRESH_REUSED`.
+An attacker who steals a refresh token gets one use of it, and the next refresh by either
+party logs both out. The victim notices, which is the point.
+
+The revocation runs in its own transaction (`REQUIRES_NEW`) precisely because the exception
+that reports it would otherwise roll it back — the API would answer "this session has been
+ended" and end nothing, and every status-code assertion would still pass. `RefreshRotationIT`
+asserts the chain state in SQL for that reason, not through the API's own answers.
+
+### Refresh-token transport — the decision
+
+**httpOnly cookie, `SameSite=Lax`, `Path=/api/auth`, `Secure` in every deployed environment.
+The access token lives in the SPA's memory and is never persisted.**
+
+- `HttpOnly` is the whole reason: an XSS bug cannot exfiltrate a seven-day credential. A
+  refresh token in a JSON body reaches `localStorage` in every codebase that has tried it,
+  whatever the README says.
+- `SameSite=Lax` plus the path scope is the CSRF answer. A cross-site `POST` does not carry a
+  Lax cookie, and the two endpoints that read one are the only ones that accept a cookie for
+  anything — everything else authorises on the `Authorization` header. That is why
+  `csrf()` is disabled: a conclusion, not an oversight.
+- Consequences the frontend plans depend on: CORS sends `allowCredentials`, so the origin list
+  can never be a wildcard, and the SPA's Axios instance needs `withCredentials: true`. Its
+  interceptor retries a 401 once against `POST /api/auth/refresh` with no body.
+- `/refresh` and `/logout` also accept `{"refreshToken": "..."}` in the body. That is not a
+  second browser transport — it is how a non-browser client, Swagger UI or a test presents a
+  *specific* token, which is the only way to demonstrate reuse detection at all, since a
+  browser has by then thrown the old value away. The raw value is visible to a human in the
+  `Set-Cookie` response header.
+
+### The filter chain
+
+Stateless sessions, BCrypt (strength from configuration: 12 in production, 4 in the suite —
+BCrypt is deliberately slow and a suite that signs in a hundred times should not pay for it),
+and an enumerated public allowlist:
+
+```
+/api/auth/register  /api/auth/login  /api/auth/refresh
+/api/auth/forgot-password  /api/auth/reset-password
+/api/public/**  /api/webhooks/stripe
+/swagger-ui/**  /v3/api-docs/**  /actuator/health
+```
+
+Enumerated, not `/api/auth/**`: `/me` and `/logout` need a caller, and a prefix rule would
+leave both anonymous while still *looking* correct. Everything else is `authenticated()`, and
+roles are checked by `@PreAuthorize` next to the method they guard rather than by a second list
+of URL patterns here — "OWNER, or STAFF acting on themselves" is a sentence no URL pattern can
+express.
+
+`401` and `403` raised **inside** the chain go through an explicit `AuthenticationEntryPoint`
+and `AccessDeniedHandler` onto the same `Problems` factory as everything else. Without them,
+the two errors Spring Security writes itself would be the only responses in this API that a
+client cannot parse like the rest — the risk plan 04 called out. `FilterChainProblemBodyTest`
+compares those two bodies strictly.
+
+### Login hardening and password reset
+
+An unknown address, a wrong password and a deactivated account return a **byte-identical**
+401, and login performs exactly one BCrypt verification on every path — including when there
+is no user at all, against a hash of a random value computed at startup — so the timing does
+not answer what the body refuses to. `AuthFlowIT` asserts the three bodies are equal as
+strings.
+
+`forgot-password` always answers `202`, whether or not the address exists (D6). A reset token
+is single use, expires in an hour on the injected clock, and on success **revokes every refresh
+token the user holds** — a reset exists to end the sessions a compromise created, and one that
+leaves them alive has accomplished nothing.
+
+Rate limiting sits in front of all of this (see below), and deliberately ahead of Spring
+Security: BCrypt at strength 12 makes an unlimited login endpoint a CPU amplifier.
+
 ## Pagination
 
 `?page=&size=` with `size` defaulting to 20 and clamped to 100, returning
@@ -172,11 +276,12 @@ is visibly a test about buffers.
 - The domain model above: eleven entities, their repositories, and the behaviour the later
   plans call — booking transitions, policy windows, buffer arithmetic, deposit rounding
 - The test harness above: one shared container, a movable clock, and fixture builders
+- The auth stack above: registration in one transaction, refresh rotation with reuse
+  detection, password reset, and the problem-detail 401/403 from inside the filter chain
 
 ## Not built yet
 
-Auth, the availability engine, and every endpoint. `SecurityConfig` currently
-permits everything and is replaced when auth lands — which is also when 401 and 403 raised
-*inside* the security filter chain start using the problem shape above, via an explicit
-`AuthenticationEntryPoint` and `AccessDeniedHandler`. Build order is tracked in the local
-project brief (see `docs/`, not committed yet).
+The availability engine, the catalog, bookings, payments and the dashboard. Email has no
+transport yet: `NotificationService` is an interface with a logging implementation, so the
+invitation and reset links are read from the api log until plan 12. Build order is tracked in
+the local project brief (see `docs/`, not committed yet).

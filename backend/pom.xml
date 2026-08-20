@@ -225,8 +225,18 @@
                       suite passes on an English machine and fails on a French one. It has to be
                       a JVM argument, not a systemPropertyVariable: Locale.getDefault() is
                       resolved during JVM startup, before those are applied.
+
+                      The two auth properties are here for a related reason: they belong to the
+                      build, not to the code under test. JWT_SECRET is environment-only by design,
+                      so a context that starts in a test needs a throwaway key from somewhere, and
+                      putting it in an application.yml under src/test/resources would shadow the
+                      real one. BCrypt at strength 4 turns a suite that signs in a hundred times
+                      from twenty-five seconds of key stretching into half a second; production
+                      stays at 12 (application.yml).
                     -->
-                    <argLine>-Duser.language=en -Duser.country=US</argLine>
+                    <argLine>-Duser.language=en -Duser.country=US
+                        -Dapp.security.jwt.secret=slotflow-test-signing-key-not-a-secret-0123456789
+                        -Dapp.security.bcrypt-strength=4</argLine>
                 </configuration>
             </plugin>
 
@@ -236,7 +246,10 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
                     <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
-                    <argLine>-Duser.language=en -Duser.country=US</argLine>
+                    <!-- Same three arguments, same reasons; see the surefire block above. -->
+                    <argLine>-Duser.language=en -Duser.country=US
+                        -Dapp.security.jwt.secret=slotflow-test-signing-key-not-a-secret-0123456789
+                        -Dapp.security.bcrypt-strength=4</argLine>
                 </configuration>
                 <executions>
                     <execution>
