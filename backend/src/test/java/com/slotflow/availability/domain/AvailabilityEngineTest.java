@@ -125,6 +125,49 @@ class AvailabilityEngineTest {
             assertThat(slots.stream().map(Slot::start).distinct()).hasSize(5);
         }
 
+        @Test
+        @DisplayName("a shift wholly inside the missing hour moves past it, keeping its length")
+        void aShiftInsideTheGapMovesPastIt() {
+            // Both ends are pushed forward by the length of the gap, so half an hour of work
+            // stays half an hour of work and lands at 03:00. Losing it instead would be the
+            // defensible alternative; moving it is what java.time does, and it is the reading a
+            // night worker would recognise.
+            List<Slot> slots = query().on(SPRING_FORWARD)
+                    .staff(DANA, dayShift(DayOfWeek.SUNDAY, "02:00", "02:30"))
+                    .lasting(30).every(30)
+                    .slots();
+
+            assertThat(localStarts(slots)).containsExactly("2026-03-29T03:00");
+        }
+
+        @Test
+        @DisplayName("a shift starting in the missing hour and ending after it vanishes, and does not throw")
+        void aShiftStraddlingTheGapVanishes() {
+            // 02:30 does not exist and is pushed to 03:30; 03:15 does exist and stays put. The
+            // range therefore runs backwards, which is not a window at all — and it is the one
+            // shape a configured range can take that leaves nothing behind. Dropping it is the
+            // only answer; constructing it would be an IllegalArgumentException from inside a
+            // GET that a customer typed a date into.
+            List<Slot> slots = query().on(SPRING_FORWARD)
+                    .staff(DANA, dayShift(DayOfWeek.SUNDAY, "02:30", "03:15"))
+                    .lasting(30).every(30)
+                    .slots();
+
+            assertThat(slots).isEmpty();
+        }
+
+        @Test
+        @DisplayName("an EXTRA window straddling the missing hour vanishes the same way")
+        void anExtraStraddlingTheGapVanishes() {
+            List<Slot> slots = query().on(SPRING_FORWARD)
+                    .staff(new StaffSchedule(DANA, List.of(),
+                            List.of(extraBetween(DANA, SPRING_FORWARD, "02:30", "03:15")), List.of()))
+                    .lasting(30).every(30)
+                    .slots();
+
+            assertThat(slots).isEmpty();
+        }
+
         private static Duration lengthOf(LocalDate date) {
             return Duration.between(date.atStartOfDay(PARIS), date.plusDays(1).atStartOfDay(PARIS));
         }

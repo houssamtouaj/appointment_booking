@@ -32,9 +32,21 @@ public final class BusinessFields {
      * (D11). {@code getAvailableZoneIds} is the region set, so the check is the whole rule.
      */
     public static ZoneId timezone(String timezone) {
+        return timezone(timezone, "timezone");
+    }
+
+    /**
+     * The same rule under a different field name.
+     *
+     * <p>The availability engine's {@code ?tz=} is a zone too — it decides where the requested days
+     * begin and end (D11) — and a 422 has to name the parameter the client actually sent, not the
+     * body field this class was written for. One rule, two names, rather than a second copy of
+     * {@code getAvailableZoneIds} that would one day disagree about offsets.
+     */
+    public static ZoneId timezone(String timezone, String field) {
         String candidate = timezone == null ? "" : timezone.trim();
         if (!ZoneId.getAvailableZoneIds().contains(candidate)) {
-            throw ApiException.invalidField("timezone",
+            throw ApiException.invalidField(field,
                     "must be an IANA zone id such as Europe/Paris");
         }
         return ZoneId.of(candidate);

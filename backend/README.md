@@ -543,6 +543,108 @@ Rules worth knowing:
   zone would mean the engine resolving wall-clock hours against a different zone per candidate,
   which is a plan-09 change and not a settings field.
 
+## The availability engine
+
+The thing the rest of the project exists to make possible. Given a business, a service, a
+staff member (or "any") and a date range, it returns the exact set of bookable start times.
+
+| Method | Path | Auth |
+|---|---|---|
+| `GET` | `/api/public/businesses/{slug}/availability?serviceId=&from=&to=&tz=&staffId=` | none |
+
+```
+availability/domain/TimeWindow.java          the vocabulary: [start, end) over Instant
+availability/domain/Slot.java                a start, an end, and who can serve it
+availability/domain/AvailabilityQuery.java   everything the engine needs, already loaded
+availability/domain/AvailabilityEngine.java  pure; no Spring, no @Service, no repository
+availability/AvailabilityService.java        loads the data, calls the engine, maps DTOs
+availability/AvailabilityController.java     the one public endpoint above
+```
+
+**The engine is a pure function, and that is the load-bearing decision.** It takes an
+`AvailabilityQuery` and returns slots; it never asks a repository a question and never reads a
+clock — the policy window arrives as two instants the service computed from the injected `Clock`.
+The whole test matrix therefore runs against no Spring context and no container, in under a
+second, which is why cases nobody would set up against a database — a spring-forward Sunday, a
+booking two months out, a shift that starts in an hour that does not exist — are cheap enough to
+have. Wiring the controller first and backing into the algorithm is the version of this that
+takes twenty-five hours instead of ten.
+
+### The pipeline
+
+Per candidate staff member, over every business-zone date the range touches:
+
+1. **Materialise the weekly template** into instants with
+   `ZonedDateTime.of(date, localTime, businessZone)`. A row whose end is before its start is a
+   night shift and ends on `date + 1`.
+2. **Add the `EXTRA` windows** and coalesce, so extra hours that touch the template extend it
+   rather than starting a second window beside it.
+3. **Subtract the `BLOCKED` windows**, business-wide (D5) and staff-level alike.
+4. **Subtract the bookings**, as `[blocked_from, blocked_to)` — the buffer-expanded pair already
+   stored on the row (D4), which is the same interval the exclusion constraint ranges over, so the
+   engine cannot offer a start the insert would then refuse.
+5. **Walk** what is left in `slotGranularityMinutes` steps, keeping a start only when
+   `[start - bufferBefore, start + duration + bufferAfter)` fits wholly inside the window.
+6. **Clamp** to `now + minLeadTimeHours` … `now + maxAdvanceDays`, and to the requested range.
+
+### Rules worth knowing
+
+- **`BLOCKED` always beats `EXTRA`.** At every level, whatever the insertion order. A staff
+  member's extra evening cannot reopen a business-wide closure, and a day off written after the
+  extra hours removes them just as it would have done written before. The rule is arbitrary — the
+  opposite one is equally implementable — which is exactly why it is stated here rather than left
+  to be inferred from behaviour. It falls out of the pipeline order above rather than from a
+  special case.
+- **Half-open `[start, end)` everywhere**, matching the `tstzrange` default the exclusion
+  constraint uses and the working-hours overlap check. A 09:00–10:00 booking and a 10:00–11:00
+  booking do not overlap. Windows that merely touch coalesce, which is what makes a gapless split
+  shift one unbroken eight hours rather than two.
+- **Buffers fit inside working hours; they do not spill past the edges.** With ten minutes of
+  setup, the first appointment of a 09:00 day is not at 09:00, because setting up at 08:50 means
+  opening at 08:50. Same at the other end: a cleanup buffer that would run past closing removes
+  the last slot.
+- **The grid is anchored at each window's own start, not at midnight.** A window that begins at
+  13:15 because a booking ended there offers 13:45 next on a half-hour grid, not 13:30 — the
+  earliest moment the work can actually begin. The cost is that the afternoon's starts need not
+  line up with the morning's once something has been taken out of the day.
+- **`?tz=` decides where the `from`/`to` days begin and end, and nothing else.** Working hours are
+  always read in the **business** timezone (D11) — a salon opens at 09:00 local whatever the phone
+  booking it says. A customer in Tokyo asking for "Wednesday" gets the window their Wednesday
+  covers, which is the tail of the salon's Tuesday plus most of its Wednesday. Every returned
+  instant is UTC.
+- **A slot carries every staff member who could serve it.** An any-staff query is the union across
+  everyone who performs the service, deduped by start instant. Picking one here would mean always
+  sending work to the lowest id and would throw away the only place the alternatives are known;
+  plan 10 chooses between them when the booking is made (fewest bookings that day, then lowest id).
+- **DST is handled by `ZonedDateTime.of`, and both of its behaviours are the ones wanted.** In a
+  spring-forward gap it moves the local time forward by the length of the gap, so a 02:00–02:30
+  shift becomes 03:00–03:30 and keeps its length; in a fall-back overlap it takes the earlier
+  offset, so the 25-hour day is fully worked and its two 02:00s are two distinct instants. The one
+  shape that leaves nothing behind is a range that *starts* inside the gap and ends after it —
+  02:30–03:15 runs backwards once resolved — and that window is dropped rather than thrown on.
+- **A slot is an offer, not a hold.** Nothing is written here and two customers may be looking at
+  the same 10:00. Which of them gets it is decided by the exclusion constraint when one of them
+  books, because a check-then-insert across two requests has a race in it that no amount of
+  reading can close.
+- **Refusals name what is wrong**: an unknown slug or service is `404`, a deactivated service is
+  `422 SERVICE_INACTIVE` rather than a silent empty list, a staff member who does not perform the
+  service is `422 STAFF_NOT_ASSIGNED`, and a backwards or oversized range is a `422` naming `to`.
+  The range is capped at **62 days** — an anonymous endpoint with an unbounded range is a request
+  for a decade of slots that costs the server a decade of work.
+- **A deactivated staff member disappears from the answer without being unassigned.** "Who
+  performs this service" and "who can be offered" are genuinely different sets, and the assignment
+  is deliberately left alone so that reactivating somebody restores their calendar (plan 06).
+
+### Seven statements, whatever the range
+
+The working hours, the overrides and the bookings are fetched **once each**, for the whole range
+and all candidate staff, and the fold happens in memory. Four more resolve what was asked about:
+the business, the service, the policy, and who can perform the service. The number that matters is
+not seven but that it is *the same seven* for one day as for sixty, and for three staff members as
+for one — `AvailabilityQueryCountIT` asserts it from both ends with a Hibernate statement counter,
+because a per-day loop produces a response nobody can tell apart from the right one and a month
+view that takes five seconds. A service nobody is assigned to skips the three loads entirely.
+
 ## Pagination
 
 `?page=&size=` with `size` defaulting to 20 and clamped to 100, returning
@@ -626,11 +728,15 @@ is visibly a test about buffers.
 - The availability configuration above: the weekly template as a full replace, staff and
   business-wide overrides, the booking policy and the business settings — everything the engine
   is about to consume, editable, validated and tenant-safe
+- The availability engine above: `TimeWindow` and the pure-domain engine, the loader that feeds it
+  in three queries, and the one public endpoint the booking calendar polls — with the plan's whole
+  test matrix as named tests, DST included, running with no container in under a second
 
 ## Not built yet
 
-The availability engine, bookings, payments and the dashboard. Every input the engine needs is
-now editable through the API; nothing computes a slot from them yet. Email has no
+Bookings, payments and the dashboard. The engine computes slots and a booking page can render a
+calendar from them; nothing can be reserved yet, and a slot stays an offer rather than a hold
+until plan 10 turns one into a row. Email has no
 transport yet: `NotificationService` is an interface with a logging implementation, so the
 invitation and reset links are read from the api log until plan 12. Build order is tracked in
 the local project brief (see `docs/`, not committed yet).

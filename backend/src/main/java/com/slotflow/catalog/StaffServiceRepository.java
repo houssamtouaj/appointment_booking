@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 /**
  * The staff-to-service assignment, read from both directions.
@@ -51,6 +52,30 @@ public interface StaffServiceRepository extends JpaRepository<StaffService, Staf
     }
 
     List<StaffService> findByServiceIdIn(Collection<UUID> serviceIds);
+
+    /**
+     * The availability engine's candidate set: who can perform this service <em>and</em> can still
+     * be booked.
+     *
+     * <p>{@link #findByServiceId} plus an active check would be two queries and a set intersection
+     * in the service, on the hot path of the one endpoint the booking calendar polls. It is also the
+     * wrong two questions: a deactivated staff member is still assigned to the service — plan 06
+     * deliberately leaves the assignment alone so that reactivating somebody restores their work —
+     * so "who performs this" and "who can be offered" are genuinely different sets, and the second
+     * is the only one this endpoint has ever wanted.
+     *
+     * <p>Ids and not rows: the three loads that follow are all keyed by staff id, and nothing here
+     * ever reads a name.
+     */
+    @Query("""
+            select s.staffId from StaffService s
+            where s.serviceId = :serviceId
+              and exists (select 1 from User u
+                          where u.id = s.staffId
+                            and u.businessId = :businessId
+                            and u.active = true)
+            """)
+    List<UUID> findBookableStaffIdsForService(UUID serviceId, UUID businessId);
 
     boolean existsByStaffIdAndServiceId(UUID staffId, UUID serviceId);
 }

@@ -68,6 +68,16 @@ import org.testcontainers.containers.PostgreSQLContainer;
         // which test it caught would depend on the wall clock. ExpiredTokenSweepIT calls the
         // sweeper directly, which is the only honest way to assert what it deletes.
         "app.security.token-sweep-cron=-",
+        // Plan 09's gate is a statement count, and Hibernate reports one only when asked to keep
+        // statistics. It is on for the whole suite rather than for the one class that reads it,
+        // because a per-class @TestPropertySource forks the context cache and pays for a second
+        // application context - the exact cost the shared base class above exists to avoid. See
+        // QueryCounter.
+        "spring.jpa.properties.hibernate.generate_statistics=true",
+        // ...and the twenty-line "Session Metrics" block it otherwise logs for every session, which
+        // across two hundred integration tests is most of the build output. The counters QueryCounter
+        // reads are on the SessionFactory and are unaffected by this listener being quiet.
+        "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener=WARN",
 })
 public abstract class IntegrationTest {
 

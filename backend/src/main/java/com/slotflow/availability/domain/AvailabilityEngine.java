@@ -266,10 +266,13 @@ public final class AvailabilityEngine {
      * at 03:00 instead of throwing. In a fall-back overlap it takes the earlier offset, so a shift
      * starting at the first 02:00 runs for the full twenty-five-hour day rather than losing an hour.
      *
-     * <p>The length check is not defensive padding: on a spring-forward day a 02:00–02:30 range has
-     * both ends pushed to 03:00 and is a genuinely empty window, which {@link TimeWindow} refuses to
-     * represent. Dropping it is the right answer — half an hour that does not exist is not
-     * bookable — and it is the only place in the engine where a configured range can vanish.
+     * <p>The length check is not defensive padding, and the case that needs it is narrower than it
+     * looks. A range wholly inside the gap has both ends pushed forward together and survives with
+     * its length intact — 02:00–02:30 becomes 03:00–03:30, which is the right answer. A range that
+     * <em>starts</em> in the gap and ends after it does not: 02:30 moves to 03:30 while 03:15 stays
+     * where it is, and the result runs backwards. That is the one shape a configured range can take
+     * that leaves nothing behind, and dropping it is the only answer — building it would be an
+     * {@code IllegalArgumentException} thrown from inside a GET somebody typed a date into.
      */
     private static void addWindow(List<TimeWindow> into, LocalDate startDate, LocalTime startTime,
                                   LocalDate endDate, LocalTime endTime, ZoneId zone) {

@@ -48,6 +48,30 @@ public interface AvailabilityOverrideRepository extends JpaRepository<Availabili
     List<AvailabilityOverride> findBusinessWideByDateBetween(
             UUID businessId, LocalDate from, LocalDate to);
 
+    /**
+     * <b>The engine's one override read</b> (plan 09): the business-wide closures and the candidate
+     * staff members' own rows, together, for the whole range.
+     *
+     * <p>One query and not the two above, which is the difference between the engine's data load
+     * being three statements and being four — the number the plan fixes and the endpoint's query
+     * counter asserts. It costs nothing to merge them: {@code business_id} is on every row whichever
+     * level it belongs to, so the predicate is one {@code OR} rather than a second round trip, and
+     * {@code AvailabilityOverride.isBusinessWide} sorts the results out in memory afterwards.
+     *
+     * <p>Not a replacement for {@link #findByBusinessIdAndDateBetween}: that one is the admin
+     * calendar and wants <em>every</em> staff member's rows, while this one wants only the staff who
+     * can perform the service being asked about. Loading the whole tenant's overrides to throw most
+     * of them away is exactly the read that gets slower as the business gets busier.
+     */
+    @Query("""
+            select o from AvailabilityOverride o
+            where o.businessId = :businessId
+              and (o.staffId is null or o.staffId in :staffIds)
+              and o.date between :from and :to
+            """)
+    List<AvailabilityOverride> findForEngine(UUID businessId, Collection<UUID> staffIds,
+                                             LocalDate from, LocalDate to);
+
     /** The merged admin view: business-wide plus every staff member's (plan 08). */
     List<AvailabilityOverride> findByBusinessIdAndDateBetween(
             UUID businessId, LocalDate from, LocalDate to);
