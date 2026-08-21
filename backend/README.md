@@ -234,6 +234,22 @@ rests on, because an argument about a library is worth what the assertion under 
 Rate limiting sits in front of all of this (see below), and deliberately ahead of Spring
 Security: BCrypt at strength 12 makes an unlimited login endpoint a CPU amplifier.
 
+**No password is hashed inside a transaction.** Hibernate holds the connection it acquired until
+the transaction ends, so hashing inside one parks a pooled connection for the hundreds of
+milliseconds BCrypt is meant to cost — with `maximum-pool-size: 10` that caps sign-ins near
+forty a second and lets a login burst starve unrelated requests. `register`, `reset-password`
+and `accept-invitation` hash first and then open a short `TransactionTemplate` around their
+writes; `login` needs no transaction at all. A template rather than a `@Transactional` private
+method because that is a self-invocation, which does not pass through the proxy: the annotation
+would be ignored and `register` would quietly stop being atomic while every test still passed.
+
+For the same reason `refresh` is not transactional. The reuse branch of rotation revokes the
+chain in a `REQUIRES_NEW` transaction so the revocation survives the exception that reports it,
+and suspending a transaction does not release its connection — nested, one replayed token cost
+two connections at once, so ten simultaneous replays could stall a pool of ten. The two
+transactions now run in sequence: measured peak on the real path is one connection, and
+`REQUIRES_NEW` stays so the guarantee holds even if some future caller does wrap it.
+
 **`register` is deliberately not indistinguishable, and that is worth saying out loud.**
 `409 EMAIL_TAKEN` versus `201` tells an unauthenticated caller whether an address has an
 account here, across every tenant, at ten probes a minute per IP. It stays because the only

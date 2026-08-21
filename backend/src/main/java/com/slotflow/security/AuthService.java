@@ -22,7 +22,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Registration, login, refresh, logout and password reset.
@@ -30,11 +32,14 @@ import org.springframework.transaction.annotation.Transactional;
  * <h2>Two rules run through everything here</h2>
  *
  * <ul>
- *   <li><b>One transaction per use case.</b> {@link #register} in particular creates three rows —
- *       a business, its policy and its owner — and a partial tenant is unusable in a way that is
- *       hard to notice and impossible to repair from the API: the slug is taken, so the owner
- *       cannot retry. {@code AuthFlowIT} forces a failure on the last insert and asserts that
- *       nothing survives.</li>
+ *   <li><b>One transaction per use case, and no BCrypt inside it.</b> {@link #register} in
+ *       particular creates three rows — a business, its policy and its owner — and a partial tenant
+ *       is unusable in a way that is hard to notice and impossible to repair from the API: the slug
+ *       is taken, so the owner cannot retry. {@code AuthFlowIT} forces a failure on the last insert
+ *       and asserts that nothing survives. The transaction is a {@link TransactionTemplate} around
+ *       exactly those writes rather than {@code @Transactional} on the whole method, because the
+ *       expensive part of every method here is a password hash and a hash needs no database at
+ *       all — see {@link #writes}.</li>
  *   <li><b>One answer for every authentication failure.</b> Unknown address, wrong password and
  *       deactivated account produce a byte-identical body, and {@link #login} does exactly one
  *       BCrypt verification on every path so that the timing does not answer what the body
@@ -67,11 +72,32 @@ public class AuthService {
      */
     private final String absentPasswordHash;
 
+    /**
+     * The write half of a use case, in a transaction that starts after the hashing is done.
+     *
+     * <p>BCrypt at strength 12 is hundreds of milliseconds of deliberate key stretching, and
+     * Hibernate holds the JDBC connection it acquired for the whole transaction — measured, not
+     * assumed: a connection stays checked out across the hash with no statement in flight. Hashing
+     * inside {@code @Transactional} therefore parks a connection doing nothing for a quarter of a
+     * second per sign-in, which with {@code maximum-pool-size: 10} caps logins near forty a second
+     * and lets a burst of them starve every unrelated request of a connection. The fix is only the
+     * order of operations: look up, let the transaction end, hash, then a short transaction for the
+     * writes.
+     *
+     * <p>A {@code TransactionTemplate} rather than moving the writes into a second bean, because a
+     * private method annotated {@code @Transactional} and called from this class is a
+     * self-invocation: it does not pass through the proxy, the annotation is silently ignored, and
+     * {@code register} would quietly stop being one transaction while every test still passed.
+     * {@code RefreshTokenService} carries the same argument for the same reason.
+     */
+    private final TransactionTemplate writes;
+
     public AuthService(UserRepository users, BusinessRepository businesses,
                        BookingPolicyRepository policies, RefreshTokenService refreshTokens,
                        PasswordResetService passwordResets,
                        ApplicationEventPublisher notifications,
-                       PasswordEncoder passwordEncoder, JwtService jwtService, AuthMapper mapper) {
+                       PasswordEncoder passwordEncoder, JwtService jwtService, AuthMapper mapper,
+                       PlatformTransactionManager transactionManager) {
         this.users = users;
         this.businesses = businesses;
         this.policies = policies;
@@ -82,6 +108,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.mapper = mapper;
         this.absentPasswordHash = passwordEncoder.encode(SecretTokens.random());
+        this.writes = new TransactionTemplate(transactionManager);
     }
 
     // ---------------------------------------------------------------------------------
@@ -126,7 +153,6 @@ public class AuthService {
      * A registration probe tells an attacker that an account exists; a login probe would tell them
      * when they have guessed its password.
      */
-    @Transactional
     public AuthSession register(RegisterRequest request) {
         String email = normaliseEmail(request.email());
         String slug = request.slug().trim().toLowerCase(Locale.ROOT);
@@ -147,22 +173,33 @@ public class AuthService {
                     .with("slug", slug);
         }
 
-        Business business = businesses.save(
-                new Business(slug, request.businessName(), timezone, currency));
-        policies.save(BookingPolicy.defaultsFor(business.getId()));
-        User owner = users.save(User.owner(business.getId(), email, request.fullName(),
-                passwordEncoder.encode(request.password())));
+        // Outside the transaction below, on purpose. Nothing here needs a database, and a
+        // registration is one of the two places in the codebase that pays for a hash.
+        String passwordHash = passwordEncoder.encode(request.password());
 
-        log.info("Registered business {} ({}) with owner {}", business.getSlug(),
-                business.getId(), owner.getId());
-        return sessionFor(owner, business);
+        return writes.execute(status -> {
+            Business business = businesses.save(
+                    new Business(slug, request.businessName(), timezone, currency));
+            policies.save(BookingPolicy.defaultsFor(business.getId()));
+            User owner = users.save(
+                    User.owner(business.getId(), email, request.fullName(), passwordHash));
+
+            log.info("Registered business {} ({}) with owner {}", business.getSlug(),
+                    business.getId(), owner.getId());
+            return sessionFor(owner, business);
+        });
     }
 
     // ---------------------------------------------------------------------------------
     //  session lifecycle
     // ---------------------------------------------------------------------------------
 
-    @Transactional
+    /**
+     * Not {@code @Transactional}, and that is the point: the one expensive step is the BCrypt
+     * verification, and it must not happen with a connection checked out. Three short transactions —
+     * the lookup, the business read, the refresh-token insert — cost three round trips and hold a
+     * connection for none of the hashing. See {@link #writes}.
+     */
     public AuthSession login(LoginRequest request) {
         Optional<User> candidate = users.findByEmailIgnoreCase(normaliseEmail(request.email()));
 
@@ -189,8 +226,13 @@ public class AuthService {
      * from the row, and an inactive user cannot get past {@link User#canLogIn()}. The
      * fifteen-minute gap between such a change and this moment is the documented cost of stateless
      * access tokens — see {@link JwtService}.
+     *
+     * <p>Not {@code @Transactional} either, and here it is load-bearing rather than merely tidy:
+     * {@link RefreshTokenService#rotate} answers a replayed token by revoking the chain in its own
+     * transaction and then throwing, and an enclosing transaction would make that a suspended one —
+     * two connections held by a single request, which ten simultaneous replays turn into a stalled
+     * pool.
      */
-    @Transactional
     public AuthSession refresh(String rawRefreshToken) {
         RefreshTokenService.Rotation rotation = refreshTokens.rotate(rawRefreshToken);
         User user = users.findById(rotation.userId())
@@ -209,7 +251,6 @@ public class AuthService {
      * is no blocklist, on purpose, and that window is the price of a stateless check on every
      * request. Fifteen minutes, written down here and in the README rather than discovered later.
      */
-    @Transactional
     public void logout(String rawRefreshToken) {
         refreshTokens.revoke(rawRefreshToken);
     }
@@ -263,14 +304,23 @@ public class AuthService {
      * That last step is the point of a reset: if the account was taken over, the sessions the
      * takeover created have to die with the old password, or the reset has accomplished nothing.
      */
-    @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        User user = users.findById(passwordResets.consume(request.token()))
-                .orElseThrow(AuthService::invalidCredentials);
-        user.changePassword(passwordEncoder.encode(request.password()));
-        users.save(user);
-        int revoked = refreshTokens.revokeAllFor(user.getId());
-        log.info("Password reset for user {}; revoked {} refresh token(s)", user.getId(), revoked);
+        // Hashed before the token is even looked at, for the reason given on writes: this is the
+        // third of the three places a request pays for BCrypt, and none of them needs a connection
+        // while they do. Burning a hash on a bad token costs an attacker the same rate-limited
+        // request that login already costs them, and login hashes unconditionally by design.
+        String passwordHash = passwordEncoder.encode(request.password());
+
+        writes.execute(status -> {
+            User user = users.findById(passwordResets.consume(request.token()))
+                    .orElseThrow(AuthService::invalidCredentials);
+            user.changePassword(passwordHash);
+            users.save(user);
+            int revoked = refreshTokens.revokeAllFor(user.getId());
+            log.info("Password reset for user {}; revoked {} refresh token(s)",
+                    user.getId(), revoked);
+            return null;
+        });
     }
 
     // ---------------------------------------------------------------------------------

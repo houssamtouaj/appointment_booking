@@ -187,9 +187,14 @@ class AuthFlowIT extends ApiIntegrationTest {
     void registrationIsAllOrNothing() {
         // The service is called directly, past bean validation, with a name that fits the Java field
         // and not the varchar(120) — so the insert of the third row is what fails, which is exactly
-        // the case a missing @Transactional would leave behind as a business with no owner. A
-        // business whose slug is taken and whose owner does not exist cannot be repaired through
-        // the API: the owner cannot register, and nobody can log in to fix it.
+        // the case a missing transaction would leave behind as a business with no owner. A business
+        // whose slug is taken and whose owner does not exist cannot be repaired through the API:
+        // the owner cannot register, and nobody can log in to fix it.
+        //
+        // The transaction is AuthService.writes, a TransactionTemplate around the three inserts,
+        // rather than @Transactional on the method — the password hash happens before it opens so
+        // that a connection is not parked for the length of a BCrypt. This test is what would catch
+        // that template being dropped: without it the business commits on its own and survives.
         String slug = uniqueSlug();
         RegisterRequest request = new RegisterRequest("Dana Clinic", slug, "Europe/Paris", "EUR",
                 "N".repeat(200), uniqueEmail(), PASSWORD);

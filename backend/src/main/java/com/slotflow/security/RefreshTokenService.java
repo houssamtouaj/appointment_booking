@@ -54,15 +54,35 @@ public class RefreshTokenService {
     private final Clock clock;
 
     /**
+     * The transaction that spends the presented token: the locking read and the two writes that
+     * follow it, and nothing else.
+     *
+     * <p>A {@code TransactionTemplate} rather than {@code @Transactional} on {@link #rotate} because
+     * the theft branch has to run <em>after</em> this one has finished — see {@link #ownTransaction}
+     * — and a method cannot both be the transaction and outlive it. Default propagation, so a caller
+     * that has its own transaction is joined rather than suspended.
+     */
+    private final TransactionTemplate consumeToken;
+
+    /**
      * The theft response has to survive the exception that reports it.
      *
-     * <p>Revoking the chain and then throwing {@code REFRESH_REUSED} inside the caller's
-     * transaction would roll the revocation back with the response — the API would say "this
-     * session has been ended" and end nothing. This template runs that one write in its own
+     * <p>Revoking the chain and then throwing {@code REFRESH_REUSED} inside the transaction that
+     * discovered the replay would roll the revocation back with the response — the API would say
+     * "this session has been ended" and end nothing. This template runs that one write in its own
      * transaction, which commits before the exception is thrown. It is a {@code TransactionTemplate}
-     * rather than a second {@code @Transactional(REQUIRES_NEW)} method because the call is a
+     * rather than a second {@code @Transactional(REQUIRES_NEW)} method because the call would be a
      * self-invocation, and a self-invocation does not pass through the proxy: the annotation would
      * be silently ignored and the bug would look exactly like no bug at all.
+     *
+     * <p><b>{@code REQUIRES_NEW} is kept, and the nesting is not.</b> Suspending a transaction does
+     * not return its JDBC connection to the pool, so revoking from inside {@link #rotate}'s own
+     * transaction made one replayed token cost two connections at once — measured, not assumed —
+     * and ten simultaneous replays, an attacker retrying or a client storm after a dropped response,
+     * would exhaust a pool of ten and stall every unrelated request behind it. The two transactions
+     * are now sequential, so a replay costs one connection at a time. {@code REQUIRES_NEW} stays
+     * anyway: it is what keeps the guarantee true if some future caller does wrap this in a
+     * transaction of its own, at the old cost rather than at the old correctness.
      */
     private final TransactionTemplate ownTransaction;
 
@@ -71,6 +91,7 @@ public class RefreshTokenService {
         this.refreshTokens = refreshTokens;
         this.ttl = properties.jwt().refreshTokenTtl();
         this.clock = clock;
+        this.consumeToken = new TransactionTemplate(transactionManager);
         this.ownTransaction = new TransactionTemplate(transactionManager);
         this.ownTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -100,24 +121,56 @@ public class RefreshTokenService {
     /**
      * Consumes a refresh token and issues its successor.
      *
+     * <p>Deliberately not {@code @Transactional}: two short transactions in sequence rather than one
+     * with another nested inside it. The first spends the presented row under a lock; only if it
+     * turns out to have been spent already does the second revoke the chain, by which time the first
+     * has committed and given its connection back. See {@link #ownTransaction} for why that
+     * ordering, rather than the nesting it replaces, is what makes a replay cheap.
+     *
      * @throws ApiException {@code 401 REFRESH_REUSED} when the presented token was already
      *                      revoked, having first revoked everything else that user holds;
      *                      {@code 401 UNAUTHENTICATED} when it is unknown or expired
      */
-    @Transactional
     public Rotation rotate(String rawToken) {
-        RefreshToken presented = load(rawToken);
+        Consumed consumed = consumeToken.execute(status -> consume(rawToken));
 
-        if (presented.isRevoked() || presented.hasSuccessor()) {
+        if (consumed.wasReplayed()) {
             // The interesting branch, and the one a lost race lands in too: with the row locked,
             // "already revoked" covers both the replay of a token spent yesterday and the caller
             // that arrived a millisecond behind. Note the order — revoke first, then throw, and the
             // revocation in its own transaction so it survives the exception that reports it.
-            int revoked = ownTransaction.execute(status -> revokeLiveTokens(presented.getUserId()));
+            int revoked = ownTransaction.execute(status -> revokeLiveTokens(consumed.userId()));
             log.warn("Refresh token reuse detected for user {}; revoked {} live token(s)",
-                    presented.getUserId(), revoked);
+                    consumed.userId(), revoked);
             throw new ApiException(ErrorCode.REFRESH_REUSED,
                     "This session has been ended for security reasons. Please sign in again.");
+        }
+        return consumed.rotation();
+    }
+
+    /**
+     * What the presented row turned out to be. {@code rotation} is null when the token had already
+     * been spent, which is the one case the caller has to answer for after this transaction ends —
+     * a record rather than an exception thrown from in here, because the revocation that answers it
+     * must not be rolled back by the exception that reports it.
+     */
+    private record Consumed(UUID userId, Rotation rotation) {
+
+        static Consumed replayed(UUID userId) {
+            return new Consumed(userId, null);
+        }
+
+        boolean wasReplayed() {
+            return rotation == null;
+        }
+    }
+
+    /** Runs inside {@link #consumeToken}, which is what makes the row lock in {@link #load} real. */
+    private Consumed consume(String rawToken) {
+        RefreshToken presented = load(rawToken);
+
+        if (presented.isRevoked() || presented.hasSuccessor()) {
+            return Consumed.replayed(presented.getUserId());
         }
         if (presented.isExpired(clock.instant())) {
             throw unauthenticated();
@@ -129,7 +182,8 @@ public class RefreshTokenService {
                 SecretTokens.hash(successorValue), expiresAt, clock.instant());
         refreshTokens.save(successor);
         refreshTokens.save(presented);
-        return new Rotation(presented.getUserId(), new Issued(successorValue, expiresAt));
+        return new Consumed(presented.getUserId(),
+                new Rotation(presented.getUserId(), new Issued(successorValue, expiresAt)));
     }
 
     /**

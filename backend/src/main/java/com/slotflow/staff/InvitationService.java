@@ -12,7 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * The public half of the invitation flow: what the accept screen reads, and what accepting does.
@@ -44,14 +46,24 @@ public class InvitationService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
+    /**
+     * The writes of {@link #accept}, in a transaction that begins once the password is hashed.
+     *
+     * <p>Hibernate keeps the connection it acquired until the transaction ends, so hashing inside
+     * one parks a connection for the hundreds of milliseconds BCrypt is meant to take. Same
+     * reasoning, same shape and the same self-invocation caveat as {@code AuthService.writes}.
+     */
+    private final TransactionTemplate writes;
+
     public InvitationService(StaffInvitationRepository invitations, UserRepository users,
                              BusinessRepository businesses, PasswordEncoder passwordEncoder,
-                             Clock clock) {
+                             Clock clock, PlatformTransactionManager transactionManager) {
         this.invitations = invitations;
         this.users = users;
         this.businesses = businesses;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.writes = new TransactionTemplate(transactionManager);
     }
 
     /** Which business is inviting, and to which address — both already known to the recipient. */
@@ -67,9 +79,21 @@ public class InvitationService {
      * Sets the name and password the invitee chose, activates the account, and burns the token — in
      * one transaction, so there is no window in which the user is active without a password or the
      * token is spent without the user being usable.
+     *
+     * <p>The hash is computed before that transaction opens rather than inside it; see
+     * {@link #writes}. It does mean an invalid token costs a BCrypt before it is rejected, which is
+     * the same bargain {@code login} already makes deliberately on every call, behind the same
+     * per-IP rate limit that runs ahead of the filter chain for exactly this reason.
      */
-    @Transactional
     public void accept(String rawToken, AcceptInvitationRequest request) {
+        String passwordHash = passwordEncoder.encode(request.password());
+        writes.execute(status -> {
+            acceptInTransaction(rawToken, request.fullName(), passwordHash);
+            return null;
+        });
+    }
+
+    private void acceptInTransaction(String rawToken, String fullName, String passwordHash) {
         StaffInvitation invitation = requireUsable(load(rawToken));
         User invited = users.findById(invitation.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("invited user"));
@@ -85,7 +109,7 @@ public class InvitationService {
             throw consumed();
         }
 
-        invited.acceptInvitation(request.fullName(), passwordEncoder.encode(request.password()));
+        invited.acceptInvitation(fullName, passwordHash);
         invitation.markUsed(clock.instant());
         users.save(invited);
         invitations.save(invitation);
