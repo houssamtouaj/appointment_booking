@@ -196,10 +196,14 @@ class TimeWindowTest {
         }
 
         @Test
-        @DisplayName("windows that touch abut, and disjoint ones do not")
+        @DisplayName("windows that touch abut, and disjoint ones do not, in either order")
         void abuts() {
             assertThat(window("09:00", "12:00").abuts(window("12:00", "17:00"))).isTrue();
+            assertThat(window("12:00", "17:00").abuts(window("09:00", "12:00"))).isTrue();
+            // Both directions, because each is a different half of the check and a one-sided
+            // version of it reads as correct while quietly merging a window with the gap after it.
             assertThat(window("09:00", "12:00").abuts(window("13:00", "17:00"))).isFalse();
+            assertThat(window("13:00", "17:00").abuts(window("09:00", "12:00"))).isFalse();
         }
 
         @Test
@@ -234,9 +238,11 @@ class TimeWindowTest {
         }
 
         @Test
-        @DisplayName("a contained window intersects to itself")
+        @DisplayName("a contained window intersects to itself, whichever side it is asked from")
         void containedWindow() {
             assertThat(WORKDAY.intersect(window("12:00", "13:00")))
+                    .contains(window("12:00", "13:00"));
+            assertThat(window("12:00", "13:00").intersect(WORKDAY))
                     .contains(window("12:00", "13:00"));
         }
 
@@ -273,9 +279,10 @@ class TimeWindowTest {
         }
 
         @Test
-        @DisplayName("a contained window merges to the container")
+        @DisplayName("a contained window merges to the container, whichever side it is asked from")
         void containedWindowMerges() {
             assertThat(WORKDAY.merge(window("12:00", "13:00"))).contains(WORKDAY);
+            assertThat(window("12:00", "13:00").merge(WORKDAY)).contains(WORKDAY);
         }
 
         @Test
