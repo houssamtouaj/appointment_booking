@@ -151,6 +151,13 @@ app:
     # 10-12 in production. The test suite drops it to 4 (see the surefire argLine in pom.xml):
     # BCrypt is deliberately slow, and a suite that logs in a hundred times pays for it.
     bcrypt-strength: ${BCRYPT_STRENGTH:12}
+    # Deletes expired refresh and reset tokens once a day, off-peak. refresh_token gains a row on
+    # every login and every rotation and nothing else ever deletes one, so without this the largest
+    # table in the schema only grows. Expired rows only, never revoked-but-live ones: those are what
+    # reuse detection reads. `-` disables the job; the suite sets that, because a sweep firing while
+    # a test has moved the clock forward would delete rows it is about to assert on. Read directly
+    # rather than through AuthProperties because @Scheduled needs a resolvable placeholder.
+    token-sweep-cron: ${TOKEN_SWEEP_CRON:0 15 3 * * *}
   stripe:
     # consumed from plan 11 onwards
     secret-key: ${STRIPE_SECRET_KEY:}

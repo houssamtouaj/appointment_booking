@@ -154,6 +154,21 @@ that reports it would otherwise roll it back — the API would answer "this sess
 ended" and end nothing, and every status-code assertion would still pass. `RefreshRotationIT`
 asserts the chain state in SQL for that reason, not through the API's own answers.
 
+### Housekeeping: the expired-token sweep
+
+`refresh_token` gains a row on every login **and** every rotation — one every fifteen minutes
+per signed-in tab — and nothing else ever deletes one. `ExpiredTokenSweeper` runs daily
+off-peak (`TOKEN_SWEEP_CRON`, `-` to disable) and deletes refresh and reset tokens whose
+`expires_at` has passed. Both queries are one bulk statement against an indexed predicate.
+
+**Expired, never revoked.** A revoked token still inside its seven days is exactly what reuse
+detection reads: presenting it has to produce `401 REFRESH_REUSED` and revoke the chain, and
+that answer exists only while the row does. Deleting revoked rows would turn a replay into an
+unknown token — no theft signal, no chain revocation — which is a security regression wearing
+housekeeping's clothes. `ExpiredTokenSweepIT` asserts both halves. The suite disables the
+schedule and calls the sweeper directly: it deletes rows, the tests move the clock forward by
+days, and otherwise which test lost its fixture would depend on the time of day the build ran.
+
 ### Refresh-token transport — the decision
 
 **httpOnly cookie, `SameSite=Lax`, `Path=/api/auth`, `Secure` in every deployed environment.

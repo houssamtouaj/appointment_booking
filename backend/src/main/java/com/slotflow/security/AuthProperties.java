@@ -11,6 +11,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * least 32 bytes of it. A committed fallback would be worse than no auth at all, because it would
  * look like auth.
  *
+ * <p>One property under this prefix is deliberately absent from the record:
+ * {@code app.security.token-sweep-cron} is read as a placeholder by
+ * {@link ExpiredTokenSweeper}'s {@code @Scheduled}, which is resolved when the bean definition is
+ * built and cannot reach a record component. Binding it here as well would mean two spellings of
+ * one setting, and editing the visible one would change nothing.
+ *
  * @param jwt              access-token signing and lifetime
  * @param refreshCookie    the two cookie attributes that differ between localhost and production
  * @param passwordResetTtl D6: one hour, single use

@@ -37,12 +37,16 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * asserts only on rows it inserted. No test may count rows in a whole table, and none may assume
  * an empty database.
  *
- * <h2>Rate limiting is off</h2>
+ * <h2>Rate limiting and the token sweep are off</h2>
  * The buckets are per process and keyed by IP, so with the limiter on, which test in a class is
  * the eleventh login would depend on execution order. It is switched off here rather than in the
  * MockMvc subclass so that what {@code RateLimitProperties} says about the test suite is true of
  * all of it. {@code RateLimitFilterTest} covers the limiter itself against its own instance, where
  * the assertions can be exact.
+ *
+ * <p>The token sweep is switched off for the same shape of reason and a sharper one: it deletes
+ * rows, this suite moves the clock forward by days, and which test lost its fixture would depend on
+ * the time of day the build ran. {@code ExpiredTokenSweepIT} calls the sweeper directly instead.
  *
  * <h2>One context</h2>
  * Subclasses that add no context configuration of their own share a single application context,
@@ -57,7 +61,14 @@ import org.testcontainers.containers.PostgreSQLContainer;
 // @ContextConfiguration listing only @TestConfiguration classes is treated as additive rather than
 // as a replacement for the application's own configuration.
 @ContextConfiguration(classes = IntegrationTest.ClockOverride.class)
-@TestPropertySource(properties = "app.rate-limit.enabled=false")
+@TestPropertySource(properties = {
+        "app.rate-limit.enabled=false",
+        // `-` is Scheduled.CRON_DISABLED. The suite moves the clock forward by days at a time, so a
+        // sweep firing on its own schedule would delete rows a test is about to assert on - and
+        // which test it caught would depend on the wall clock. ExpiredTokenSweepIT calls the
+        // sweeper directly, which is the only honest way to assert what it deletes.
+        "app.security.token-sweep-cron=-",
+})
 public abstract class IntegrationTest {
 
     /**
