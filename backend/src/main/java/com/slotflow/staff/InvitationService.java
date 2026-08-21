@@ -97,7 +97,23 @@ public class InvitationService {
     //  helpers
     // ---------------------------------------------------------------------------------
 
+    /**
+     * The token arrives as a path variable, so it is whatever was in the URL — including nothing.
+     *
+     * <p>{@link SecretTokens#hash} throws on a blank value, and rightly so: it is also the minting
+     * side, where hashing an empty secret is a bug worth a stack trace. A lookup is the other case.
+     * The endpoint's contract is that a token it cannot find is a 404, and a blank token is as
+     * unfindable as they come, so the guard belongs here rather than in {@code hash} — one of the
+     * two, not both, or a genuinely empty secret stops being loud where it should be.
+     *
+     * <p>Today {@code StrictHttpFirewall} rejects a whitespace path segment with a bare 400 before
+     * the dispatcher is reached, so this is not currently a reachable 500. It is one relaxed
+     * firewall setting, or one caller that is not a URL, away from being one.
+     */
     private StaffInvitation load(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new EntityNotFoundException("blank invitation token");
+        }
         return invitations.findByTokenHash(SecretTokens.hash(rawToken))
                 .orElseThrow(() -> new EntityNotFoundException("no such invitation"));
     }

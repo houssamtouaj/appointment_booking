@@ -1,6 +1,7 @@
 package com.slotflow.staff;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -10,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.slotflow.security.LoginRequest;
 import com.slotflow.security.SecretTokens;
 import com.slotflow.support.ApiIntegrationTest;
+import jakarta.persistence.EntityNotFoundException;
 import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +37,9 @@ class StaffInvitationIT extends ApiIntegrationTest {
 
     @Autowired
     private StaffInvitationRepository invitations;
+
+    @Autowired
+    private InvitationService invitationService;
 
     @Test
     @DisplayName("invite, accept, sign in as the new colleague")
@@ -140,6 +145,26 @@ class StaffInvitationIT extends ApiIntegrationTest {
         mockMvc.perform(get("/api/public/invitations/" + SecretTokens.random()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("a blank token is unknown, not an argument error")
+    void blankTokensAreUnknown() {
+        // Asserted against the service rather than through MockMvc on purpose. A whitespace path
+        // segment never reaches the dispatcher — Spring Security's StrictHttpFirewall answers
+        // GET /api/public/invitations/%20 with a bare 400 before any of our code runs — so an HTTP
+        // test here would be a test of a framework default we do not set and could not rely on.
+        // What is ours is that the lookup treats a blank token the way the endpoint's contract says
+        // it should: unknown, and therefore a 404, rather than the IllegalArgumentException from
+        // SecretTokens.hash that would surface as a 500 the moment anything relaxed that firewall
+        // or called this from somewhere other than a URL.
+        assertThatThrownBy(() -> invitationService.preview(" "))
+                .isInstanceOf(EntityNotFoundException.class);
+        assertThatThrownBy(() -> invitationService.preview(""))
+                .isInstanceOf(EntityNotFoundException.class);
+        assertThatThrownBy(() -> invitationService.accept("\t",
+                new AcceptInvitationRequest("Sam Ferreira", PASSWORD)))
+                .isInstanceOf(EntityNotFoundException.class);
     }
 
     @Test
