@@ -76,6 +76,23 @@ class UserTest {
     }
 
     @Test
+    @DisplayName("accepting cannot reactivate somebody who was deactivated")
+    void acceptingCannotUndoADeactivation() {
+        User staff = User.invited(BUSINESS_ID, "sam@example.test", "Sam F", Role.STAFF);
+        staff.acceptInvitation("Sam Ferreira", "bcrypt-hash");
+        staff.deactivate();
+
+        // Inactive, so the "already active" guard lets this through — and the password hash is
+        // still there, so accepting would overwrite it and switch the account back on. That would
+        // make any invitation minted for this row a self-service reactivation, which is the one
+        // thing deactivation exists to prevent.
+        assertThatThrownBy(() -> staff.acceptInvitation("Sam Ferreira", "a-hash-of-my-own"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(staff.isActive()).isFalse();
+        assertThat(staff.getPasswordHash()).isEqualTo("bcrypt-hash");
+    }
+
+    @Test
     @DisplayName("a deactivated owner can no longer manage their business")
     void deactivationRemovesManagementRights() {
         Business business = business();

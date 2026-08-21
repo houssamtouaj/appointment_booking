@@ -2,6 +2,7 @@ package com.slotflow.staff;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,6 +32,9 @@ class StaffInvitationIT extends ApiIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private StaffInvitationRepository invitations;
 
     @Test
     @DisplayName("invite, accept, sign in as the new colleague")
@@ -174,6 +178,77 @@ class StaffInvitationIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("resending to a deactivated ex-employee is refused, not a fresh way in")
+    void resendingToADeactivatedColleagueIsAConflict() throws Exception {
+        Tenant tenant = aTenant();
+        User leaver = aStaffMemberOf(tenant);
+        deactivate(tenant, leaver);
+
+        // The invitation is the only route from invited to active, and an ex-employee has already
+        // taken it. Resending would mail a live seven-day link to somebody whose access was
+        // deliberately withdrawn, and accepting it would set a password of their choosing.
+        mockMvc.perform(post("/api/staff/" + leaver.getId() + "/invite/resend")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DATA_CONFLICT"));
+
+        assertThat(notifications.sentNothingTo(leaver.getEmail()))
+                .as("and nothing was posted through their door either")
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("an invitation minted before a deactivation cannot undo it")
+    void anOldInvitationCannotReactivateAnyone() throws Exception {
+        Tenant tenant = aTenant();
+        User leaver = aStaffMemberOf(tenant);
+        deactivate(tenant, leaver);
+
+        // The row a resend would have created, reconstructed directly: still unused, still inside
+        // its seven days. Accepting it must not be a password reset for an account somebody chose
+        // to switch off — the way back is the owner reactivating them, and only that.
+        String rawToken = liveInvitationFor(tenant, leaver);
+
+        mockMvc.perform(accept(rawToken, "Sam Renamed", "a-password-of-my-own"))
+                .andExpect(status().isGone())
+                .andExpect(jsonPath("$.code").value("INVITATION_CONSUMED"));
+
+        User unchanged = users.findById(leaver.getId()).orElseThrow();
+        assertThat(unchanged.isActive()).isFalse();
+        assertThat(unchanged.getFullName()).isEqualTo(leaver.getFullName());
+        login(leaver.getEmail(), "a-password-of-my-own").andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("the list says whether an inactive colleague ever accepted")
+    void theListTellsAnInviteeFromALeaver() throws Exception {
+        Tenant tenant = aTenant();
+        User leaver = aStaffMemberOf(tenant);
+        deactivate(tenant, leaver);
+        String invitedEmail = invite(tenant);
+        UUID invitedId = users.findByEmailIgnoreCase(invitedEmail).orElseThrow().getId();
+
+        // Both rows read active:false, and the owner's next click differs: resend the one, leave
+        // the other alone. invitationPending cannot carry that on its own — an invitation that ran
+        // out weeks ago makes a pending invitee look exactly like an ex-employee.
+        String body = mockMvc.perform(get("/api/staff")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(listedMember(body, leaver.getId()).path("accepted").asBoolean())
+                .as("deactivated: has a password, so reactivate rather than re-invite")
+                .isTrue();
+        assertThat(listedMember(body, invitedId).path("accepted").asBoolean())
+                .as("invited: no password yet, so resending is the only way in")
+                .isFalse();
+        assertThat(listedMember(body, leaver.getId()).path("active").asBoolean()).isFalse();
+        assertThat(listedMember(body, invitedId).path("active").asBoolean()).isFalse();
+    }
+
+    @Test
     @DisplayName("an address that already has an account anywhere is 409 EMAIL_TAKEN (D13)")
     void addressesAreGloballyUnique() throws Exception {
         Tenant mine = aTenant();
@@ -232,6 +307,34 @@ class StaffInvitationIT extends ApiIntegrationTest {
                         .content(asJson(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF))))
                 .andExpect(status().isCreated());
         return email;
+    }
+
+    /** The one entry of {@code GET /api/staff} with this id, read out of the raw response. */
+    private com.fasterxml.jackson.databind.JsonNode listedMember(String body, UUID id)
+            throws Exception {
+        for (com.fasterxml.jackson.databind.JsonNode member : json.readTree(body)) {
+            if (id.toString().equals(member.path("id").asText())) {
+                return member;
+            }
+        }
+        throw new AssertionError(id + " is not in the staff list: " + body);
+    }
+
+    private void deactivate(Tenant tenant, User member) throws Exception {
+        mockMvc.perform(patch("/api/staff/" + member.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(asJson(new UpdateStaffRequest(null, null, false))))
+                .andExpect(status().isOk());
+        notifications.clear();
+    }
+
+    /** The row {@code issueInvitation} would have written, and the raw token only its holder has. */
+    private String liveInvitationFor(Tenant tenant, User member) {
+        String rawToken = SecretTokens.random();
+        invitations.save(new StaffInvitation(tenant.id(), member.getId(), member.getEmail(),
+                SecretTokens.hash(rawToken), clock.instant().plus(Duration.ofDays(7))));
+        return rawToken;
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder accept(

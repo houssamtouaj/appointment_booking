@@ -300,6 +300,17 @@ Rules worth knowing:
   only route from invited to active, because it is the only route that sets a password;
   otherwise the result is a user who is active, cannot log in, and is nonetheless listed on the
   public booking page as somebody a customer can book with.
+- **A deactivated colleague cannot be re-invited, and cannot accept** → `409` on resend and
+  `410` on accept. The mirror of the rule above, and the reason both exist: "has a password" is
+  the test, not "is active". A deactivated ex-employee is inactive with their hash still in
+  place, so a guard that only checks `active` mails them a live seven-day link and lets them
+  choose a new password — self-service reactivation of an account somebody deliberately
+  switched off. Resending is for people who have never accepted; reactivating is
+  `PATCH /api/staff/{id}` with `active: true`, and the owner has to do it.
+- **The list says which of the two an inactive row is.** `accepted` is true for a deactivated
+  colleague and false for an invitee, because `invitationPending` cannot carry that on its own:
+  an invitation that ran out weeks ago leaves the two looking identical, with opposite correct
+  actions.
 - **The public staff DTO is written by hand.** `PublicStaffResponse` is id and display name;
   reusing the admin record would publish every field it ever grows, and the leak would arrive
   through a change to a class nobody was thinking about at the time.

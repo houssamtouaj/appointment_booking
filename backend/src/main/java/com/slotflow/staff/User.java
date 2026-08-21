@@ -111,10 +111,19 @@ public class User extends AbstractMutableEntity implements TenantOwned {
      * Consuming an invitation: the name the invitee typed wins over the one the owner guessed,
      * and setting the password is what activates the account. One method, so there is no window
      * in which a user is active without a password.
+     *
+     * <p>Both guards refuse to overwrite a credential that already exists. An active user is
+     * plainly in use; an inactive one that already has a hash was deactivated, and accepting on its
+     * behalf is a password reset wearing an invitation's clothes. Plan 06 answers both with
+     * {@code 410 INVITATION_CONSUMED} before reaching this method, so these throws are the
+     * invariant rather than the error path — and they are what makes a third caller safe.
      */
     public void acceptInvitation(String fullName, String passwordHash) {
         if (active) {
             throw new IllegalStateException("user is already active");
+        }
+        if (hasPassword()) {
+            throw new IllegalStateException("user already has a password; this is a reactivation");
         }
         this.fullName = requireText(fullName, "fullName");
         this.passwordHash = requireText(passwordHash, "passwordHash");

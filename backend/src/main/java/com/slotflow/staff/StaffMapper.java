@@ -22,6 +22,10 @@ public interface StaffMapper {
      * @param serviceIds        passed in because the assignment is a separate table, read in one
      *                          query for the whole page rather than per row
      */
+    // accepted is read off the entity rather than passed in: it is derived from the password hash,
+    // and a caller given the chance to supply it is a caller given the chance to supply it wrongly.
+    // An expression because hasPassword() is not a JavaBean accessor MapStruct would find.
+    @Mapping(target = "accepted", expression = "java(user.hasPassword())")
     StaffResponse toResponse(User user, boolean invitationPending, List<UUID> serviceIds);
 
     /** D9. {@code fullName} becomes {@code displayName}: what it means to a customer. */

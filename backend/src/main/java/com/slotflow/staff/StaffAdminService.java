@@ -162,6 +162,16 @@ public class StaffAdminService {
      *
      * <p>A write, so a foreign id is a 403 — and this endpoint takes a staff id rather than an
      * address precisely so that it cannot be used to probe for accounts elsewhere.
+     *
+     * <p><b>Only somebody who has never set a password may be re-invited</b>, which is the same
+     * test {@link #activate} makes from the other side and for the same reason. Guarding on
+     * {@code isActive()} alone lets a resend reach a deactivated ex-employee: they are inactive, so
+     * they look like an invitee, but their password hash is still there and {@code accept} would
+     * overwrite it and switch the account back on. An owner who had just withdrawn somebody's
+     * access would be mailing them a live seven-day key to a password of their own choosing — and
+     * the admin list shows both cases as {@code active: false}, so the mistake is one misread row
+     * away. The way back for a deactivated colleague is {@code PATCH /api/staff/id} with
+     * {@code active: true}, and only that.
      */
     @Transactional
     public StaffResponse resendInvitation(UUID staffId) {
@@ -169,6 +179,11 @@ public class StaffAdminService {
         if (invited.isActive()) {
             throw new ApiException(ErrorCode.DATA_CONFLICT,
                     "That colleague has already accepted their invitation.");
+        }
+        if (invited.hasPassword()) {
+            throw new ApiException(ErrorCode.DATA_CONFLICT,
+                    "That colleague accepted an invitation before and was deactivated. "
+                            + "Reactivate them instead of inviting them again.");
         }
         issueInvitation(business(), invited);
         return toResponse(invited);
@@ -234,6 +249,10 @@ public class StaffAdminService {
      * invitee and produce a user who is active with no password: unable to log in, and yet listed
      * on the public booking page as somebody a customer can book with. The invitation is the only
      * route from invited to active, because it is the only route that sets a password.
+     *
+     * <p>{@link #resendInvitation} enforces the same rule from the other end, so the two
+     * transitions cannot be swapped: an invitee becomes active by accepting, a deactivated
+     * colleague becomes active here, and neither route can do the other's job.
      */
     private void activate(User user) {
         if (!user.hasPassword()) {

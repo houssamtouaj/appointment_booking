@@ -29,7 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
  *       token, distinguishing them discloses nothing they did not have.</li>
  *   <li><b>Accepting twice is 410, not 500.</b> A double-clicked button, a forwarded mail and a
  *       browser prefetch all produce it, and it must not be a stack trace — nor, more importantly,
- *       a way to reset the password of an account that is already in use.</li>
+ *       a way to reset the password of an account that is already in use. "Already in use" covers
+ *       a deactivated one: it has a password, so it is not waiting to be invited.</li>
  * </ul>
  */
 @Service
@@ -73,9 +74,14 @@ public class InvitationService {
         User invited = users.findById(invitation.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("invited user"));
 
-        if (invited.isActive()) {
-            // The row was activated by another route — a second, still-valid invitation, or a
-            // resend that was accepted first. Same answer as a used token: this link is spent.
+        if (invited.isActive() || invited.hasPassword()) {
+            // Two cases, one answer, because to whoever holds the link they are the same fact: it
+            // no longer works. Either the row was activated by another route — a second still-valid
+            // invitation, or a resend accepted first — or it belongs to somebody who accepted once
+            // and was later deactivated. That second case is the dangerous one: accepting would
+            // overwrite an existing password hash and switch a withdrawn account back on, which
+            // turns an old invitation into self-service reactivation. Only a user who has never had
+            // a password can be activated from here.
             throw consumed();
         }
 
