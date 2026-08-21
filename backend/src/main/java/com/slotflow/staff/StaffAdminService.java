@@ -8,6 +8,7 @@ import com.slotflow.catalog.StaffService;
 import com.slotflow.catalog.StaffServiceRepository;
 import com.slotflow.common.error.ApiException;
 import com.slotflow.common.error.ErrorCode;
+import com.slotflow.notification.NotificationRequest;
 import com.slotflow.notification.NotificationService;
 import com.slotflow.security.AuthProperties;
 import com.slotflow.security.RefreshTokenService;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +56,7 @@ public class StaffAdminService {
     private final StaffServiceRepository assignments;
     private final BookingRepository bookings;
     private final RefreshTokenService refreshTokens;
-    private final NotificationService notifications;
+    private final ApplicationEventPublisher notifications;
     private final StaffMapper mapper;
     private final TenantContext tenant;
     private final Duration invitationTtl;
@@ -63,7 +65,8 @@ public class StaffAdminService {
     public StaffAdminService(UserRepository users, BusinessRepository businesses,
                              StaffInvitationRepository invitations,
                              StaffServiceRepository assignments, BookingRepository bookings,
-                             RefreshTokenService refreshTokens, NotificationService notifications,
+                             RefreshTokenService refreshTokens,
+                             ApplicationEventPublisher notifications,
                              StaffMapper mapper, TenantContext tenant,
                              AuthProperties properties, Clock clock) {
         this.users = users;
@@ -293,6 +296,11 @@ public class StaffAdminService {
      * <p>Superseding matters: without it, every "resend it, I never got the mail" leaves another
      * live key to the account for a week. It is spelled as {@code markUsed} because the schema has
      * one column for "no longer valid" and deleting the row would lose the trail.
+     *
+     * <p>The mail is published rather than sent, so it goes out after this transaction commits. The
+     * ordering is load-bearing in one direction only: superseding the old token and issuing the new
+     * one must be atomic with each other, and neither must be visible to a recipient before it is
+     * true.
      */
     private void issueInvitation(Business business, User invited) {
         Instant now = clock.instant();
@@ -305,9 +313,12 @@ public class StaffAdminService {
         invitations.save(new StaffInvitation(business.getId(), invited.getId(), invited.getEmail(),
                 SecretTokens.hash(rawToken), expiresAt));
 
-        notifications.sendStaffInvitation(
+        // Published, not sent: NotificationDispatcher delivers it after this transaction commits.
+        // Sending here would mail a live seven-day link for a row a later failure rolls back, and
+        // leave the owner nothing to resend from.
+        notifications.publishEvent(new NotificationRequest.StaffInvitation(
                 new NotificationService.Recipient(invited.getEmail(), invited.getFullName()),
-                business.getName(), rawToken, expiresAt);
+                business.getName(), rawToken, expiresAt));
     }
 
     /** A write path: load by id, then guard, so a foreign id is refused rather than hidden. */

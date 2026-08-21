@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Password reset (D6): single use, one hour, and it ends every session the account has.
@@ -28,6 +30,12 @@ class PasswordResetIT extends ApiIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("forgot-password sends a link and answers 202")
@@ -215,6 +223,27 @@ class PasswordResetIT extends ApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(asJson(new ResetPasswordRequest(token, "пароль".repeat(6)))))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("a rolled-back reset request mails nothing either")
+    void nothingIsMailedIfTheTransactionRollsBack() {
+        Tenant tenant = aTenant();
+        String email = tenant.owner().getEmail();
+
+        // Same rule as the invitation, same reason: the token row and the mail have to agree, and
+        // the only way to guarantee that is to send after the commit that made the row real.
+        new TransactionTemplate(transactionManager).execute(status -> {
+            authService.requestPasswordReset(new ForgotPasswordRequest(email));
+            status.setRollbackOnly();
+            return null;
+        });
+
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM password_reset_token WHERE user_id = ?",
+                Integer.class, tenant.owner().getId()))
+                .isZero();
+        assertThat(notifications.sentNothingTo(email)).isTrue();
     }
 
     // ---------------------------------------------------------------------------------

@@ -340,6 +340,13 @@ Rules worth knowing:
   colleague and false for an invitee, because `invitationPending` cannot carry that on its own:
   an invitation that ran out weeks ago leaves the two looking identical, with opposite correct
   actions.
+- **Mail is sent after the commit, never inside it.** A service publishes a
+  `NotificationRequest` and `NotificationDispatcher` delivers it on `AFTER_COMMIT`. Sending from
+  inside the caller's transaction means a commit that fails afterwards — the
+  `app_user_email_key` race, a dropped connection, any later exception — leaves a live-looking
+  seven-day link in an inbox for a row that never existed, and nothing for the owner to resend
+  from. An event rather than a `TransactionSynchronization` per call site, because plan 12 adds
+  several more senders and "remember to defer this one too" is a hope, not a rule.
 - **The emailed links put the token in the path**, not in a query string:
   `{FRONTEND_BASE_URL}/accept-invitation/{token}` and `/reset-password/{token}`. A query string
   travels in the `Referer` header of every asset the page loads, is kept verbatim in browser

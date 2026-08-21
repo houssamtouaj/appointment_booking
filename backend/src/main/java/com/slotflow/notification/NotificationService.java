@@ -16,9 +16,17 @@ import java.time.Instant;
  * SPA's URL structure, and the notification layer knows the URLs but must never be able to mint a
  * token. Neither half can do the other's job by accident.
  *
- * <p>Every method is fire-and-forget from the caller's point of view. A mail failure must not roll
- * back a committed invitation — plan 12 makes these {@code @Async} and sends after commit; the
- * stub simply cannot fail.
+ * <p><b>Nothing calls these methods directly.</b> A service publishes a {@link NotificationRequest}
+ * and {@link NotificationDispatcher} calls the implementation {@code AFTER_COMMIT}, which is what
+ * makes "a mail failure must not roll back a committed invitation" true in both directions: the mail
+ * cannot undo the row, and a row that never committed cannot produce a mail. Sending from inside the
+ * caller's transaction — which is what the two call sites used to do — meant a commit that failed
+ * afterwards left a live-looking seven-day link in an inbox for a user that does not exist. The stub
+ * cannot fail, so that stayed invisible; a real transport in plan 12 would have found it in
+ * production.
+ *
+ * <p>Plan 12 also makes the send {@code @Async}, which is the other half: after-commit keeps the
+ * message honest, off-thread keeps a slow SMTP handshake out of the request.
  */
 public interface NotificationService {
 

@@ -8,6 +8,7 @@ import com.slotflow.common.error.ApiException;
 import com.slotflow.common.error.ErrorCode;
 import com.slotflow.common.error.Problems;
 import com.slotflow.common.error.ValidationError;
+import com.slotflow.notification.NotificationRequest;
 import com.slotflow.notification.NotificationService;
 import com.slotflow.staff.User;
 import com.slotflow.staff.UserRepository;
@@ -18,6 +19,7 @@ import java.util.Locale;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +52,7 @@ public class AuthService {
     private final BookingPolicyRepository policies;
     private final RefreshTokenService refreshTokens;
     private final PasswordResetService passwordResets;
-    private final NotificationService notifications;
+    private final ApplicationEventPublisher notifications;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthMapper mapper;
@@ -67,7 +69,8 @@ public class AuthService {
 
     public AuthService(UserRepository users, BusinessRepository businesses,
                        BookingPolicyRepository policies, RefreshTokenService refreshTokens,
-                       PasswordResetService passwordResets, NotificationService notifications,
+                       PasswordResetService passwordResets,
+                       ApplicationEventPublisher notifications,
                        PasswordEncoder passwordEncoder, JwtService jwtService, AuthMapper mapper) {
         this.users = users;
         this.businesses = businesses;
@@ -231,10 +234,10 @@ public class AuthService {
      * Issues a reset token when the address belongs to someone who can log in, and does nothing
      * when it does not. The controller answers {@code 202} either way.
      *
-     * <p>Not literally constant time — one branch writes a token row and calls the notification
-     * stub — but there is no branch a caller can observe: same status, same empty body, and no
-     * difference of the order a network round trip would reveal. The alternative, a 404 for an
-     * unknown address, is a bulk account-enumeration endpoint.
+     * <p>Not literally constant time — one branch writes a token row and publishes a notification —
+     * but there is no branch a caller can observe: same status, same empty body, and no difference
+     * of the order a network round trip would reveal. The alternative, a 404 for an unknown address,
+     * is a bulk account-enumeration endpoint.
      *
      * <p>An invited user who has not accepted yet is skipped by {@link User#canLogIn()}: their path
      * to a password is the invitation, and letting a reset substitute for it would let anyone who
@@ -246,9 +249,12 @@ public class AuthService {
                 .filter(User::canLogIn)
                 .ifPresent(user -> {
                     PasswordResetService.Issued issued = passwordResets.issueFor(user.getId());
-                    notifications.sendPasswordReset(
+                    // After commit, via NotificationDispatcher. A reset link for a token row that
+                    // rolled back is a link that says "invalid or expired" to somebody who just
+                    // asked for it, and no amount of retrying on their part fixes it.
+                    notifications.publishEvent(new NotificationRequest.PasswordReset(
                             new NotificationService.Recipient(user.getEmail(), user.getFullName()),
-                            issued.rawValue(), issued.expiresAt());
+                            issued.rawValue(), issued.expiresAt()));
                 });
     }
 

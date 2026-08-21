@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.slotflow.security.AuthPrincipal;
+import com.slotflow.security.JwtAuthentication;
 import com.slotflow.security.LoginRequest;
 import com.slotflow.security.SecretTokens;
 import com.slotflow.support.ApiIntegrationTest;
@@ -20,6 +22,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Invite, accept, sign in — end to end, plus every way the accept link is allowed to fail.
@@ -40,6 +45,12 @@ class StaffInvitationIT extends ApiIntegrationTest {
 
     @Autowired
     private InvitationService invitationService;
+
+    @Autowired
+    private StaffAdminService staffAdmin;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("invite, accept, sign in as the new colleague")
@@ -322,6 +333,34 @@ class StaffInvitationIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("a rolled-back invite mails nothing, so there is no link to a row that never was")
+    void nothingIsMailedIfTheTransactionRollsBack() {
+        Tenant tenant = aTenant();
+        String email = "sam-" + UUID.randomUUID().toString().substring(0, 8) + "@example.test";
+        authenticateAs(tenant);
+
+        // The invite succeeds and the transaction then does not: the app_user_email_key race, a
+        // dropped connection, any later exception in the same request. Sending inside that
+        // transaction leaves a live-looking seven-day link in somebody's inbox for a user row that
+        // does not exist — and no row for the owner to resend from, because there is nothing to
+        // resend. The stub cannot fail, so this stays invisible until a real transport lands.
+        try {
+            new TransactionTemplate(transactionManager).execute(status -> {
+                staffAdmin.invite(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF));
+                status.setRollbackOnly();
+                return null;
+            });
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+
+        assertThat(users.findByEmailIgnoreCase(email))
+                .as("the row is gone, which is the whole reason the mail must not have gone out")
+                .isEmpty();
+        assertThat(notifications.sentNothingTo(email)).isTrue();
+    }
+
+    @Test
     @DisplayName("no invitation token is stored in plaintext")
     void invitationTokensAreStoredHashedOnly() throws Exception {
         Tenant tenant = aTenant();
@@ -350,6 +389,16 @@ class StaffInvitationIT extends ApiIntegrationTest {
                         .content(asJson(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF))))
                 .andExpect(status().isCreated());
         return email;
+    }
+
+    /**
+     * Puts the owner in the {@code SecurityContext} directly, for the tests that call a service
+     * rather than an endpoint: {@link com.slotflow.tenant.TenantContext} reads the {@code bid} claim
+     * from there, and there is no filter chain in the way when the call does not go through MockMvc.
+     */
+    private void authenticateAs(Tenant tenant) {
+        SecurityContextHolder.getContext().setAuthentication(new JwtAuthentication(
+                new AuthPrincipal(tenant.owner().getId(), tenant.id(), Role.OWNER)));
     }
 
     /** The one entry of {@code GET /api/staff} with this id, read out of the raw response. */
