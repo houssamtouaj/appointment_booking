@@ -56,7 +56,11 @@ public class PolicyService {
         log.info("Booking policy for business {} set to lead {}h, advance {}d, cutoff {}h, grid {}m",
                 policy.getBusinessId(), policy.getMinLeadTimeHours(), policy.getMaxAdvanceDays(),
                 policy.getCancellationCutoffHours(), policy.getSlotGranularityMinutes());
-        return response(policies.save(policy));
+        // saveAndFlush, not save: @LastModifiedDate is stamped by the auditing listener on
+        // @PreUpdate, which runs at flush. A plain save() on an already-managed entity is a no-op
+        // merge, so the response would carry the updatedAt from before this very write — and a
+        // client caching it to detect policy drift would see a timestamp older than its own change.
+        return response(policies.saveAndFlush(policy));
     }
 
     private BookingPolicy policy() {

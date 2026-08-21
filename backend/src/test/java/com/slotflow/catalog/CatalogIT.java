@@ -14,6 +14,8 @@ import com.slotflow.staff.User;
 import com.slotflow.support.ApiIntegrationTest;
 import com.slotflow.support.fixtures.Fixtures;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,6 +128,25 @@ class CatalogIT extends ApiIntegrationTest {
         mockMvc.perform(asOwner(get("/api/services?active=false"), tenant, null))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].name").value("Blow dry"));
+    }
+
+    @Test
+    @DisplayName("a page past the end reports the catalog's real totals, not zero")
+    void aPagePastTheEndKeepsItsTotals() throws Exception {
+        Tenant tenant = aTenant();
+        services.save(Fixtures.aService().forBusiness(tenant.business()).withName("Cut").build());
+        services.save(Fixtures.aService().forBusiness(tenant.business()).withName("Shave").build());
+
+        // No rows on this page, but two in the catalog. The query ran and counted them, so the
+        // envelope must say so: totalPages: 0 here tells a paginator the catalog is empty and
+        // leaves it no way back to page 0.
+        mockMvc.perform(asOwner(get("/api/services?page=3&size=1"), tenant, null))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(0))
+                .andExpect(jsonPath("$.page").value(3))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(2));
     }
 
     // ---------------------------------------------------------------------------------
@@ -264,6 +285,39 @@ class CatalogIT extends ApiIntegrationTest {
 
         // Nothing was created: the check runs before the insert, and the whole write is one
         // transaction either way.
+        assertThat(services.findByBusinessIdAndActiveTrue(tenant.id())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("staffIds is bounded and null-free, and says so before the lookup runs")
+    void staffIdsIsBoundedAndNullFree() throws Exception {
+        Tenant tenant = aTenant();
+        User colleague = aStaffMemberOf(tenant);
+
+        // The mixed case is the one that used to get past validation: a lone null leaves the
+        // membership set empty and reports STAFF_NOT_IN_BUSINESS, but a real id alongside it makes
+        // that set non-empty, and Set.copyOf answers contains(null) with a NullPointerException.
+        mockMvc.perform(asOwner(post("/api/services"), tenant, """
+                        {"name": "Massage", "durationMinutes": 60, "priceCents": 5000,
+                         "staffIds": ["%s", null]}
+                        """.formatted(colleague.getId())))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("staffIds[1]"));
+
+        // And the list is capped, so the ids cannot become an unbounded IN (...) parameter list.
+        String tooMany = IntStream.range(0, 101)
+                .mapToObj(i -> "\"" + UUID.randomUUID() + "\"")
+                .collect(Collectors.joining(", "));
+        mockMvc.perform(asOwner(post("/api/services"), tenant, """
+                        {"name": "Massage", "durationMinutes": 60, "priceCents": 5000,
+                         "staffIds": [%s]}
+                        """.formatted(tooMany)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("staffIds"));
+
+        // Neither body created anything: both are refused before the service is reached.
         assertThat(services.findByBusinessIdAndActiveTrue(tenant.id())).isEmpty();
     }
 

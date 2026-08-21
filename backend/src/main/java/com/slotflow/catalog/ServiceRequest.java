@@ -32,7 +32,10 @@ import java.util.UUID;
  *                            means none
  * @param bufferAfterMinutes  cleanup time after. Absent means none
  * @param staffIds            who performs it. Absent or empty creates the service with nobody
- *                            assigned, which is legal and comes back as {@code bookable: false}
+ *                            assigned, which is legal and comes back as {@code bookable: false}.
+ *                            Bounded and null-free like every other collection this API accepts:
+ *                            the ids become an {@code IN (...)} list, and a null element would
+ *                            reach the membership check as a lookup no immutable set will answer
  */
 public record ServiceRequest(
 
@@ -59,5 +62,6 @@ public record ServiceRequest(
         @Schema(example = "10")
         Integer bufferAfterMinutes,
 
-        List<UUID> staffIds) {
+        @Size(max = 100)
+        List<@NotNull UUID> staffIds) {
 }

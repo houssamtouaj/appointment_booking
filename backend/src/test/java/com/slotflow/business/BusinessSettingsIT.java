@@ -12,12 +12,16 @@ import com.slotflow.catalog.ServiceOfferingRepository;
 import com.slotflow.staff.User;
 import com.slotflow.support.ApiIntegrationTest;
 import com.slotflow.support.fixtures.Fixtures;
+import com.jayway.jsonpath.JsonPath;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
@@ -253,6 +257,31 @@ class BusinessSettingsIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("the PUT response carries the updatedAt of the write it just performed")
+    void thePolicyReportsItsOwnWriteTime() throws Exception {
+        Tenant tenant = aTenant();
+        String before = updatedAt(mockMvc.perform(asOwner(get("/api/policy"), tenant, null))
+                .andExpect(status().isOk()));
+
+        clock.advanceBy(Duration.ofHours(3));
+        String written = updatedAt(mockMvc.perform(asOwner(put("/api/policy"), tenant, """
+                        {"minLeadTimeHours": 4, "maxAdvanceDays": 30,
+                         "cancellationCutoffHours": 12, "slotGranularityMinutes": 20}
+                        """))
+                .andExpect(status().isOk()));
+
+        // Auditing stamps @LastModifiedDate on @PreUpdate, which runs at flush — after a plain
+        // save() of an already-managed entity has returned. A response built before that flush
+        // carries the previous timestamp, so a client caching it to detect policy drift would see
+        // a time older than the change it just made.
+        String reread = updatedAt(mockMvc.perform(asOwner(get("/api/policy"), tenant, null))
+                .andExpect(status().isOk()));
+        assertThat(Instant.parse(written))
+                .isEqualTo(Instant.parse(reread))
+                .isAfter(Instant.parse(before));
+    }
+
+    @Test
     @DisplayName("the policy bounds are narrower than the schema's, and named on rejection")
     void thePolicyBoundsAreEnforced() throws Exception {
         Tenant tenant = aTenant();
@@ -295,6 +324,11 @@ class BusinessSettingsIT extends ApiIntegrationTest {
     // ---------------------------------------------------------------------------------
     //  helpers
     // ---------------------------------------------------------------------------------
+
+    /** The one field these tests read out of the body rather than matching in place. */
+    private static String updatedAt(ResultActions response) throws Exception {
+        return JsonPath.read(response.andReturn().getResponse().getContentAsString(), "$.updatedAt");
+    }
 
     private static String settings(String timezone) {
         return """

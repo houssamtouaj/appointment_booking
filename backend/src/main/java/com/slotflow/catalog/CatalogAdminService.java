@@ -83,13 +83,14 @@ public class CatalogAdminService {
         Page<ServiceOffering> page = active == null
                 ? services.findByBusinessId(tenant.businessId(), sorted)
                 : services.findByBusinessIdAndActive(tenant.businessId(), active, sorted);
-        if (page.isEmpty()) {
-            return PageResponse.empty(page.getNumber(), page.getSize());
-        }
-
-        Map<UUID, List<UUID>> performers = performersOf(
-                page.getContent().stream().map(ServiceOffering::getId).toList());
-        Set<UUID> activeStaff = activeStaffIds();
+        // An empty page still skips the two joins, which would have nothing to join against, but
+        // the envelope keeps the totals the query already counted. PageResponse.empty is for the
+        // case where no query ran at all; reporting totalPages: 0 for a ?page= past the end tells
+        // a paginator the catalog is empty and leaves it no way back to page 0.
+        Map<UUID, List<UUID>> performers = page.isEmpty()
+                ? Map.of()
+                : performersOf(page.getContent().stream().map(ServiceOffering::getId).toList());
+        Set<UUID> activeStaff = page.isEmpty() ? Set.of() : activeStaffIds();
         return PageResponse.of(page, service -> toResponse(service, performers, activeStaff));
     }
 

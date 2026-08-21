@@ -2,6 +2,7 @@ package com.slotflow.catalog;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
@@ -52,7 +53,7 @@ public record ServiceUpdateRequest(
 
         Boolean active,
 
-        List<UUID> staffIds) {
+        @Size(max = 100) List<@NotNull UUID> staffIds) {
 
     /** Whether this patch touches the pair the entity sets together. */
     boolean changesBuffers() {
