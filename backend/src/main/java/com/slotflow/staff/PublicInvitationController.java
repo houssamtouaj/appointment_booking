@@ -18,8 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
  * until the second of these two calls succeeds.
  *
  * <p>The token is in the path rather than in a query parameter because these are the SPA's routes as
- * much as the API's, and a path segment does not end up in a {@code Referer} header the way a query
- * string does. It is base64url, so it needs no encoding to be a path segment.
+ * much as the API's, and a path segment does not end up in a {@code Referer} header, in browser
+ * history or in an analytics beacon the way a query string does. It is base64url, so it needs no
+ * encoding to be a path segment — {@code LoggingNotificationService} encodes it anyway, on the
+ * grounds that the one place a secret becomes a URL is the wrong place to depend on the token
+ * format. That class builds the matching SPA link, and it has to: an argument made only on the
+ * reading side is undone by whoever writes the URL.
  *
  * <p>Under {@code /api/public/**}, so it is both in the security allowlist and inside the
  * rate limiter's per-IP write budget (D12) — an unauthenticated endpoint that sets a password is

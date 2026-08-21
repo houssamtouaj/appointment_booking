@@ -340,6 +340,16 @@ Rules worth knowing:
   colleague and false for an invitee, because `invitationPending` cannot carry that on its own:
   an invitation that ran out weeks ago leaves the two looking identical, with opposite correct
   actions.
+- **The emailed links put the token in the path**, not in a query string:
+  `{FRONTEND_BASE_URL}/accept-invitation/{token}` and `/reset-password/{token}`. A query string
+  travels in the `Referer` header of every asset the page loads, is kept verbatim in browser
+  history and synced-profile backups, and is reported in full by any analytics beacon — and what
+  is in this URL is a live credential, seven days for an invitation and one hour for a reset.
+  `PublicInvitationController` takes its token in the path for the same reason, and an argument
+  made only on the reading side is undone by whoever writes the URL. **This assumes two SPA
+  routes**, `/accept-invitation/:token` and `/reset-password/:token`; nothing serves them yet,
+  which is why the shape is settled here rather than inherited from whatever the wave-3 stub
+  happened to emit.
 - **The public staff DTO is written by hand.** `PublicStaffResponse` is id and display name;
   reusing the admin record would publish every field it ever grows, and the leak would arrive
   through a change to a class nobody was thinking about at the time.
