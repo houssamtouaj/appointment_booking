@@ -7,7 +7,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.slotflow.support.ApiIntegrationTest;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +32,14 @@ import org.springframework.test.web.servlet.MvcResult;
  * and leave a thief with a working session.
  */
 class RefreshRotationIT extends ApiIntegrationTest {
+
+    /**
+     * Four callers per round, three rounds. Enough overlap that a read-then-write rotation loses
+     * the race reliably rather than occasionally, and few enough that the losers — each holding a
+     * row lock and a connection while they wait — stay well inside the ten-connection pool.
+     */
+    private static final int RACERS = 4;
+    private static final int ROUNDS = 3;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -88,6 +103,38 @@ class RefreshRotationIT extends ApiIntegrationTest {
         assertThat(jdbc.queryForObject("""
                 SELECT count(*) FROM refresh_token WHERE user_id = ? AND revoked_at IS NULL
                 """, Integer.class, tenant.owner().getId())).isZero();
+    }
+
+    @Test
+    @DisplayName("concurrent rotations of one token mint one successor; the losers are REFRESH_REUSED")
+    void oneTokenRotatesOnceEvenWhenTheReadsOverlap() throws Exception {
+        // "Usable exactly once" is a claim about concurrency, so it cannot be tested sequentially:
+        // a single-threaded replay always sees revoked_at already committed and takes the reuse
+        // branch whatever the implementation does. What has to hold is that four callers whose
+        // reads overlap still produce one successor — a double-clicked tab, an Axios interceptor
+        // retrying a dropped response, or a thief racing the victim all produce exactly this.
+        for (int round = 1; round <= ROUNDS; round++) {
+            Tenant tenant = aTenant();
+            String presented = login(tenant);
+
+            List<Integer> statuses = rotateConcurrently(presented);
+
+            assertThat(statuses).as("round %d: exactly one caller may rotate", round)
+                    .filteredOn(status -> status == 200)
+                    .hasSize(1);
+            assertThat(tokenCount(tenant.owner().getId()))
+                    .as("round %d: the presented token and its one successor, and nothing else. "
+                            + "A second successor is a live session nobody can trace: the chain "
+                            + "links to one of them, so the other is a week-long credential with "
+                            + "no theft signal attached", round)
+                    .isEqualTo(2);
+            // And the losers are told it is theft, not merely refused: whichever caller lost the
+            // race, the chain is dead and both parties have to sign in again.
+            assertThat(liveTokenCount(tenant.owner().getId())).isZero();
+            refresh(presented)
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("REFRESH_REUSED"));
+        }
     }
 
     @Test
@@ -168,6 +215,32 @@ class RefreshRotationIT extends ApiIntegrationTest {
                 .content(asJson(new RefreshRequest(rawToken))));
     }
 
+    /**
+     * Presents one token from {@link #RACERS} threads released together, and returns the status
+     * each of them got. The barrier is the point: without it the first caller finishes before the
+     * second starts and the test proves nothing about the window between the read and the write.
+     */
+    private List<Integer> rotateConcurrently(String rawToken) throws Exception {
+        ExecutorService racers = Executors.newFixedThreadPool(RACERS);
+        CyclicBarrier startTogether = new CyclicBarrier(RACERS);
+        try {
+            List<Future<Integer>> attempts = new ArrayList<>();
+            for (int racer = 0; racer < RACERS; racer++) {
+                attempts.add(racers.submit(() -> {
+                    startTogether.await(10, TimeUnit.SECONDS);
+                    return refresh(rawToken).andReturn().getResponse().getStatus();
+                }));
+            }
+            List<Integer> statuses = new ArrayList<>();
+            for (Future<Integer> attempt : attempts) {
+                statuses.add(attempt.get(30, TimeUnit.SECONDS));
+            }
+            return statuses;
+        } finally {
+            racers.shutdownNow();
+        }
+    }
+
     private Object revokedAt(String rawToken) {
         return jdbc.queryForObject("SELECT revoked_at FROM refresh_token WHERE token_hash = ?",
                 Object.class, SecretTokens.hash(rawToken));
@@ -189,6 +262,11 @@ class RefreshRotationIT extends ApiIntegrationTest {
      * comparison between the two is a test that passes or fails depending on the calendar.
      * Revocation is the property under test in any case.
      */
+    private int tokenCount(UUID userId) {
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM refresh_token WHERE user_id = ?", Integer.class, userId);
+    }
+
     private int liveTokenCount(UUID userId) {
         return jdbc.queryForObject(
                 "SELECT count(*) FROM refresh_token WHERE user_id = ? AND revoked_at IS NULL",

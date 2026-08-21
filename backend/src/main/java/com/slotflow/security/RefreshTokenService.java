@@ -24,6 +24,13 @@ import org.springframework.transaction.support.TransactionTemplate;
  * through {@code replaced_by}. A refresh token is therefore usable exactly once, and the chain of
  * links is a session's history.
  *
+ * <p>"Exactly once" is a statement about simultaneous callers, so it is enforced by the database
+ * and not by the {@code if} below: the lookup takes a row lock
+ * ({@link RefreshTokenRepository#findByTokenHashForUpdate}), so of two overlapping refreshes with
+ * the same value the second waits, re-reads a revoked row, and takes the reuse branch. Read the row
+ * without locking it and both callers see {@code revoked_at IS NULL}, both mint a successor, and
+ * one of those successors is a live week-long session that no {@code replaced_by} points at.
+ *
  * <h2>Reuse detection</h2>
  * That chain is what makes theft visible. A token that is already revoked — because it was rotated,
  * or because the user logged out — can only be presented by someone who kept a copy: the
@@ -102,8 +109,10 @@ public class RefreshTokenService {
         RefreshToken presented = load(rawToken);
 
         if (presented.isRevoked() || presented.hasSuccessor()) {
-            // The interesting branch. Note the order: revoke first, then throw, and both inside
-            // this transaction — an attacker must not be able to win a race by refreshing twice.
+            // The interesting branch, and the one a lost race lands in too: with the row locked,
+            // "already revoked" covers both the replay of a token spent yesterday and the caller
+            // that arrived a millisecond behind. Note the order — revoke first, then throw, and the
+            // revocation in its own transaction so it survives the exception that reports it.
             int revoked = ownTransaction.execute(status -> revokeLiveTokens(presented.getUserId()));
             log.warn("Refresh token reuse detected for user {}; revoked {} live token(s)",
                     presented.getUserId(), revoked);
@@ -162,11 +171,16 @@ public class RefreshTokenService {
         return findByRaw(rawToken).orElseThrow(RefreshTokenService::unauthenticated);
     }
 
+    /**
+     * Every lookup here is the prelude to a write — rotation spends the row, logout revokes it — so
+     * there is one helper and it takes the row lock. That is why both callers are
+     * {@code @Transactional}, and not only because of the writes that follow.
+     */
     private Optional<RefreshToken> findByRaw(String rawToken) {
         if (rawToken == null || rawToken.isBlank()) {
             return Optional.empty();
         }
-        return refreshTokens.findByTokenHash(SecretTokens.hash(rawToken));
+        return refreshTokens.findByTokenHashForUpdate(SecretTokens.hash(rawToken));
     }
 
     /** Unknown and expired are the same answer, for the same reason as everywhere else in auth. */

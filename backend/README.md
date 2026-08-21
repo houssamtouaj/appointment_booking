@@ -134,6 +134,15 @@ Every refresh revokes the presented token, issues a successor, and links the two
 `replaced_by`. A refresh token is therefore usable exactly once, and the chain is a session's
 history.
 
+"Exactly once" is a claim about simultaneous callers, so the lookup takes a row lock
+(`SELECT … FOR UPDATE`) rather than reading and then writing. Without it two overlapping
+refreshes of the same value both see `revoked_at IS NULL` and both mint a successor: the hashes
+differ, so no unique index objects, `replaced_by` names one of them, and the other is a live
+seven-day session with no theft signal attached. With it the second caller waits, re-reads a
+revoked row, and gets the `REFRESH_REUSED` answer it should have got. `RefreshRotationIT`
+races four callers over one token, because a sequential replay cannot tell the two
+implementations apart.
+
 That chain is what makes theft visible. A token that is already revoked can only be presented
 by someone holding a copy — the legitimate client rotated and discarded it. So a replay is not
 a plain 401: it revokes **every live token for that user** and returns `401 REFRESH_REUSED`.

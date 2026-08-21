@@ -388,9 +388,21 @@ class SchemaMappingIT extends IntegrationTest {
             invitations.save(new StaffInvitation(business.getId(), owner.getId(), owner.getEmail(),
                     inviteHash, NOW.plus(7, ChronoUnit.DAYS)));
 
-            assertThat(refreshTokens.findByTokenHash(refreshHash)).isPresent();
+            // Read back with SQL, like everything else in this class: the claim is that the value
+            // reached the column the lookups query, and a round trip through the same Hibernate
+            // mapping that wrote it cannot tell us that. The refresh lookup is also the only one
+            // that takes a row lock, and it exists to spend the token rather than to check it.
+            assertThat(tokenHashesIn("refresh_token")).contains(refreshHash);
+            assertThat(tokenHashesIn("password_reset_token")).contains(resetHash);
+            assertThat(tokenHashesIn("staff_invitation")).contains(inviteHash);
             assertThat(resetTokens.findByTokenHash(resetHash)).isPresent();
             assertThat(invitations.findByTokenHash(inviteHash)).isPresent();
+        }
+
+        private List<String> tokenHashesIn(String table) {
+            return jdbc.queryForList(
+                    "SELECT token_hash FROM " + table + " WHERE user_id = ?",
+                    String.class, owner.getId());
         }
 
         @Test
