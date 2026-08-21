@@ -1,6 +1,7 @@
 package com.slotflow.common.error;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 
@@ -26,6 +27,25 @@ public class ApiException extends RuntimeException {
     /** Uses the status the code declares, which is the right choice almost every time. */
     public ApiException(ErrorCode code, String detail) {
         this(code, code.status(), detail);
+    }
+
+    /**
+     * A 422 in exactly the shape the MVC binder produces, {@code errors[]} included, for a field
+     * bean validation cannot check on its own.
+     *
+     * <p>There are several: an IANA zone id and an ISO 4217 code are "well-formed but unknown", and
+     * a working-hours range is only invalid relative to the other ranges in the same request. All of
+     * them are still one field being wrong, and a React form has to be able to attach the message to
+     * an input whichever layer noticed — so the body must not depend on where the check happened to
+     * live. Declared here rather than copied into each service, because the third copy is where the
+     * shapes start to differ.
+     *
+     * @param field the request-body path the client knows the value by: {@code timezone},
+     *              {@code ranges[2].endTime}
+     */
+    public static ApiException invalidField(String field, String message) {
+        return new ApiException(ErrorCode.VALIDATION_FAILED, Problems.VALIDATION_DETAIL)
+                .with(Problems.ERRORS_PROPERTY, List.of(new ValidationError(field, message)));
     }
 
     public ApiException(ErrorCode code, HttpStatus status, String detail) {

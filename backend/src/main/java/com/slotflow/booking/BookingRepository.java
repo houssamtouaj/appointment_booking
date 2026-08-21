@@ -86,6 +86,26 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findByStaffIdAndStatusInAndStartsAtGreaterThanEqualOrderByStartsAtAsc(
             UUID staffId, Collection<BookingStatus> statuses, Instant from);
 
+    /**
+     * How many appointments a tenant-wide change is about to affect, used by plan 08 to put a number
+     * in the {@code 409} that refuses an unconfirmed timezone move.
+     *
+     * <p>A count rather than the rows: the caller needs a figure to show an operator, and loading a
+     * year of a busy calendar to call {@code size()} on it is a query that gets slower exactly as the
+     * business it belongs to gets more successful.
+     *
+     * <p>Active statuses only, the same pair as everywhere else. A cancelled appointment in next
+     * month is not affected by anything, and counting it would overstate the consequence of the
+     * change the operator is being asked to confirm.
+     */
+    default long countUpcomingActive(UUID businessId, Instant from) {
+        return countByBusinessIdAndStatusInAndStartsAtGreaterThanEqual(
+                businessId, BookingStatus.blocking(), from);
+    }
+
+    long countByBusinessIdAndStatusInAndStartsAtGreaterThanEqual(
+            UUID businessId, Collection<BookingStatus> statuses, Instant from);
+
     // ---------------------------------------------------------------------------------
     //  the scheduled jobs
     // ---------------------------------------------------------------------------------

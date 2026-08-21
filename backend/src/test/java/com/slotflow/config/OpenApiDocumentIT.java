@@ -64,7 +64,19 @@ class OpenApiDocumentIT extends ApiIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/services/{id}'].delete").exists())
                 .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}/services'].get")
-                        .exists());
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/staff/{staffId}/working-hours'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/staff/{staffId}/working-hours'].put").exists())
+                .andExpect(jsonPath("$.paths['/api/staff/{staffId}/exceptions'].post").exists())
+                .andExpect(jsonPath(
+                        "$.paths['/api/staff/{staffId}/exceptions/{exceptionId}'].delete").exists())
+                .andExpect(jsonPath("$.paths['/api/exceptions'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/exceptions'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/exceptions/{id}'].delete").exists())
+                .andExpect(jsonPath("$.paths['/api/policy'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/policy'].put").exists())
+                .andExpect(jsonPath("$.paths['/api/business'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/business'].put").exists());
     }
 
     @Test

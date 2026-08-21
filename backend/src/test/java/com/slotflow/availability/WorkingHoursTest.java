@@ -7,6 +7,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,82 @@ class WorkingHoursTest {
         assertThat(morning.durationMinutes() + afternoon.durationMinutes()).isEqualTo(7 * 60);
     }
 
+    // ---------------------------------------------------------------------------------
+    //  the overlap rule (plan 08)
+    // ---------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("a split shift with a gap, and one without, are both consistent")
+    void splitShiftsDoNotOverlap() {
+        assertThat(WorkingHours.findOverlap(List.of(
+                on(DayOfWeek.MONDAY, "09:00", "12:00"),
+                on(DayOfWeek.MONDAY, "13:00", "17:00"))))
+                .isEmpty();
+
+        // Touching, not overlapping: half-open intervals, so a shop that changes staff at noon is
+        // expressible. The booking exclusion constraint uses the same convention.
+        assertThat(WorkingHours.findOverlap(List.of(
+                on(DayOfWeek.MONDAY, "09:00", "12:00"),
+                on(DayOfWeek.MONDAY, "12:00", "17:00"))))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("two ranges sharing an hour on one day are reported against that day")
+    void overlapWithinADay() {
+        assertThat(WorkingHours.findOverlap(List.of(
+                on(DayOfWeek.WEDNESDAY, "09:00", "13:00"),
+                on(DayOfWeek.WEDNESDAY, "12:00", "17:00"))))
+                .contains(DayOfWeek.WEDNESDAY);
+
+        // Identical rows overlap themselves, which is how a duplicated grid row is caught.
+        assertThat(WorkingHours.findOverlap(List.of(
+                on(DayOfWeek.FRIDAY, "09:00", "17:00"),
+                on(DayOfWeek.FRIDAY, "09:00", "17:00"))))
+                .contains(DayOfWeek.FRIDAY);
+    }
+
+    @Test
+    @DisplayName("a night shift is consistent with the next day, until it is not")
+    void overlapAcrossMidnight() {
+        // Monday 22:00 to Tuesday 02:00 alongside a Tuesday afternoon: no conflict.
+        assertThat(WorkingHours.findOverlap(List.of(
+                on(DayOfWeek.MONDAY, "22:00", "02:00"),
+                on(DayOfWeek.TUESDAY, "14:00", "18:00"))))
+                .isEmpty();
+
+        // The same night shift alongside a Tuesday range starting at 01:00. Neither overlaps
+        // anything "within a day", and the person is working Tuesday 01:00 twice.
+        assertThat(WorkingHours.findOverlap(List.of(
+                on(DayOfWeek.MONDAY, "22:00", "02:00"),
+                on(DayOfWeek.TUESDAY, "01:00", "03:00"))))
+                .contains(DayOfWeek.TUESDAY);
+    }
+
+    @Test
+    @DisplayName("a Sunday night shift wraps onto Monday, and is checked there")
+    void theWeekIsCircular() {
+        // Sunday 23:00 to Monday 01:00. The week has to close on itself or this is the one
+        // overlap the check cannot see — and it is the shape a seven-day rota actually produces.
+        assertThat(WorkingHours.findOverlap(List.of(
+                on(DayOfWeek.SUNDAY, "23:00", "01:00"),
+                on(DayOfWeek.MONDAY, "00:30", "08:00"))))
+                .contains(DayOfWeek.MONDAY);
+
+        assertThat(WorkingHours.findOverlap(List.of(
+                on(DayOfWeek.SUNDAY, "23:00", "01:00"),
+                on(DayOfWeek.MONDAY, "01:00", "08:00"))))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("an empty week and a single range are both consistent")
+    void trivialTemplatesAreConsistent() {
+        assertThat(WorkingHours.findOverlap(List.of())).isEmpty();
+        assertThat(WorkingHours.findOverlap(List.of(on(DayOfWeek.MONDAY, "09:00", "17:00"))))
+                .isEmpty();
+    }
+
     @Test
     @DisplayName("a wall-clock 09:00 survives a DST change, which an Instant would not")
     void wallClockTimesSurviveDst() {
@@ -91,5 +168,9 @@ class WorkingHoursTest {
 
     private static WorkingHours hours(LocalTime start, LocalTime end) {
         return new WorkingHours(STAFF_ID, DayOfWeek.TUESDAY, start, end);
+    }
+
+    private static WorkingHours on(DayOfWeek day, String start, String end) {
+        return new WorkingHours(STAFF_ID, day, LocalTime.parse(start), LocalTime.parse(end));
     }
 }

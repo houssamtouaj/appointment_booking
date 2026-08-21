@@ -38,8 +38,14 @@ public interface WorkingHoursRepository extends JpaRepository<WorkingHours, UUID
      * loading every matching row and removing them one at a time. {@code clearAutomatically}
      * because this runs immediately before the replacement rows are saved, and the emptied
      * persistence context must not still hold the ones the query just deleted.
+     *
+     * <p>{@code flushAutomatically} is the other half of that, and it is not optional: clearing a
+     * persistence context <em>discards</em> whatever was still pending in it. Without the flush, any
+     * caller that had modified an entity before calling this would watch that change vanish with no
+     * error anywhere — which is the failure mode Spring Data's own documentation warns about, and it
+     * belongs on the method rather than in a note every future caller has to have read.
      */
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("delete from WorkingHours w where w.staffId = :staffId")
     int deleteByStaffId(UUID staffId);

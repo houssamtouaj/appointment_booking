@@ -109,6 +109,23 @@ public class AvailabilityOverride extends AbstractMutableEntity implements Tenan
                 OverrideType.BLOCKED, reason);
     }
 
+    /**
+     * Part of a day shut for everybody: a staff meeting, an early close on Christmas Eve.
+     *
+     * <p>The same row as the whole-day closure above with times on it, which the schema allows and
+     * the engine reads the same way. Only the {@code BLOCKED} direction is expressible business-wide,
+     * and that is a decision rather than an omission: extra availability is a statement only the
+     * person working it can make, so a business-wide {@code EXTRA} would be the API deciding on
+     * somebody's behalf that they are free — see {@code OverrideService}.
+     */
+    public static AvailabilityOverride businessWideClosure(UUID businessId, LocalDate date,
+                                                           LocalTime startTime, LocalTime endTime,
+                                                           String reason) {
+        return new AvailabilityOverride(businessId, null, date,
+                requireNotNull(startTime, "startTime"), requireNotNull(endTime, "endTime"),
+                OverrideType.BLOCKED, reason);
+    }
+
     public boolean isWholeDay() {
         return startTime == null;
     }

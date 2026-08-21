@@ -19,6 +19,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
@@ -151,6 +152,30 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .toList());
         return handleExceptionInternal(ex, problem, headers,
                 ErrorCode.VALIDATION_FAILED.status(), request);
+    }
+
+    /**
+     * A required query parameter that was not sent.
+     *
+     * <p>Without this override the answer is {@code 400 MALFORMED_REQUEST} — the generic code
+     * {@link ErrorCode#forStatus} hands to any 400 — which is the same answer as unparseable JSON
+     * and an unknown property. {@link ErrorCode#MISSING_PARAMETER} was declared in plan 04 for
+     * exactly this case and had no way of ever being returned; the first endpoint with a required
+     * parameter ({@code GET /api/exceptions?from=&to=}) is what made that visible. The distinction
+     * is worth the eight lines: "you forgot {@code from}" and "your body is not JSON" are different
+     * mistakes with different fixes, and only one of them is worth re-reading the payload over.
+     *
+     * <p>The parameter is named in {@code detail} rather than in {@code errors[]}, because that
+     * array is a 422 member — it is what the React forms parse to attach a message to an input, and
+     * a missing query parameter is a bug in the caller rather than something a user typed.
+     */
+    @Override
+    protected ResponseEntity<Object> handleMissingServletRequestParameter(
+            MissingServletRequestParameterException ex, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+        ProblemDetail problem = Problems.of(ErrorCode.MISSING_PARAMETER, status,
+                "The required parameter \"%s\" is missing.".formatted(ex.getParameterName()));
+        return handleExceptionInternal(ex, problem, headers, status, request);
     }
 
     /**

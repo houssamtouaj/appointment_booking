@@ -453,6 +453,96 @@ Rules worth knowing:
   shift carries `closesNextDay: true`, because `22:00 → 02:00` without it cannot be told from a
   twenty-hour day somebody typed backwards.
 
+## Availability configuration
+
+Everything the availability engine will consume, editable through the API. `exceptions` on the
+wire, `AvailabilityOverride` in the code (D8).
+
+| Method | Path | Auth |
+|---|---|---|
+| `GET` `/` `PUT` | `/api/staff/{id}/working-hours` | OWNER, or STAFF on themselves |
+| `POST` | `/api/staff/{id}/exceptions` | OWNER, or STAFF on themselves |
+| `DELETE` | `/api/staff/{id}/exceptions/{exceptionId}` | OWNER, or STAFF on themselves |
+| `GET` | `/api/exceptions?from=&to=` | OWNER, STAFF |
+| `POST` | `/api/exceptions` | OWNER |
+| `DELETE` | `/api/exceptions/{id}` | OWNER |
+| `GET` `/` `PUT` | `/api/policy` | GET: OWNER, STAFF · PUT: OWNER |
+| `GET` `/` `PUT` | `/api/business` | GET: OWNER, STAFF · PUT: OWNER |
+
+**The authorisation rule, written down once:** an owner edits anyone in the tenant, a staff
+member edits only their own hours and their own overrides. The use-case diagram implies it
+("manage **own** working hours") and the brief never said it. It cannot be an annotation,
+because it depends on the id in the path, so it is one `TenantContext.requireOwnerOrSelf` call
+in each service — the same one the staff patch makes — and both branches are tested.
+
+Rules worth knowing:
+
+- **Working hours are a full weekly replace, not a per-row patch.** The editor is a seven-row
+  grid and the server's copy has to end up being exactly what is on the screen; a per-row
+  `PATCH` makes the client work out which rows were added, edited and removed since it loaded
+  the page and issue them in an order that never leaves a half-saved week behind. One body, one
+  transaction, one outcome. A flat list of `{dayOfWeek, startTime, endTime}` with **no row ids**,
+  because publishing an id invites exactly the per-row patch the endpoint exists to avoid.
+- **A day with no entry is a day not worked**, not "inherit" — there is nothing to inherit from,
+  and `ranges: []` is a legal body meaning this person works no fixed hours.
+- **Ranges are a set per weekday.** Split shifts (`09:00–12:00`, `13:00–17:00`) are the normal
+  case, `end < start` is a night shift and is accepted, and `end == start` is refused with the
+  row's own path in `errors[]` (`ranges[1].endTime`).
+- **A second identical `PUT` is a no-op down to the row ids.** The service compares the requested
+  week with the stored one and returns early. Without it, every save of an unchanged grid deletes
+  seven rows and inserts seven more against the one table the engine reads on every request — and
+  "did anything change?" stops being answerable from the data.
+- **Overlaps are checked across the week, not within a day** → `422 HOURS_OVERLAP` naming the
+  weekday. The plan asks only for the within-a-day case, which is the one a client hits; the same
+  mistake is expressible across midnight (a Monday `22:00–02:00` shift beside a Tuesday
+  `01:00–03:00` one overlaps on Tuesday morning and shares no weekday), and a Sunday night shift
+  wraps onto Monday. Laying the week out as minutes from Monday midnight makes all of it one
+  check with one error code. Intervals are half-open, so ranges that merely touch at noon are
+  adjacent rather than overlapping — the same convention the booking exclusion constraint uses.
+- **Overlapping *overrides* on one date are allowed**, including a `BLOCKED` and an `EXTRA` over
+  the same hour. The engine owns precedence (plan 09, where `BLOCKED` always wins), and refusing
+  every combination this layer cannot interpret would refuse the ordinary case of a closure with
+  one person's extra hours layered on it.
+- **`BLOCKED` with no times is a whole day; `EXTRA` with no times is `422`.** "Available, from no
+  time until no time" is a sentence with no meaning, and the schema refuses it as well. One time
+  without the other is a bug rather than a meaning, and is refused too.
+- **A business-wide closure is one row with `staff_id NULL`** (D5), owner-only, whole-day or a
+  range. It appears **once** in `GET /api/exceptions` with `businessWide: true` and applies to
+  everybody, now and to whoever joins later — fanning it out into a copy per staff member would
+  produce ids that can be deleted individually, which is a closure that can be half-removed.
+  `EXTRA` is refused at this level: a business can declare itself shut on its staff's behalf, but
+  only the person working an evening can declare themselves available for it.
+- **The merged view is one query**, because `business_id` is on every row whichever level it
+  belongs to. Staff can read it: somebody has to be able to see the closure that is about to
+  cancel their Tuesday.
+- **`slotGranularityMinutes` is one of 5, 10, 15, 20, 30 or 60** → anything else is `422`. The
+  database allows 1–480 because a check constraint is a floor, not a product decision; 7 minutes
+  is legal arithmetic and a baffling slot list (`09:00, 09:07, 09:14`). Every allowed value
+  divides 60, so the grid does not drift against the wall clock through the day.
+- **`MISSING_PARAMETER` became reachable here.** `GET /api/exceptions?from=&to=` is the first
+  endpoint with a required query parameter, and until now every 400 fell through to the generic
+  `MALFORMED_REQUEST` — so "you forgot `from`" and "your body is not JSON" were the same answer.
+  The parameter is named in `detail`, not in `errors[]`, which stays a 422 member.
+- **Changing the timezone requires `confirmShift: true`** → otherwise `409
+  TIMEZONE_SHIFT_UNCONFIRMED` carrying `affectedBookings`. Working hours are wall-clock times
+  read in *this* zone (D11), so "09:00 on Tuesdays" is not a fact about a moment until this field
+  says which moment — and moving it moves every future slot the engine will compute while every
+  customer holding a confirmation keeps their instant. The 409 is returned **even when the count
+  is zero**: the bookings are the visible consequence, not the reason, and an endpoint that only
+  asks when it has something to warn about is one whose behaviour nobody can predict. Nothing is
+  normalised in either direction — not the hours, not the bookings — because there is no way to
+  know which intention the operator had.
+- **The slug is not editable at all.** It is the public URL segment; a booking page whose address
+  changes breaks every link the business has ever sent a customer. `Business` has no setter for
+  it and `BusinessRequest` has no field.
+- **Neither settings endpoint needs a tenant guard**, and that is worth saying rather than
+  noticing: there is no id in either path, so the row is always the one in the token and "another
+  tenant's settings" is not a request they can express. What they need is a role check, which an
+  annotation can do.
+- **Staff in other timezones is out of scope for v1** — one business, one timezone. A per-staff
+  zone would mean the engine resolving wall-clock hours against a different zone per candidate,
+  which is a plan-09 change and not a settings field.
+
 ## Pagination
 
 `?page=&size=` with `size` defaulting to 20 and clamped to 100, returning
@@ -533,11 +623,14 @@ is visibly a test about buffers.
 - The catalog above: services CRUD with the assignment set, the soft delete, and the two public
   endpoints the booking page opens with — including the opening hours derived from staff working
   hours (D5)
+- The availability configuration above: the weekly template as a full replace, staff and
+  business-wide overrides, the booking policy and the business settings — everything the engine
+  is about to consume, editable, validated and tenant-safe
 
 ## Not built yet
 
-The availability engine, bookings, payments and the dashboard. Working hours can be read but
-nothing writes them yet, so the derived opening hours are empty until plan 08. Email has no
+The availability engine, bookings, payments and the dashboard. Every input the engine needs is
+now editable through the API; nothing computes a slot from them yet. Email has no
 transport yet: `NotificationService` is an interface with a logging implementation, so the
 invitation and reset links are read from the api log until plan 12. Build order is tracked in
 the local project brief (see `docs/`, not committed yet).

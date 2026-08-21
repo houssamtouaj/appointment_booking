@@ -3,18 +3,16 @@ package com.slotflow.security;
 import com.slotflow.business.BookingPolicy;
 import com.slotflow.business.BookingPolicyRepository;
 import com.slotflow.business.Business;
+import com.slotflow.business.BusinessFields;
 import com.slotflow.business.BusinessRepository;
 import com.slotflow.common.error.ApiException;
 import com.slotflow.common.error.ErrorCode;
-import com.slotflow.common.error.Problems;
-import com.slotflow.common.error.ValidationError;
 import com.slotflow.notification.NotificationRequest;
 import com.slotflow.notification.NotificationService;
 import com.slotflow.staff.User;
 import com.slotflow.staff.UserRepository;
 import java.time.ZoneId;
 import java.util.Currency;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -156,8 +154,10 @@ public class AuthService {
     public AuthSession register(RegisterRequest request) {
         String email = normaliseEmail(request.email());
         String slug = request.slug().trim().toLowerCase(Locale.ROOT);
-        ZoneId timezone = parseTimezone(request.timezone());
-        Currency currency = parseCurrency(request.currency());
+        // Parsed through BusinessFields, which PUT /api/business shares: an offset zone that
+        // registration refuses must not be a zone the settings screen accepts.
+        ZoneId timezone = BusinessFields.timezone(request.timezone());
+        Currency currency = BusinessFields.currency(request.currency());
 
         if (users.existsByEmailIgnoreCase(email)) {
             // D13: globally unique, so this can be another tenant's owner — and answering at all
@@ -348,37 +348,6 @@ public class AuthService {
 
     private static String normaliseEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
-    }
-
-    /**
-     * Region ids only. {@code ZoneId.of("+02:00")} parses happily and then has no DST rules at all,
-     * which is the one thing a business day genuinely needs — a salon that opens at 09:00 keeps
-     * opening at 09:00 through the March transition (D11).
-     */
-    private static ZoneId parseTimezone(String timezone) {
-        String candidate = timezone == null ? "" : timezone.trim();
-        if (!ZoneId.getAvailableZoneIds().contains(candidate)) {
-            throw invalidField("timezone", "must be an IANA zone id such as Europe/Paris");
-        }
-        return ZoneId.of(candidate);
-    }
-
-    private static Currency parseCurrency(String currency) {
-        try {
-            return Currency.getInstance(currency.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException | NullPointerException e) {
-            throw invalidField("currency", "must be a valid ISO 4217 currency code");
-        }
-    }
-
-    /**
-     * A 422 in the same shape the MVC binder produces, {@code errors[]} included, for the two fields
-     * bean validation cannot check: an IANA zone id and an ISO 4217 code are both "well-formed but
-     * unknown", and a React form should be able to attach the message to the input either way.
-     */
-    private static ApiException invalidField(String field, String message) {
-        return new ApiException(ErrorCode.VALIDATION_FAILED, Problems.VALIDATION_DETAIL)
-                .with(Problems.ERRORS_PROPERTY, List.of(new ValidationError(field, message)));
     }
 
     /** One exception, one detail, for every way authentication can fail. */

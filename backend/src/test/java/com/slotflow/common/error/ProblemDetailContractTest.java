@@ -193,6 +193,22 @@ class ProblemDetailContractTest {
     }
 
     @Test
+    @DisplayName("a missing required parameter says which one, and is not the generic 400")
+    void missingParameterHasItsOwnCode() throws Exception {
+        // MISSING_PARAMETER was declared in plan 04 and unreachable until plan 08 added the first
+        // endpoint with a required query parameter: every 400 fell through to MALFORMED_REQUEST, so
+        // "you forgot ?from=" and "your body is not JSON" were the same answer.
+        mockMvc.perform(get("/test/problems/paged"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("MISSING_PARAMETER"))
+                .andExpect(jsonPath("$.detail").value("The required parameter \"size\" is missing."))
+                // Named in detail, not in errors[]: that array is a 422 member the forms parse to
+                // attach a message to an input, and this is a bug in the caller.
+                .andExpect(jsonPath("$.errors").doesNotExist());
+    }
+
+    @Test
     @DisplayName("a failed parameter constraint is a 422 with the parameter named")
     void invalidQueryParameterIs422() throws Exception {
         mockMvc.perform(get("/test/problems/paged").param("size", "-1"))

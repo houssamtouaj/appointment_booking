@@ -8,6 +8,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -74,7 +79,7 @@ public class WorkingHours extends AbstractMutableEntity {
      * shift that ends at 02:00 as later than one that ends at 23:00, and no comparison of two
      * wall-clock times can do that. Paired with {@link #durationMinutes()} it turns a range into a
      * half-open interval, which is the only shape that reasons about midnight correctly — see
-     * {@link OpeningHours#derive}.
+     * {@link OpeningHours#derive} and the overlap check in plan 08.
      */
     public int startMinuteOfDay() {
         return startTime.toSecondOfDay() / 60;
@@ -89,6 +94,63 @@ public class WorkingHours extends AbstractMutableEntity {
         int start = startMinuteOfDay();
         int end = endTime.toSecondOfDay() / 60;
         return crossesMidnight() ? (24 * 60 - start) + end : end - start;
+    }
+
+    // ---------------------------------------------------------------------------------
+    //  the overlap rule
+    // ---------------------------------------------------------------------------------
+
+    private static final int MINUTES_PER_DAY = 24 * 60;
+    private static final int MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
+
+    /**
+     * The first weekday whose ranges overlap something, or empty when the whole template is
+     * consistent. Plan 08 turns a non-empty answer into {@code 422 HOURS_OVERLAP}.
+     *
+     * <p><b>Across the week, not within a day.</b> The plan asks only that ranges within one day do
+     * not overlap, and that is the case a client hits — two rows of the same grid line. But the same
+     * mistake is expressible across midnight: a Monday 22:00–02:00 shift and a Tuesday 01:00–03:00
+     * shift do not share a weekday and do overlap in reality, on Tuesday morning, and storing both
+     * would hand the engine two answers about whether that hour is worked. Laying the week out as
+     * minutes from Monday midnight — with a shift that runs past Sunday midnight wrapping to Monday —
+     * makes the two cases one check, and one error code, rather than a second rule somebody has to
+     * remember exists.
+     *
+     * <p>Half-open intervals throughout, so a shift that ends at 12:00 and one that starts at 12:00
+     * are adjacent rather than overlapping. That matches the {@code tstzrange} the booking
+     * constraint uses, and it is what makes a split shift with no gap expressible at all.
+     */
+    public static Optional<DayOfWeek> findOverlap(Collection<WorkingHours> ranges) {
+        List<Span> spans = new ArrayList<>(ranges.size() + 1);
+        for (WorkingHours range : ranges) {
+            int from = range.getDayOfWeek().ordinal() * MINUTES_PER_DAY + range.startMinuteOfDay();
+            int to = from + range.durationMinutes();
+            if (to <= MINUTES_PER_WEEK) {
+                spans.add(new Span(range.getDayOfWeek(), from, to));
+            } else {
+                // A Sunday night shift finishes on Monday morning, which is earlier in this
+                // coordinate system than it started. Two pieces, so the comparison stays a plain
+                // sort instead of modular arithmetic at every step.
+                spans.add(new Span(range.getDayOfWeek(), from, MINUTES_PER_WEEK));
+                spans.add(new Span(range.getDayOfWeek(), 0, to - MINUTES_PER_WEEK));
+            }
+        }
+
+        spans.sort(Comparator.comparingInt(Span::from));
+        for (int i = 1; i < spans.size(); i++) {
+            // Sorted by start, so if any two spans overlap then some adjacent pair does: the later
+            // of an overlapping pair starts before the earlier one ends, and anything sorted between
+            // them starts before that too.
+            if (spans.get(i).from() < spans.get(i - 1).to()) {
+                // The day of the range that starts second, which is the row the editor just added.
+                return Optional.of(spans.get(i).day());
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** One range flattened onto the week. {@code day} is kept for the error message. */
+    private record Span(DayOfWeek day, int from, int to) {
     }
 
     public void setRange(LocalTime startTime, LocalTime endTime) {
