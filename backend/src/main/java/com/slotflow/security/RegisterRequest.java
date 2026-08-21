@@ -18,7 +18,8 @@ import jakarta.validation.constraints.Size;
  * @param currency     ISO 4217, upper case
  * @param fullName     the owner's name
  * @param email        the owner's login, globally unique (D13)
- * @param password     see {@link Passwords} for why the maximum is 72
+ * @param password     see {@link Passwords} for why the maximum is 72 <em>bytes</em> and not
+ *                     72 characters
  */
 public record RegisterRequest(
 
@@ -49,8 +50,7 @@ public record RegisterRequest(
         @Schema(example = "dana@example.com")
         String email,
 
-        @NotBlank @Size(min = Passwords.MIN_LENGTH, max = Passwords.MAX_LENGTH,
-                message = Passwords.SIZE_MESSAGE)
-        @Schema(example = "correct-horse-battery")
+        @NotBlank @Password
+        @Schema(description = Passwords.SCHEMA_DESCRIPTION, example = "correct-horse-battery")
         String password) {
 }

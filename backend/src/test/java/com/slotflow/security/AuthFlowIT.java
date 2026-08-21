@@ -150,6 +150,39 @@ class AuthFlowIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("a passphrase over 72 bytes is refused, because BCrypt would only read 72 of them")
+    void oversizedPassphrasesAreRejected() throws Exception {
+        // 72 characters — inside every character-counted limit — and 144 UTF-8 bytes. BCrypt reads
+        // the first 72 bytes and ignores the rest, so accepting this registers an account whose
+        // password is really its first 36 characters: anyone who knows that much signs in as its
+        // owner. PasswordsTest pins that truncation directly.
+        RegisterRequest request = new RegisterRequest("Dana Clinic", uniqueSlug(), "Europe/Paris",
+                "EUR", "Dana Okoye", uniqueEmail(), "пароль".repeat(12));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(asJson(request)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("password"));
+
+        assertThat(users.findByEmailIgnoreCase(request.email())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("a 72-byte passphrase in any alphabet is accepted")
+    void passphrasesUpToSeventyTwoBytesAreAccepted() throws Exception {
+        // The limit is bytes, so the same 72 bytes are 72 Latin characters or 36 Cyrillic ones, and
+        // both are fine. Rejecting the shorter-looking one would be the mirror mistake.
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(asJson(new RegisterRequest("Dana Clinic", uniqueSlug(),
+                                "Europe/Paris", "EUR", "Dana Okoye", uniqueEmail(),
+                                "пароль".repeat(6)))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
     @DisplayName("a failure on the last insert leaves no half-built tenant behind")
     void registrationIsAllOrNothing() {
         // The service is called directly, past bean validation, with a name that fits the Java field

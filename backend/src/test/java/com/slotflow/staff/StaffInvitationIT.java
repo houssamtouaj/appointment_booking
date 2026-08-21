@@ -279,6 +279,24 @@ class StaffInvitationIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("accepting with a passphrase over 72 bytes is a 422, and does not spend the link")
+    void oversizedPassphrasesAreRejectedOnAccept() throws Exception {
+        Tenant tenant = aTenant();
+        String email = invite(tenant);
+        String token = notifications.invitationTo(email).rawToken();
+
+        // Same rule as register and reset: 72 characters of Cyrillic are 144 bytes, and BCrypt
+        // would read half of them. The invitee has to be told, not quietly given a password whose
+        // second half is decoration.
+        mockMvc.perform(accept(token, "Sam Ferreira", "пароль".repeat(12)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value("password"));
+
+        mockMvc.perform(accept(token, "Sam Ferreira", "пароль".repeat(6)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
     @DisplayName("no invitation token is stored in plaintext")
     void invitationTokensAreStoredHashedOnly() throws Exception {
         Tenant tenant = aTenant();

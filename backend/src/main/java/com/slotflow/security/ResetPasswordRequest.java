@@ -8,7 +8,5 @@ public record ResetPasswordRequest(
 
         @NotBlank @Size(max = 200) String token,
 
-        @NotBlank @Size(min = Passwords.MIN_LENGTH, max = Passwords.MAX_LENGTH,
-                message = Passwords.SIZE_MESSAGE)
-        String password) {
+        @NotBlank @Password String password) {
 }

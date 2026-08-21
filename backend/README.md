@@ -213,6 +213,15 @@ is single use, expires in an hour on the injected clock, and on success **revoke
 token the user holds** — a reset exists to end the sessions a compromise created, and one that
 leaves them alive has accomplished nothing.
 
+**Password length is 8 characters minimum, 72 *bytes* maximum**, declared once as `@Password`
+and applied to register, accept-invitation and reset-password alike. The unit is the whole
+point: BCrypt only looks at 72 bytes, so 72 *characters* is a different and wrong rule — 72
+Cyrillic characters are 144 bytes. Spring Security's encoder does not silently truncate them,
+it throws, so a character-counted limit turned an over-long passphrase into an unhandled 500 on
+two unauthenticated endpoints and on the one link an invited colleague ever gets. The minimum
+stays in characters, where the entropy is. `PasswordsTest` pins both BCrypt behaviours the rule
+rests on, because an argument about a library is worth what the assertion under it is worth.
+
 Rate limiting sits in front of all of this (see below), and deliberately ahead of Spring
 Security: BCrypt at strength 12 makes an unlimited login endpoint a CPU amplifier.
 

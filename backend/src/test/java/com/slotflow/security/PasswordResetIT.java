@@ -196,6 +196,27 @@ class PasswordResetIT extends ApiIntegrationTest {
                 .andExpect(jsonPath("$.errors[0].field").value("password"));
     }
 
+    @Test
+    @DisplayName("a passphrase over 72 bytes is a 422 here too, not a silently truncated one")
+    void oversizedPassphrasesAreRejected() throws Exception {
+        Tenant tenant = aTenant();
+        String token = requestReset(tenant);
+
+        // 72 characters, 144 bytes. BCrypt would hash the first 72 bytes and ignore the rest, so
+        // accepting it sets a password whose second half means nothing.
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(asJson(new ResetPasswordRequest(token, "пароль".repeat(12)))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value("password"));
+
+        // And the token is still there to be used properly: a rejected body must not spend it.
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(asJson(new ResetPasswordRequest(token, "пароль".repeat(6)))))
+                .andExpect(status().isNoContent());
+    }
+
     // ---------------------------------------------------------------------------------
     //  helpers
     // ---------------------------------------------------------------------------------
