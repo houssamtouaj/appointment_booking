@@ -94,6 +94,34 @@ public class AuthService {
      * slug inline, and it can only do that if it knows which field lost. The unique indexes remain
      * the actual guarantee: two simultaneous registrations of the same slug end with one of them
      * seeing a {@code 409} from the constraint, which is correct and needs no branch of its own.
+     *
+     * <h3>{@code EMAIL_TAKEN} is an enumeration oracle, and it is a deliberate trade</h3>
+     * Say it plainly, because {@link #login} goes to some trouble to be unreadable and this
+     * endpoint gives the same fact away for nothing: {@code 409} versus {@code 201} tells an
+     * unauthenticated caller whether an address has an account here. Addresses are global (D13), so
+     * the answer covers every tenant, and {@code RateLimitFilter}'s {@code PUBLIC_WRITE} budget of
+     * ten writes per minute per IP puts a ceiling of roughly fourteen thousand probes a day on it.
+     *
+     * <p>It stays because the alternative is not available yet, not because the oracle is
+     * imaginary. Masking it means answering {@code 202 "check your inbox"} whether or not the
+     * account was created, and that only works if the address is verified by mail before the
+     * account becomes usable — plan 12 owns the transport, and until it lands
+     * {@link com.slotflow.notification.NotificationService} writes links to a log file. Faking the
+     * success in the meantime would mean returning a session for a tenant that does not exist.
+     *
+     * <p>Two things that look like cheaper fixes are not. Reordering the checks so the slug loses
+     * first buys nothing: a prober supplies a fresh random slug and reads the answer anyway. Nor
+     * does collapsing both into one generic {@code 409}, because plan 05 requires
+     * {@code SLUG_TAKEN} to be distinguishable — the form has to offer another address inline —
+     * and a slug is public by construction: anyone can fetch the booking page and see whether it
+     * is taken.
+     *
+     * <p>What this trade must not be allowed to leak into is {@link #login}, where the same fact
+     * would be worth much more: there, wrong password, unknown address and deactivated account
+     * return byte-identical bodies after exactly one BCrypt verification, and
+     * {@code AuthFlowIT.failedLoginsAreIndistinguishable} compares the three responses as strings.
+     * A registration probe tells an attacker that an account exists; a login probe would tell them
+     * when they have guessed its password.
      */
     @Transactional
     public AuthSession register(RegisterRequest request) {
@@ -103,8 +131,10 @@ public class AuthService {
         Currency currency = parseCurrency(request.currency());
 
         if (users.existsByEmailIgnoreCase(email)) {
-            // D13: globally unique, so this can be another tenant's owner. The message says no more
-            // than the caller already knows, having just typed the address.
+            // D13: globally unique, so this can be another tenant's owner — and answering at all
+            // confirms the address is registered somewhere. That is the trade argued above, taken
+            // knowingly and bounded by the rate limiter, not an oversight: the sign-up form cannot
+            // say "sign in instead" without being told which field lost.
             throw new ApiException(ErrorCode.EMAIL_TAKEN,
                     "That email address is already registered.");
         }

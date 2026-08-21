@@ -216,6 +216,17 @@ leaves them alive has accomplished nothing.
 Rate limiting sits in front of all of this (see below), and deliberately ahead of Spring
 Security: BCrypt at strength 12 makes an unlimited login endpoint a CPU amplifier.
 
+**`register` is deliberately not indistinguishable, and that is worth saying out loud.**
+`409 EMAIL_TAKEN` versus `201` tells an unauthenticated caller whether an address has an
+account here, across every tenant, at ten probes a minute per IP. It stays because the only
+honest way to mask it is `202 "check your inbox"` with the address verified by mail before the
+account works, and the mail transport is plan 12 — until then, faking the success would mean
+returning a session for a tenant that was never created. Reordering the two checks buys
+nothing (a prober supplies a fresh slug), and one generic `409` breaks the requirement that
+the sign-up form can offer an alternative slug inline. What the trade must not reach is
+`login`, where the same fact would tell an attacker when they had guessed a password rather
+than merely that an account exists.
+
 ## Tenant isolation
 
 The tenant id is the `bid` claim of the access token. Not a path variable, not a query
