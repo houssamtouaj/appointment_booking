@@ -343,6 +343,43 @@ class AuthFlowIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("signing out works once the access token has expired, which is when it is needed")
+    void logoutNeedsOnlyTheRefreshToken() throws Exception {
+        Tenant tenant = aTenant();
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody(tenant.owner().getEmail(), PASSWORD)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String refreshToken = refreshCookieFrom(login);
+
+        // No Authorization header, which is the state of every tab left open longer than fifteen
+        // minutes. Behind authenticated() this was a 401 and the controller never ran, so the one
+        // credential that actually matters — a seven-day refresh cookie — could not be revoked by
+        // the client holding it. The cookie is itself proof of possession: 256 bits, single use,
+        // looked up by hash.
+        MvcResult loggedOut = mockMvc.perform(post("/api/auth/logout")
+                        .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        assertThat(loggedOut.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains("Max-Age=0");
+
+        // And it really is revoked, not merely forgotten by the browser.
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_REUSED"));
+    }
+
+    @Test
+    @DisplayName("signing out with nothing to sign out of is still a 204")
+    void logoutWithoutATokenIsIdempotent() throws Exception {
+        // Public now, so this is reachable by anyone — and it has to stay harmless. There is
+        // nothing to revoke and nothing to say about it.
+        mockMvc.perform(post("/api/auth/logout")).andExpect(status().isNoContent());
+    }
+
+    @Test
     @DisplayName("refresh with no token at all is a 401, not a 500")
     void refreshWithoutATokenIsUnauthorised() throws Exception {
         mockMvc.perform(post("/api/auth/refresh"))

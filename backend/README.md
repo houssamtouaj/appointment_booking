@@ -182,17 +182,26 @@ BCrypt is deliberately slow and a suite that signs in a hundred times should not
 and an enumerated public allowlist:
 
 ```
-/api/auth/register  /api/auth/login  /api/auth/refresh
+/api/auth/register  /api/auth/login  /api/auth/refresh  /api/auth/logout
 /api/auth/forgot-password  /api/auth/reset-password
 /api/public/**  /api/webhooks/stripe
 /swagger-ui/**  /v3/api-docs/**  /actuator/health
 ```
 
-Enumerated, not `/api/auth/**`: `/me` and `/logout` need a caller, and a prefix rule would
-leave both anonymous while still *looking* correct. Everything else is `authenticated()`, and
-roles are checked by `@PreAuthorize` next to the method they guard rather than by a second list
-of URL patterns here — "OWNER, or STAFF acting on themselves" is a sentence no URL pattern can
+Enumerated, not `/api/auth/**`: `/me` needs a caller, and a prefix rule would leave it
+anonymous while still *looking* correct. Everything else is `authenticated()`, and roles are
+checked by `@PreAuthorize` next to the method they guard rather than by a second list of URL
+patterns here — "OWNER, or STAFF acting on themselves" is a sentence no URL pattern can
 express.
+
+**`logout` is on the list, and that is deliberate.** Behind `authenticated()`, sign-out stops
+working exactly when it is needed: fifteen minutes into a forgotten tab the access token is
+gone, the client still holds a seven-day refresh cookie, and `POST /logout` answers 401 without
+the controller ever running — so the credential that actually matters cannot be revoked by the
+client holding it. The refresh token in the request *is* the proof of possession: 256 bits,
+single use, looked up by hash. Requiring a second credential in order to give up the first buys
+nothing and costs the SPA a refresh-then-logout dance on every sign-out path. Writes under
+`/api/auth/` stay inside the rate limiter either way.
 
 `401` and `403` raised **inside** the chain go through an explicit `AuthenticationEntryPoint`
 and `AccessDeniedHandler` onto the same `Problems` factory as everything else. Without them,

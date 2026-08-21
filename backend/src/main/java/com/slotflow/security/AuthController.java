@@ -25,10 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
  * belongs here is the {@code Set-Cookie} header — the refresh token's transport, which is settled
  * and argued in {@link RefreshTokenCookie}.
  *
- * <p>Five of these are public and two are not, which is why {@link SecurityConfig} allowlists the
- * five individually rather than the whole {@code /api/auth/**} prefix: {@code /me} and
- * {@code /logout} need a caller, and a prefix rule that quietly included them would be a hole
- * nobody notices, because both would still appear to work.
+ * <p>Six of these are public and one is not, which is why {@link SecurityConfig} allowlists the six
+ * individually rather than the whole {@code /api/auth/**} prefix: {@code /me} needs a caller, and a
+ * prefix rule that quietly included it would be a hole nobody notices, because it would still
+ * appear to work. {@code /logout} is public because the refresh token it presents is the
+ * credential — see the note on the method.
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -86,16 +87,30 @@ public class AuthController {
     }
 
     /**
-     * Revokes the presented refresh token and clears the cookie. Authenticated, so a stray request
-     * cannot end someone else's session by guessing — though guessing a 256-bit token is the harder
-     * half of that sentence.
+     * Revokes the presented refresh token and clears the cookie.
+     *
+     * <p>Public, and deliberately so. The refresh token is the credential here: 256 bits from
+     * {@link SecretTokens}, stored only as a hash, and single use — a caller who presents one has
+     * proved possession at least as well as a bearer token proves it. Requiring an <em>access</em>
+     * token as well would mean sign-out fails exactly when it matters: fifteen minutes into a
+     * forgotten tab there is no access token left, and the seven-day cookie the client is trying to
+     * give up would become unrevokable by the only party holding it.
+     *
+     * <p>What that opens is a caller with no token at all, which is why the body below is tolerant
+     * rather than strict: nothing to revoke is nothing to report, and answering 401 would leave a
+     * client with an expired cookie unable to tidy up. Presenting somebody <em>else's</em> refresh
+     * token would end their session, and that is the same 256-bit guess {@code /refresh} already
+     * rests on — except that here the attacker's reward is logging their victim out.
      */
     @PostMapping("/logout")
+    @SecurityRequirements
     @Operation(summary = "Sign out",
             description = """
-                    Revokes the presented refresh token and clears the cookie. The access token
-                    keeps working until it expires; that 15-minute window is a deliberate trade for
-                    stateless verification on every request.""")
+                    Revokes the presented refresh token and clears the cookie. No access token is
+                    required — the refresh token is the credential, so a client whose access token
+                    has already expired can still sign out. The access token keeps working until it
+                    expires; that 15-minute window is a deliberate trade for stateless verification
+                    on every request.""")
     public ResponseEntity<Void> logout(
             @CookieValue(name = RefreshTokenCookie.NAME, required = false) String cookieToken,
             @RequestBody(required = false) RefreshRequest body) {

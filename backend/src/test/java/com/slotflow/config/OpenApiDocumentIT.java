@@ -64,6 +64,9 @@ class OpenApiDocumentIT extends ApiIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/auth/register'].post.security").isEmpty())
                 .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}/staff'].get.security")
                         .isEmpty())
+                // logout is public too, and the padlock has to agree: a client whose access token
+                // expired still has to be able to revoke its refresh cookie.
+                .andExpect(jsonPath("$.paths['/api/auth/logout'].post.security").isEmpty())
                 // While an authenticated one keeps it.
                 .andExpect(jsonPath("$.paths['/api/staff'].get.security").doesNotExist());
     }

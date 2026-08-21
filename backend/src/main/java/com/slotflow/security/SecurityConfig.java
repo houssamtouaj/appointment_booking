@@ -19,11 +19,20 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * The filter chain, and the four decisions in it worth defending.
  *
  * <h2>1. The allowlist is enumerated, not prefixed</h2>
- * Plan 05 suggested opening {@code /api/auth/**}. This chain opens five specific paths under it
- * instead, because {@code /api/auth/me} and {@code /api/auth/logout} need a caller. A prefix rule
- * would have left both reachable anonymously and <em>looking</em> fine — {@code /me} would have
- * thrown a null-principal 500 rather than a 401, and it would have been diagnosed as a bug in the
- * controller.
+ * Plan 05 suggested opening {@code /api/auth/**}. This chain opens six specific paths under it
+ * instead, because {@code /api/auth/me} needs a caller: a prefix rule would leave it reachable
+ * anonymously and <em>looking</em> fine, throwing a null-principal 500 rather than a 401, which
+ * would then be diagnosed as a bug in the controller.
+ *
+ * <p>{@code /api/auth/logout} is on the list, and that is a change of mind worth recording.
+ * Requiring an access token there means sign-out stops working exactly when it is most needed:
+ * fifteen minutes into a forgotten tab the access token is expired, the client still holds a
+ * seven-day refresh cookie, and {@code POST /logout} answers 401 without the controller ever
+ * running — so the one credential that matters cannot be revoked by the client that has it. The
+ * refresh token in the same request is the proof of possession: 256 bits, single use, looked up by
+ * hash, and {@code AuthController#logout} already tolerates a missing or stale one by answering
+ * 204. Requiring a <em>second</em> credential to give up the first buys nothing, and costs the SPA
+ * a refresh-then-logout dance on every sign-out path.
  *
  * <h2>2. Stateless, so CSRF protection would protect nothing — with one exception, handled</h2>
  * There is no session and no server-rendered form. Authorisation on every protected endpoint is the
@@ -56,11 +65,18 @@ public class SecurityConfig {
      *
      * <p>{@code /actuator/health} and nothing else from the actuator: {@code /actuator/**} would
      * publish whatever a future dependency decides to register there.
+     *
+     * <p>Every write under {@code /api/auth/} is inside the rate limiter's {@code PUBLIC_WRITE}
+     * budget whether it is listed here or not ({@code RateLimitFilter} runs ahead of this chain),
+     * so opening a path does not open it to unlimited traffic.
      */
     private static final String[] PUBLIC_PATHS = {
             "/api/auth/register",
             "/api/auth/login",
             "/api/auth/refresh",
+            // Authenticated by the refresh token it presents, not by an access token; see the
+            // class note. /api/auth/me is deliberately absent from this list.
+            "/api/auth/logout",
             "/api/auth/forgot-password",
             "/api/auth/reset-password",
             "/api/public/**",
