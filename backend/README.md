@@ -394,6 +394,65 @@ Rules worth knowing:
   `PublicStaffEndpointIT` asserts the absence of an email address **on the raw JSON**, because
   a test that maps the response back into a DTO cannot fail when a sixth field appears.
 
+## Catalog
+
+What a business sells, and who performs it. The Java type is `ServiceOffering`; the path and
+every DTO keep the word *service* (D8).
+
+| Method | Path | Auth |
+|---|---|---|
+| `GET` | `/api/services?active=&page=&size=` | OWNER, STAFF |
+| `GET` | `/api/services/{id}` | OWNER, STAFF |
+| `POST` | `/api/services` | OWNER |
+| `PATCH` | `/api/services/{id}` | OWNER |
+| `DELETE` | `/api/services/{id}` | OWNER |
+| `GET` | `/api/public/businesses/{slug}` | public |
+| `GET` | `/api/public/businesses/{slug}/services` | public |
+
+Rules worth knowing:
+
+- **`staffIds` on a `PATCH` has three spellings and two meanings.** Absent and `null` both mean
+  "leave the assignment set alone" — Jackson cannot tell them apart in a record component, and
+  inventing a third meaning would cost a `JsonNullable` wrapper on every optional field in the
+  API to express an intention no client has. `[]` means "unassign everyone", which is legal and
+  comes back as `bookable: false`. `CatalogIT` tests all three, because a rule about JSON
+  absence that lives only in a javadoc changes the first time somebody edits the mapper.
+- **`bookable` is derived and covers three cases.** False when the service is inactive, when
+  nobody is assigned, and when everybody assigned has been deactivated. All three produce
+  exactly no availability, and the second and third look completely different on an admin
+  screen — a flag that only covered one of them would drive a warning that is wrong half the
+  time. It is what stops "why does nothing show up on my booking page?" being a support thread.
+- **Duration is 5–480 minutes and a multiple of 5, and is *not* validated against
+  `slotGranularityMinutes`.** The tempting wrong rule: granularity governs where a slot may
+  *start*, so a 45-minute service on a 15-minute grid is ordinary. Tying them together would let
+  a policy change invalidate a catalog that was never wrong. There is a test that asserts the
+  45-on-30 case is accepted, so the decision cannot be "fixed" by accident.
+- **`DELETE` is a soft delete** — `active = false`, the same thing `PATCH {"active": false}`
+  does. The service leaves the public list immediately, its bookings stay readable and priced as
+  they were sold, and `active: true` brings it back. This is not caution: `booking`'s foreign key
+  is `NO ACTION` (D15), so a hard delete of a service with history is refused by the database,
+  and the alternative to a soft delete is a 409 the owner can do nothing about.
+- **Editing a price or a buffer never reaches an existing booking** (D14). Bookings snapshot
+  both at creation, so a price rise applies to the next customer and the blocked window an
+  appointment already holds does not shrink underneath the exclusion constraint keeping the slot.
+  One assertion in `CatalogIT` for a decision that would otherwise be an argument.
+- **A cross-tenant `staffIds` is `422 STAFF_NOT_IN_BUSINESS`, listing the ids that failed**, so a
+  form with one stale row can say which one. The check is not what makes it safe —
+  `staff_service`'s two composite foreign keys make a cross-tenant row unrepresentable, for psql
+  as much as for the service class — it is what turns that guarantee into an answer a form can
+  display. Deactivated colleagues stay assignable: they produce no availability, and refusing
+  would mean an owner editing a price loses the assignments of anybody currently switched off.
+- **The public business page is one round trip**: name, timezone, currency, deposit rule, the
+  active catalog, and the opening hours. Its `depositRequired` is the *effective* answer, so a
+  business with the flag on and a percentage of zero reports `false` — sending a customer to a
+  checkout for nothing is worse than an inconsistent-looking form.
+- **Opening hours are derived, not stored** (D5). Hours belong to people, so the page reports the
+  union across *active* staff per weekday, earliest start to latest end, with days nobody works
+  absent. It is a hull and not a schedule: a two-person salon working 09:00–12:00 and 14:00–18:00
+  reports 09:00–18:00, and whether 12:30 is bookable is the availability engine's answer. A night
+  shift carries `closesNextDay: true`, because `22:00 → 02:00` without it cannot be told from a
+  twenty-hour day somebody typed backwards.
+
 ## Pagination
 
 `?page=&size=` with `size` defaulting to 20 and clamped to 100, returning
@@ -471,12 +530,14 @@ is visibly a test about buffers.
   every later admin plan extends
 - Staff and invitations: invite, resend, accept, deactivation semantics, and the public
   booking-page staff list (D9)
+- The catalog above: services CRUD with the assignment set, the soft delete, and the two public
+  endpoints the booking page opens with — including the opening hours derived from staff working
+  hours (D5)
 
 ## Not built yet
 
-The availability engine, the catalog, bookings, payments and the dashboard. Service
-assignments are read everywhere they matter but nothing writes them yet, so `serviceIds` is
-empty until plan 07. Email has no
+The availability engine, bookings, payments and the dashboard. Working hours can be read but
+nothing writes them yet, so the derived opening hours are empty until plan 08. Email has no
 transport yet: `NotificationService` is an interface with a logging implementation, so the
 invitation and reset links are read from the api log until plan 12. Build order is tracked in
 the local project brief (see `docs/`, not committed yet).

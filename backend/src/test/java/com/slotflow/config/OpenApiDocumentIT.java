@@ -53,6 +53,21 @@ class OpenApiDocumentIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("every endpoint of wave four is in it")
+    void theWaveFourEndpointsAreDocumented() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/services'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/services'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/services/{id}'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/services/{id}'].patch").exists())
+                .andExpect(jsonPath("$.paths['/api/services/{id}'].delete").exists())
+                .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}/services'].get")
+                        .exists());
+    }
+
+    @Test
     @DisplayName("public operations do not ask the reader for a bearer token")
     void publicOperationsOptOutOfTheGlobalSecurityRequirement() throws Exception {
         // OpenApiConfig applies bearerAuth to the whole document, which is right for a mostly
@@ -63,6 +78,10 @@ class OpenApiDocumentIT extends ApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/auth/register'].post.security").isEmpty())
                 .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}/staff'].get.security")
+                        .isEmpty())
+                .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}'].get.security")
+                        .isEmpty())
+                .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}/services'].get.security")
                         .isEmpty())
                 // logout is public too, and the padlock has to agree: a client whose access token
                 // expired still has to be able to revoke its refresh cookie.

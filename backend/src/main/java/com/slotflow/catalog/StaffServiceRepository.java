@@ -4,9 +4,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * The staff-to-service assignment, read from both directions.
@@ -15,6 +12,16 @@ import org.springframework.transaction.annotation.Transactional;
  * deliberate addition, because the join is queried on its own in two places — the public
  * "who performs this service" list (D9) and the assignment replace in plan 07 — and neither can go
  * through the service repository.
+ *
+ * <p><b>There is no bulk delete here, and there were two.</b> Plan 03 added
+ * {@code deleteByServiceId} / {@code deleteByStaffId} in anticipation of plan 07 replacing the whole
+ * assignment set with a delete and a reinsert. It does not: {@code CatalogAdminService} writes the
+ * difference instead, so an owner who saves a form without touching the assignments performs no
+ * writes at all, and the rows — which carry nothing beyond the pair — are not rewritten to the same
+ * values. Nothing else in v1 ever removes an assignment either, because a service is soft-deleted
+ * and a staff member is deactivated rather than dropped. Two methods documented as having a caller
+ * and never acquiring one are worse than absent, so they are gone; a future caller can restore them
+ * along with its own reasons.
  */
 public interface StaffServiceRepository extends JpaRepository<StaffService, StaffServiceId> {
 
@@ -34,24 +41,16 @@ public interface StaffServiceRepository extends JpaRepository<StaffService, Staf
 
     List<StaffService> findByStaffIdIn(Collection<UUID> staffIds);
 
-    boolean existsByStaffIdAndServiceId(UUID staffId, UUID serviceId);
-
     /**
-     * Plan 07 replaces the whole assignment set on write, in one transaction.
-     *
-     * <p>Bulk {@code delete} queries rather than derived {@code deleteBy…} methods, which Spring
-     * Data makes neither transactional nor modifying: the first caller outside a transaction gets
-     * {@code TransactionRequiredException}, and inside one they load every matching row before
-     * removing them one at a time. {@code clearAutomatically} because the replacement rows are
-     * saved straight afterwards and the context must not still hold the deleted ones.
+     * The mirror of {@link #findForStaff}, for the other list that reads this table a page at a
+     * time: plan 07's catalog grid shows who performs each service, and asking per row is the same
+     * N+1 from the other direction.
      */
-    @Modifying(clearAutomatically = true)
-    @Transactional
-    @Query("delete from StaffService s where s.serviceId = :serviceId")
-    int deleteByServiceId(UUID serviceId);
+    default List<StaffService> findForServices(Collection<UUID> serviceIds) {
+        return serviceIds.isEmpty() ? List.of() : findByServiceIdIn(serviceIds);
+    }
 
-    @Modifying(clearAutomatically = true)
-    @Transactional
-    @Query("delete from StaffService s where s.staffId = :staffId")
-    int deleteByStaffId(UUID staffId);
+    List<StaffService> findByServiceIdIn(Collection<UUID> serviceIds);
+
+    boolean existsByStaffIdAndServiceId(UUID staffId, UUID serviceId);
 }

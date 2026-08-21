@@ -68,12 +68,25 @@ public class WorkingHours extends AbstractMutableEntity {
     }
 
     /**
+     * Where the shift starts, as minutes since midnight.
+     *
+     * <p>Minutes rather than a {@code LocalTime} because every comparison this feeds has to treat a
+     * shift that ends at 02:00 as later than one that ends at 23:00, and no comparison of two
+     * wall-clock times can do that. Paired with {@link #durationMinutes()} it turns a range into a
+     * half-open interval, which is the only shape that reasons about midnight correctly — see
+     * {@link OpeningHours#derive}.
+     */
+    public int startMinuteOfDay() {
+        return startTime.toSecondOfDay() / 60;
+    }
+
+    /**
      * How long the shift lasts, in minutes, counting a midnight crossing correctly. Useful for the
      * derived opening hours on the public business page (plan 07) and for asserting that a service
      * cannot possibly fit.
      */
     public int durationMinutes() {
-        int start = startTime.toSecondOfDay() / 60;
+        int start = startMinuteOfDay();
         int end = endTime.toSecondOfDay() / 60;
         return crossesMidnight() ? (24 * 60 - start) + end : end - start;
     }
