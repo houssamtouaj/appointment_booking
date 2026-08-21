@@ -21,17 +21,6 @@ public interface StaffServiceRepository extends JpaRepository<StaffService, Staf
     /** "Who can perform this service?" — booking flow step 2 (D9), and the engine's staff set. */
     List<StaffService> findByServiceId(UUID serviceId);
 
-    /**
-     * The same question for a whole set of services in one query, for the admin list. Empty in,
-     * empty out, without a round trip — the guard {@code BookingRepository} carries on the same
-     * shape, for the same reason.
-     */
-    default List<StaffService> findForServices(Collection<UUID> serviceIds) {
-        return serviceIds.isEmpty() ? List.of() : findByServiceIdIn(serviceIds);
-    }
-
-    List<StaffService> findByServiceIdIn(Collection<UUID> serviceIds);
-
     /** "What does this staff member do?" — the staff detail screen. */
     List<StaffService> findByStaffId(UUID staffId);
 

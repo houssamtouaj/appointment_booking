@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -30,7 +29,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * <p>Registered inside the security chain by {@link SecurityConfig}, not as a servlet filter bean:
  * a {@code @Component} extending {@code OncePerRequestFilter} would otherwise also be picked up by
  * Boot's filter registration and run twice, once outside the chain where its ordering relative to
- * the entry point is undefined.
+ * the entry point is undefined. The {@code @Component} import that used to sit at the top of this
+ * file — unused, and one keystroke from being applied — is gone for that reason.
  */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

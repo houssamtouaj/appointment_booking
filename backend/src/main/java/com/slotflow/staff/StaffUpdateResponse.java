@@ -23,8 +23,4 @@ public record StaffUpdateResponse(StaffResponse staff, DeactivationWarning warni
      */
     public record DeactivationWarning(long upcomingBookings, Instant nextBookingAt) {
     }
-
-    public static StaffUpdateResponse of(StaffResponse staff) {
-        return new StaffUpdateResponse(staff, null);
-    }
 }

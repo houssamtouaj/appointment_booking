@@ -52,8 +52,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
      */
     List<RefreshToken> findByUserIdAndRevokedAtIsNull(UUID userId);
 
-    List<RefreshToken> findByUserId(UUID userId);
-
     /**
      * Housekeeping: an expired token proves nothing and does not need to be kept.
      *

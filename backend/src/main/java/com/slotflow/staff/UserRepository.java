@@ -22,8 +22,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findByBusinessId(UUID businessId);
 
-    List<User> findByBusinessIdAndRole(UUID businessId, Role role);
-
     List<User> findByBusinessIdAndActiveTrue(UUID businessId);
 
     /** The tenant-safe read: a foreign id returns empty, which plan 06 turns into a 404, not a 403. */
