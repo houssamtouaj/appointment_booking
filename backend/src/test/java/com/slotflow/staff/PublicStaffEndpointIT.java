@@ -11,6 +11,7 @@ import com.slotflow.catalog.StaffService;
 import com.slotflow.catalog.StaffServiceRepository;
 import com.slotflow.support.ApiIntegrationTest;
 import com.slotflow.support.fixtures.Fixtures;
+import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -119,6 +120,22 @@ class PublicStaffEndpointIT extends ApiIntegrationTest {
                         .param("serviceId", theirService.getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("the slug in the path is matched however the customer typed it")
+    void theSlugIsNormalisedAtTheBoundary() throws Exception {
+        Tenant tenant = aTenant();
+        String slug = tenant.business().getSlug();
+
+        // RegisterRequest accepts ^[A-Za-z0-9-]{3,40}$ and its javadoc promises "Dana-Clinic" is a
+        // usable answer, because Business lower-cases before it checks the schema's own
+        // ^[a-z0-9-]{3,40}$. So the stored slug is lower case and the URL a business puts on a
+        // card, or a browser capitalises, or a customer types by hand, need not be — and an exact
+        // match answers 404 for a business that plainly exists.
+        mockMvc.perform(get("/api/public/businesses/" + slug.toUpperCase(Locale.ROOT) + "/staff"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(tenant.owner().getId().toString()));
     }
 
     @Test

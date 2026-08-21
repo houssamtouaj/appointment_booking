@@ -21,6 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link StaffResponse}. The rule for a public endpoint is that the DTO is the boundary: id and
  * display name, and no field that could grow into a PII leak later.
  *
+ * <p>The slug arrives from a URL a human may have typed, so it is resolved through
+ * {@code BusinessRepository.findByPublicSlug}, which folds the case the way {@code register} does
+ * on the way in. An exact match here answers 404 for a business whose own printed card says
+ * "Dana-Clinic".
+ *
  * <p>Two filters, both of which matter:
  *
  * <ul>
@@ -50,7 +55,10 @@ public class PublicStaffService {
 
     @Transactional(readOnly = true)
     public List<PublicStaffResponse> bookableStaff(String slug, UUID serviceId) {
-        Business business = businesses.findBySlug(slug)
+        // findByPublicSlug, not findBySlug: the stored value is lower case and what arrives in the
+        // path is whatever a customer typed or a card printed. The normalisation lives in the
+        // repository so the public endpoints plans 07-10 add inherit it instead of copying it.
+        Business business = businesses.findByPublicSlug(slug)
                 .orElseThrow(() -> new EntityNotFoundException("no business with slug " + slug));
 
         List<User> active = users.findByBusinessIdAndActiveTrue(business.getId());
