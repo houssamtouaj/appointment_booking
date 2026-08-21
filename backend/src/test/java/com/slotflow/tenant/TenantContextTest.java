@@ -13,6 +13,7 @@ import java.time.ZoneId;
 import java.util.Currency;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,10 +37,17 @@ class TenantContextTest {
     private static final UUID MY_BUSINESS = UUID.randomUUID();
     private static final UUID THEIR_BUSINESS = UUID.randomUUID();
 
+    /**
+     * Both ends, not just the tidy one. The {@code SecurityContext} is a thread local and the
+     * surefire fork reuses its thread across classes, so clearing only afterwards protects the next
+     * test in <em>this</em> class and nothing else: the first test to run here inherits whatever
+     * some other class left behind. {@link #anUnauthenticatedRequestHasNoTenant} is the one that
+     * would notice — if it happens to run first, a stale authentication makes it fail for a reason
+     * that has nothing to do with tenancy, in a class that is nowhere near the cause.
+     */
+    @BeforeEach
     @AfterEach
     void clearTheContext() {
-        // The SecurityContext is a thread local, and the surefire fork reuses its thread. Without
-        // this, a test that never authenticates would inherit the previous test's tenant.
         SecurityContextHolder.clearContext();
     }
 

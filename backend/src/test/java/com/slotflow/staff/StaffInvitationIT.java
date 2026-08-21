@@ -16,6 +16,8 @@ import com.slotflow.support.ApiIntegrationTest;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.Duration;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +53,18 @@ class StaffInvitationIT extends ApiIntegrationTest {
 
     @Autowired
     private PlatformTransactionManager transactionManager;
+
+    /**
+     * This class authenticates by hand for the tests that call a service directly, and the
+     * {@code SecurityContext} is a thread local on a reused fork thread — so it is cleared at both
+     * ends for the same reason {@code TenantContextTest} does it: clearing only afterwards leaves
+     * the first test of the class inheriting whatever ran before it.
+     */
+    @BeforeEach
+    @AfterEach
+    void clearTheSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     @DisplayName("invite, accept, sign in as the new colleague")
@@ -364,15 +378,11 @@ class StaffInvitationIT extends ApiIntegrationTest {
         // transaction leaves a live-looking seven-day link in somebody's inbox for a user row that
         // does not exist — and no row for the owner to resend from, because there is nothing to
         // resend. The stub cannot fail, so this stays invisible until a real transport lands.
-        try {
-            new TransactionTemplate(transactionManager).execute(status -> {
-                staffAdmin.invite(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF));
-                status.setRollbackOnly();
-                return null;
-            });
-        } finally {
-            SecurityContextHolder.clearContext();
-        }
+        new TransactionTemplate(transactionManager).execute(status -> {
+            staffAdmin.invite(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF));
+            status.setRollbackOnly();
+            return null;
+        });
 
         assertThat(users.findByEmailIgnoreCase(email))
                 .as("the row is gone, which is the whole reason the mail must not have gone out")
