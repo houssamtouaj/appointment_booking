@@ -148,6 +148,31 @@ class StaffInvitationIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("an expired invitation stops counting as pending, in the list and on the row")
+    void anExpiredInvitationIsNoLongerPending() throws Exception {
+        Tenant tenant = aTenant();
+        String email = invite(tenant);
+        UUID invitedId = users.findByEmailIgnoreCase(email).orElseThrow().getId();
+
+        assertThat(listedMember(staffList(tenant), invitedId).path("invitationPending").asBoolean())
+                .isTrue();
+
+        clock.advanceBy(Duration.ofDays(8));
+
+        // The definition of "pending" now lives in one query rather than in a Java filter on one
+        // path and a different Java filter on the other, so this is the assertion that would catch
+        // the two drifting apart: the whole-team read and the single-row read have to agree.
+        assertThat(listedMember(staffList(tenant), invitedId).path("invitationPending").asBoolean())
+                .as("no live link left, which is what tells the owner to resend")
+                .isFalse();
+        mockMvc.perform(get("/api/staff/" + invitedId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.invitationPending").value(false))
+                .andExpect(jsonPath("$.accepted").value(false));
+    }
+
+    @Test
     @DisplayName("a token nobody issued is 404, not 410")
     void unknownTokensAreNotFound() throws Exception {
         // Distinguished from a spent token on purpose: for the person holding the link, one is a
@@ -267,12 +292,7 @@ class StaffInvitationIT extends ApiIntegrationTest {
         // Both rows read active:false, and the owner's next click differs: resend the one, leave
         // the other alone. invitationPending cannot carry that on its own — an invitation that ran
         // out weeks ago makes a pending invitee look exactly like an ex-employee.
-        String body = mockMvc.perform(get("/api/staff")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+        String body = staffList(tenant);
 
         assertThat(listedMember(body, leaver.getId()).path("accepted").asBoolean())
                 .as("deactivated: has a password, so reactivate rather than re-invite")
@@ -389,6 +409,15 @@ class StaffInvitationIT extends ApiIntegrationTest {
                         .content(asJson(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF))))
                 .andExpect(status().isCreated());
         return email;
+    }
+
+    private String staffList(Tenant tenant) throws Exception {
+        return mockMvc.perform(get("/api/staff")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
     }
 
     /**

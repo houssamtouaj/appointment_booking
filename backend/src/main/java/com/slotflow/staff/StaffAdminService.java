@@ -18,10 +18,12 @@ import jakarta.persistence.EntityNotFoundException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -89,9 +91,12 @@ public class StaffAdminService {
     /**
      * The whole team, active and not, with each person's service assignments.
      *
-     * <p>Three queries regardless of team size — users, their outstanding invitations, their
-     * assignments — rather than two per row. Small numbers here, but this is the shape every later
-     * list endpoint copies, and the copy is where it stops being small.
+     * <p>Three queries regardless of team size — the users, the assignments of all of them, the live
+     * invitations of all of them — rather than two per row. Each of the three is also bounded by the
+     * team: the invitation query filters used and expired rows in SQL rather than loading a table
+     * that only ever grows (one row per invite, another per resend, none deleted) in order to throw
+     * most of it away. Small numbers here, but this is the shape every later list endpoint copies,
+     * and the copy is where it stops being small.
      */
     @Transactional(readOnly = true)
     public List<StaffResponse> list() {
@@ -104,14 +109,7 @@ public class StaffAdminService {
         Map<UUID, List<UUID>> servicesByStaff = assignments.findForStaff(ids).stream()
                 .collect(Collectors.groupingBy(StaffService::getStaffId,
                         Collectors.mapping(StaffService::getServiceId, Collectors.toList())));
-        // "Pending" means an invitation exists that is neither used nor expired. An invitation that
-        // has simply run out leaves an inactive user with no live link, which the owner has to be
-        // able to see in order to resend.
-        Instant now = clock.instant();
-        List<UUID> pending = invitations.findByBusinessId(tenant.businessId()).stream()
-                .filter(invitation -> invitation.isValid(now))
-                .map(StaffInvitation::getUserId)
-                .toList();
+        Set<UUID> pending = pendingInvitees(ids);
 
         return team.stream()
                 .sorted(Comparator.comparing(User::getFullName, String.CASE_INSENSITIVE_ORDER))
@@ -344,11 +342,24 @@ public class StaffAdminService {
     }
 
     private StaffResponse toResponse(User user) {
-        boolean pending = invitations.findByUserIdAndUsedAtIsNull(user.getId()).stream()
-                .anyMatch(invitation -> invitation.isValid(clock.instant()));
         List<UUID> serviceIds = assignments.findByStaffId(user.getId()).stream()
                 .map(StaffService::getServiceId)
                 .toList();
-        return mapper.toResponse(user, pending, serviceIds);
+        return mapper.toResponse(user, !pendingInvitees(List.of(user.getId())).isEmpty(), serviceIds);
+    }
+
+    /**
+     * "Which of these people have a live invitation?" — the single-row and whole-team paths ask it
+     * through the same query, so the rule cannot drift between the staff list and the response to a
+     * resend. "Live" means neither used nor expired: an invitation that has simply run out leaves an
+     * inactive colleague with no working link, which the owner has to be able to see in order to
+     * resend it.
+     *
+     * <p>One clock reading, taken here. Evaluating {@code clock.instant()} inside a per-row lambda
+     * lets the boundary move mid-response, so two colleagues whose invitations expire in the same
+     * second could be reported differently in one list.
+     */
+    private Set<UUID> pendingInvitees(Collection<UUID> userIds) {
+        return invitations.findPending(userIds, clock.instant());
     }
 }
