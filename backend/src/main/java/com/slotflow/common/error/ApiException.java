@@ -20,6 +20,18 @@ import org.springframework.http.HttpStatus;
  */
 public class ApiException extends RuntimeException {
 
+    /**
+     * The one property with a meaning beyond the body: {@link GlobalExceptionHandler} copies it to
+     * the {@code Retry-After} header as well.
+     *
+     * <p>{@code RateLimitFilter} sets that header on the 429s it produces, and D12's per-email
+     * booking budget is enforced in a service rather than in a filter — the key is in the parsed
+     * request body — so without this the same status code would come back with the header from one
+     * producer and without it from the other. A client that backs off correctly against one and
+     * hammers the other is a contract with a seam in it.
+     */
+    public static final String RETRY_AFTER_SECONDS = "retryAfterSeconds";
+
     private final ErrorCode code;
     private final HttpStatus status;
     private final Map<String, Object> properties = new LinkedHashMap<>();
@@ -68,9 +80,21 @@ public class ApiException extends RuntimeException {
         return status;
     }
 
-    /** Fluent because these are almost always added at the throw site. */
+    /**
+     * Fluent because these are almost always added at the throw site.
+     *
+     * <p>A null value is dropped rather than stored, and that is load-bearing rather than tidy.
+     * {@link #properties()} hands back a {@code Map.copyOf}, which throws on a null value — from
+     * inside the {@code @ExceptionHandler} that called it, where a thrown exception is logged at
+     * warn and the <em>original</em> exception is left to escape as a 500. So a single optional
+     * member, absent for a perfectly ordinary request, turns a considered 409 into a server error
+     * that names neither the field nor the endpoint. {@code NON_NULL} serialisation would have
+     * dropped the member anyway; this drops it one step earlier, where it cannot detonate.
+     */
     public ApiException with(String name, Object value) {
-        properties.put(name, value);
+        if (value != null) {
+            properties.put(name, value);
+        }
         return this;
     }
 

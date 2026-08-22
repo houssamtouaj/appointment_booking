@@ -158,6 +158,12 @@ app:
     # a test has moved the clock forward would delete rows it is about to assert on. Read directly
     # rather than through AuthProperties because @Scheduled needs a resolvable placeholder.
     token-sweep-cron: ${TOKEN_SWEEP_CRON:0 15 3 * * *}
+  # D2/D3. Off means every booking is created CONFIRMED and nothing ever reaches Stripe, which is
+  # what keeps the deployed demo working when a test key expires. On, a deposit-requiring business
+  # creates a PENDING booking holding its slot for 30 minutes; plan 11 supplies the checkout URL
+  # that makes that hold mean something, and until then turning this on would only lose slots.
+  payments:
+    enabled: ${PAYMENTS_ENABLED:false}
   stripe:
     # consumed from plan 11 onwards
     secret-key: ${STRIPE_SECRET_KEY:}

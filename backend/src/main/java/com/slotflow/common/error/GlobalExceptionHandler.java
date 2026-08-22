@@ -57,7 +57,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> handleApiException(ApiException ex, WebRequest request) {
         ProblemDetail problem = Problems.of(ex.code(), ex.status(), ex.detail());
         ex.properties().forEach(problem::setProperty);
-        return handleExceptionInternal(ex, problem, new HttpHeaders(), ex.status(), request);
+        return handleExceptionInternal(ex, problem, retryAfter(ex), ex.status(), request);
+    }
+
+    /**
+     * The single property that is also a header. See {@link ApiException#RETRY_AFTER_SECONDS}: a
+     * rate limit enforced in a service has to answer in the same shape as one enforced in the
+     * filter, headers included, or a well-behaved client backs off against one and not the other.
+     */
+    private static HttpHeaders retryAfter(ApiException ex) {
+        HttpHeaders headers = new HttpHeaders();
+        Object seconds = ex.properties().get(ApiException.RETRY_AFTER_SECONDS);
+        if (seconds != null) {
+            headers.set(HttpHeaders.RETRY_AFTER, String.valueOf(seconds));
+        }
+        return headers;
     }
 
     /**

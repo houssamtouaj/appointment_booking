@@ -49,6 +49,14 @@ import org.springframework.transaction.annotation.Transactional;
  * <h2>Everything time-dependent comes from the injected {@code Clock}</h2>
  * The policy window is computed here and handed to the engine as two instants, which is what keeps
  * the engine a pure function and lets its tests assert on a lead time with no Spring context.
+ *
+ * <h2>Two callers, one loader</h2>
+ * {@link #slots} answers the calendar; {@link #verify} answers the booking path (plan 10) about one
+ * exact start. Both go through {@link #load}, which is the point: the booking insert must be
+ * checked against precisely the windows the list endpoint offered, and against {@code
+ * [blocked_from, blocked_to)} rather than the customer-visible pair (D4). A second loader in the
+ * booking package would be a second chance to get that wrong, and the symptom would be a {@code
+ * 409} from the exclusion constraint on a slot the API had just advertised.
  */
 @Service
 public class AvailabilityService {
@@ -145,12 +153,126 @@ public class AvailabilityService {
             return List.of();
         }
 
-        // --- the three loads, for the whole range and all candidates at once ------------
-        //
-        // The span is one day wider than the request at each end: a shift or a closure belonging to
-        // yesterday can still be running this morning, and one belonging to tomorrow can block a
-        // slot that starts tonight. AvailabilityEngine owns that arithmetic so that the loader and
-        // the scanner cannot come to disagree about it.
+        AvailabilityQuery query = load(business, service, policy, range, candidates).query();
+
+        return AvailabilityEngine.slots(query).stream()
+                .map(AvailabilityService::toResponse)
+                .toList();
+    }
+
+    // ---------------------------------------------------------------------------------
+    //  one exact start — the booking path (plan 10)
+    // ---------------------------------------------------------------------------------
+
+    /**
+     * Whether one specific start is bookable, and if not, whose fault that is.
+     *
+     * <p>Here rather than in the booking service, because everything it needs — the three loads, the
+     * candidate set, the buffer-expanded windows, the policy clamp — is what {@link #slots} already
+     * assembles, and a second assembly of it in another package is a second chance to feed the
+     * engine {@code [starts_at, ends_at)} instead of {@code [blocked_from, blocked_to)} (D4). The
+     * engine and the exclusion constraint agree because there is one loader, not two.
+     *
+     * <p>The business, service and policy arrive already loaded: the caller needs all three anyway
+     * — to snapshot a price, to decide a deposit, to compute a cutoff — and resolving them twice
+     * would double the cheap half of the booking path for nothing.
+     *
+     * <p>One business-zone day is scanned, not the requested range of the list endpoint.
+     * {@link AvailabilityEngine#datesToScan} widens that by a day at each end on its own, which is
+     * what keeps a start at 00:30 belonging to last night's shift answerable.
+     *
+     * @param startsAt the exact instant the customer picked, copied from a slot response
+     * @param staffId  the person they asked for, or null for "anybody"
+     * @throws ApiException {@code 422 STAFF_NOT_ASSIGNED} if a named staff member does not perform
+     *                      this service — the one refusal that is about the request rather than
+     *                      about the calendar, so it is raised here rather than reported back
+     */
+    @Transactional(readOnly = true)
+    public SlotVerdict verify(Business business, ServiceOffering service, BookingPolicy policy,
+                              Instant startsAt, UUID staffId) {
+        List<UUID> candidates = candidateStaff(business.getId(), service.getId(), staffId);
+        if (candidates.isEmpty()) {
+            return SlotVerdict.nobody();
+        }
+
+        ZoneId businessZone = business.getTimezone();
+        LocalDate day = LocalDate.ofInstant(startsAt, businessZone);
+        TimeWindow range = new TimeWindow(day.atStartOfDay(businessZone).toInstant(),
+                day.plusDays(1).atStartOfDay(businessZone).toInstant());
+
+        LoadedCalendar calendar = load(business, service, policy, range, candidates);
+        return new SlotVerdict(
+                true,
+                servedBy(AvailabilityEngine.slots(calendar.query()), startsAt),
+                // The same fold with every booking removed. The engine is a pure function of its
+                // query, so this is a second pass over data already in memory: no query, no clock,
+                // and no second definition of what "open" means. The difference between the two
+                // lists is precisely "somebody else got there first".
+                servedBy(AvailabilityEngine.slots(withoutBookings(calendar.query())), startsAt),
+                bookingsPerStaff(calendar.bookings(), range));
+    }
+
+    /** Who the engine offered this exact instant to, or an empty list if it offered it to nobody. */
+    private static List<UUID> servedBy(List<Slot> slots, Instant start) {
+        return slots.stream()
+                .filter(slot -> slot.start().equals(start))
+                .findFirst()
+                .map(Slot::staffIds)
+                .orElseGet(List::of);
+    }
+
+    private static AvailabilityQuery withoutBookings(AvailabilityQuery query) {
+        List<StaffSchedule> quiet = query.staff().stream()
+                .map(schedule -> new StaffSchedule(schedule.staffId(), schedule.workingHours(),
+                        schedule.overrides(), List.of()))
+                .toList();
+        return new AvailabilityQuery(query.businessZone(), query.range(), query.durationMinutes(),
+                query.bufferBeforeMinutes(), query.bufferAfterMinutes(),
+                query.slotGranularityMinutes(), query.earliestStart(), query.latestStart(),
+                query.businessWide(), quiet);
+    }
+
+    /**
+     * How loaded a candidate's day already is, which is the tie-break for an any-staff booking.
+     *
+     * <p>Counted from the rows the engine was handed rather than with a {@code count(*)}, so the
+     * fairness rule costs the booking path nothing. Filtered to the requested day because the load
+     * window is deliberately wider than it — a night shift reaches into tomorrow — and a colleague
+     * who looked busier because of a booking on an adjacent date would send the work to the wrong
+     * person.
+     */
+    private static Map<UUID, Long> bookingsPerStaff(List<Booking> loaded, TimeWindow day) {
+        return loaded.stream()
+                .filter(booking -> day.contains(booking.getStartsAt()))
+                .collect(Collectors.groupingBy(Booking::getStaffId, Collectors.counting()));
+    }
+
+    // ---------------------------------------------------------------------------------
+    //  the three loads, shared by both callers
+    // ---------------------------------------------------------------------------------
+
+    /**
+     * The engine's input, and the rows it was built from.
+     *
+     * <p>The bookings travel alongside the query because {@link #verify} needs to count them and
+     * the query only carries them as anonymous windows. Reading them a second time would be a
+     * query the loader has already paid for.
+     */
+    private record LoadedCalendar(AvailabilityQuery query, List<Booking> bookings) {
+    }
+
+    /**
+     * Working hours, overrides and bookings — each fetched <em>once</em>, for the whole range and
+     * every candidate, and folded in memory.
+     *
+     * <p>The span is one day wider than the request at each end: a shift or a closure belonging to
+     * yesterday can still be running this morning, and one belonging to tomorrow can block a slot
+     * that starts tonight. {@link AvailabilityEngine} owns that arithmetic so that the loader and
+     * the scanner cannot come to disagree about it.
+     */
+    private LoadedCalendar load(Business business, ServiceOffering service, BookingPolicy policy,
+                                TimeWindow range, List<UUID> candidates) {
+        ZoneId businessZone = business.getTimezone();
         List<LocalDate> scanned = AvailabilityEngine.datesToScan(range, businessZone);
         TimeWindow loadWindow = AvailabilityEngine.loadWindow(range, businessZone);
 
@@ -158,12 +280,12 @@ public class AvailabilityService {
                 .collect(Collectors.groupingBy(WorkingHours::getStaffId));
         List<AvailabilityOverride> allOverrides = overrides.findForEngine(
                 business.getId(), candidates, scanned.getFirst(), scanned.getLast());
-        Map<UUID, List<TimeWindow>> busy =
-                bookings.findActiveForStaffBetween(candidates, loadWindow.start(), loadWindow.end())
-                        .stream()
-                        .collect(Collectors.groupingBy(Booking::getStaffId,
-                                Collectors.mapping(AvailabilityService::blockedWindow,
-                                        Collectors.toList())));
+        List<Booking> booked = bookings.findActiveForStaffBetween(
+                candidates, loadWindow.start(), loadWindow.end());
+        Map<UUID, List<TimeWindow>> busy = booked.stream()
+                .collect(Collectors.groupingBy(Booking::getStaffId,
+                        Collectors.mapping(AvailabilityService::blockedWindow,
+                                Collectors.toList())));
 
         // One query brought back both levels; splitting them is a partition in memory, because the
         // engine applies business-wide closures to everybody and staff rows to their owner (D5).
@@ -187,10 +309,7 @@ public class AvailabilityService {
                 policy.getSlotGranularityMinutes(),
                 policy.earliestBookableAt(now), policy.latestBookableAt(now),
                 businessWide, schedules);
-
-        return AvailabilityEngine.slots(query).stream()
-                .map(AvailabilityService::toResponse)
-                .toList();
+        return new LoadedCalendar(query, booked);
     }
 
     // ---------------------------------------------------------------------------------

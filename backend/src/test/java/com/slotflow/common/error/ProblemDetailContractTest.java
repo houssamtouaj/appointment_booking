@@ -225,6 +225,29 @@ class ProblemDetailContractTest {
                 .andExpect(header().exists("X-Request-Id"));
     }
 
+    @Test
+    @DisplayName("a rate limit raised in a service answers like one raised in the filter, header and all")
+    void aServiceRaisedRateLimitCarriesRetryAfter() throws Exception {
+        // D12's per-email booking budget is enforced in plan 10's service rather than in
+        // RateLimitFilter, because the key is in the parsed body. Two producers of the same status
+        // code have to answer in the same shape, or a client that backs off correctly against one
+        // hammers the other.
+        mockMvc.perform(post("/test/problems/throttled"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "30"))
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
+                .andExpect(jsonPath("$.retryAfterSeconds").value(30));
+
+        // And a null property is dropped rather than stored: ApiException.properties() is a
+        // Map.copyOf, which throws on a null value from inside the @ExceptionHandler — where the
+        // failure is logged at warn and the original exception escapes as a 500.
+        mockMvc.perform(post("/test/problems/throttled-without-a-wait"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().doesNotExist("Retry-After"))
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
+                .andExpect(jsonPath("$.retryAfterSeconds").doesNotExist());
+    }
+
     // ---------------------------------------------------------------------------------
     //  the probe controller: exists only for this test
     // ---------------------------------------------------------------------------------
@@ -248,6 +271,22 @@ class ProblemDetailContractTest {
             throw new ApiException(ErrorCode.BOOKING_SLOT_TAKEN,
                     "That slot was taken while you were deciding.")
                     .with("requestedStart", "2026-03-02T09:00:00Z");
+        }
+
+        @PostMapping("/throttled")
+        String throttled() {
+            return doThrottled(30L);
+        }
+
+        /** The same refusal for a caller with no wait attached, which must not set the header. */
+        @PostMapping("/throttled-without-a-wait")
+        String throttledWithoutAWait() {
+            return doThrottled(null);
+        }
+
+        private String doThrottled(Long retryAfterSeconds) {
+            throw new ApiException(ErrorCode.RATE_LIMITED, "Too many bookings from this address.")
+                    .with(ApiException.RETRY_AFTER_SECONDS, retryAfterSeconds);
         }
 
         @GetMapping("/missing")

@@ -33,8 +33,12 @@ import org.springframework.test.web.servlet.MvcResult;
  * <ul>
  *   <li><b>MockMvc with the security chain applied</b>, which is the point: an authorisation test
  *       that bypasses the filter chain proves nothing about the filter chain.</li>
- *   <li><b>A recording notification service</b>, so a test can read an invitation link the way its
- *       recipient would. See {@link RecordingNotificationService}.</li>
+ *   <li><b>Two recorders</b> — a notification service, so a test can read an invitation link the way
+ *       its recipient would ({@link RecordingNotificationService}), and an after-commit booking
+ *       event listener, so a test can assert that a rolled-back booking notifies nobody
+ *       ({@link RecordingBookingEvents}). Both live here rather than in a per-class
+ *       {@code @TestConfiguration}, because a second configuration would fork the context cache and
+ *       pay for a whole extra application context.</li>
  * </ul>
  *
  * <p>Rate limiting is off for every integration test, not only the ones that go through MockMvc;
@@ -64,6 +68,9 @@ public abstract class ApiIntegrationTest extends IntegrationTest {
     protected RecordingNotificationService notifications;
 
     @Autowired
+    protected RecordingBookingEvents bookingEvents;
+
+    @Autowired
     protected JwtService jwtService;
 
     @Autowired
@@ -79,8 +86,9 @@ public abstract class ApiIntegrationTest extends IntegrationTest {
     protected UserRepository users;
 
     @BeforeEach
-    void emptyTheInbox() {
+    void emptyTheRecorders() {
         notifications.clear();
+        bookingEvents.clear();
     }
 
     // ---------------------------------------------------------------------------------
@@ -177,6 +185,16 @@ public abstract class ApiIntegrationTest extends IntegrationTest {
         @Primary
         RecordingNotificationService recordingNotificationService() {
             return new RecordingNotificationService();
+        }
+
+        /**
+         * No {@code @Primary} here: this one does not replace anything. It listens alongside the
+         * application's own {@code BookingEventListener}, on the same after-commit phase, so a test
+         * sees exactly what a real subscriber would see and nothing a real subscriber would not.
+         */
+        @Bean
+        RecordingBookingEvents recordingBookingEvents() {
+            return new RecordingBookingEvents();
         }
     }
 }
