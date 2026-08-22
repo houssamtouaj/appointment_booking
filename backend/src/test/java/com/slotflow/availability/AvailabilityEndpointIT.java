@@ -155,6 +155,31 @@ class AvailabilityEndpointIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("a booking on the day after the range still cuts the slot that runs into it")
+    void aBookingPastTheRequestedRangeIsStillLoaded() throws Exception {
+        Salon salon = aNightSalon();
+
+        // The hours either side of Wednesday's two midnights, before anything is booked.
+        assertThat(startsOn(salon, WEDNESDAY)).containsExactly(
+                parisTime("2026-03-04T00:00"), parisTime("2026-03-04T22:00"),
+                parisTime("2026-03-04T22:30"), parisTime("2026-03-04T23:00"),
+                parisTime("2026-03-04T23:30"));
+
+        // Now take the first two hours of Thursday. Nothing about that appointment is inside the
+        // requested Wednesday, and the load window used to stop at Thursday's midnight - which is
+        // precisely where this one begins, so it was fetched by no query and subtracted by nothing.
+        for (UUID staff : List.of(salon.dana(), salon.sam())) {
+            bookings.save(aBooking().forService(salon.service()).withStaff(staff)
+                    .at(parisTime("2026-03-05T00:00")).build());
+        }
+
+        // 22:00 survives: it ends where the booking begins. Every later start runs through it, and
+        // offering one would hand wave 6 a 409 from the exclusion constraint over the same range.
+        assertThat(startsOn(salon, WEDNESDAY)).containsExactly(
+                parisTime("2026-03-04T00:00"), parisTime("2026-03-04T22:00"));
+    }
+
+    @Test
     @DisplayName("staffId narrows to one person; omitting it unions both and dedupes by start")
     void namedStaffNarrowsTheAnswer() throws Exception {
         Salon salon = aSalon();
@@ -298,6 +323,16 @@ class AvailabilityEndpointIT extends ApiIntegrationTest {
 
         // The widest range that is still allowed, so the cap is a boundary and not a vague limit.
         availability(salon, WEDNESDAY, WEDNESDAY.plusDays(61)).andExpect(status().isOk());
+
+        // LocalDate.MAX clears both guards above - it is not before itself, and it is zero days
+        // from itself - and then overflows the arithmetic that turns a date into an instant. On an
+        // endpoint that is anonymous and exempt from the rate limiter, that must not be a 500.
+        availability(salon, LocalDate.MAX, LocalDate.MAX)
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("from"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("must be between 1970-01-01 and 9999-12-31"));
     }
 
     @Test
@@ -342,6 +377,26 @@ class AvailabilityEndpointIT extends ApiIntegrationTest {
 
     private Salon aSalon() {
         return aSalonWithBuffers(0, 0);
+    }
+
+    /** A salon that works nights: 22:00-02:00 on weekdays, two hours to an appointment. */
+    private Salon aNightSalon() {
+        Tenant tenant = aTenant();
+        BookingPolicy policy = policies.findById(tenant.id()).orElseThrow();
+        policy.setMinLeadTimeHours(0);
+        policy.setSlotGranularityMinutes(30);
+        policies.save(policy);
+
+        ServiceOffering treatment = services.save(aService().forBusiness(tenant.business())
+                .withName("Overnight treatment").withDuration(120).build());
+
+        User sam = aStaffMemberOf(tenant);
+        for (User staff : List.of(tenant.owner(), sam)) {
+            assignments.save(new StaffService(tenant.id(), staff.getId(), treatment.getId()));
+            workingHours.saveAll(workingHours().forStaff(staff).overnight().buildWeekdays());
+        }
+
+        return new Salon(tenant, treatment, tenant.owner().getId(), sam.getId());
     }
 
     private Salon aSalonWithBuffers(int before, int after) {

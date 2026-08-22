@@ -63,6 +63,21 @@ public class AvailabilityService {
      */
     static final int MAX_RANGE_DAYS = 62;
 
+    /**
+     * The calendar this endpoint will answer for at all.
+     *
+     * <p>{@code from} and {@code to} arrive parsed and otherwise unexamined, and {@code
+     * LocalDate.MAX} clears both guards in {@link #requestedRange} — it is not before itself and it
+     * is zero days from itself — only to overflow on the {@code plusDays} that turns it into an
+     * instant. On an endpoint that is anonymous and deliberately exempt from the rate limiter (D12),
+     * that is a 500 and a stack trace for the price of one query string, so the dates are bounded
+     * here to something a booking calendar could plausibly mean and refused with the same 422 every
+     * other bad range gets.
+     */
+    static final LocalDate EARLIEST_QUERYABLE_DAY = LocalDate.of(1970, 1, 1);
+
+    static final LocalDate LATEST_QUERYABLE_DAY = LocalDate.of(9999, 12, 31);
+
     private final BusinessRepository businesses;
     private final ServiceOfferingRepository services;
     private final BookingPolicyRepository policies;
@@ -132,9 +147,10 @@ public class AvailabilityService {
 
         // --- the three loads, for the whole range and all candidates at once ------------
         //
-        // The span is one day wider than the request at the near end, because a shift or a closure
-        // belonging to yesterday can still be running this morning. AvailabilityEngine owns that
-        // arithmetic so that the loader and the scanner cannot come to disagree about it.
+        // The span is one day wider than the request at each end: a shift or a closure belonging to
+        // yesterday can still be running this morning, and one belonging to tomorrow can block a
+        // slot that starts tonight. AvailabilityEngine owns that arithmetic so that the loader and
+        // the scanner cannot come to disagree about it.
         List<LocalDate> scanned = AvailabilityEngine.datesToScan(range, businessZone);
         TimeWindow loadWindow = AvailabilityEngine.loadWindow(range, businessZone);
 
@@ -189,6 +205,8 @@ public class AvailabilityService {
      * valid instant of that day and the second is a local time that never happened.
      */
     private TimeWindow requestedRange(LocalDate from, LocalDate to, ZoneId customerZone) {
+        rejectOutsideCalendar("from", from);
+        rejectOutsideCalendar("to", to);
         if (to.isBefore(from)) {
             throw ApiException.invalidField("to", "must not be before from");
         }
@@ -198,6 +216,13 @@ public class AvailabilityService {
         }
         return new TimeWindow(from.atStartOfDay(customerZone).toInstant(),
                 to.plusDays(1).atStartOfDay(customerZone).toInstant());
+    }
+
+    private static void rejectOutsideCalendar(String field, LocalDate date) {
+        if (date.isBefore(EARLIEST_QUERYABLE_DAY) || date.isAfter(LATEST_QUERYABLE_DAY)) {
+            throw ApiException.invalidField(field, "must be between "
+                    + EARLIEST_QUERYABLE_DAY + " and " + LATEST_QUERYABLE_DAY);
+        }
     }
 
     /**

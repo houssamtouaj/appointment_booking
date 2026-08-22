@@ -99,21 +99,27 @@ public final class AvailabilityEngine {
     // ---------------------------------------------------------------------------------
 
     /**
-     * Every business-zone date whose working hours could reach into the requested range.
+     * Every business-zone date whose hours — or whose cuts — could reach into the requested range.
      *
      * <p>One date earlier than the range begins, and that is load-bearing twice over: a 22:00–02:00
      * shift started yesterday is still running at 01:00 today, and {@code ?tz=} can put the start of
-     * the requested range in the middle of the previous business-zone day. Nothing is needed at the
-     * far end for the mirror-image reason — a shift belonging to the day <em>after</em> the last
-     * scanned date cannot start before that date's midnight, which is already past the end of the
-     * range.
+     * the requested range in the middle of the previous business-zone day.
+     *
+     * <p>One date later as well, and not for the mirror-image reason. No <em>start</em> can ever be
+     * reported from the day after the range, because the walk keeps only what the range contains.
+     * But a start inside the range can be blocked by something dated after it: a midnight-crossing
+     * shift on the last requested day is still open at 23:00, and a two-hour appointment beginning
+     * there is blocked until 01:00 the next morning. A booking or a closure sitting in that hour has
+     * to be loaded and subtracted, or the engine offers a slot the exclusion constraint will then
+     * refuse — the one thing the pipeline above promises cannot happen. The extra date costs one
+     * more day of template materialisation and yields no extra slots.
      */
     public static List<LocalDate> datesToScan(TimeWindow range, ZoneId zone) {
         LocalDate first = LocalDate.ofInstant(range.start(), zone).minusDays(1);
         // The range is half-open, so its last instant is the one just before the end. Taking the
         // date of the end itself would scan one spurious day every time the range ends at midnight,
-        // which is every time.
-        LocalDate last = LocalDate.ofInstant(range.end().minusNanos(1), zone);
+        // which is every time — so the day added here is the deliberate one above, not that accident.
+        LocalDate last = LocalDate.ofInstant(range.end().minusNanos(1), zone).plusDays(1);
 
         List<LocalDate> dates = new ArrayList<>();
         for (LocalDate date = first; !date.isAfter(last); date = date.plusDays(1)) {
@@ -126,9 +132,9 @@ public final class AvailabilityEngine {
      * The instants those dates span, which is the window the caller must load bookings over.
      *
      * <p>Wider than the requested range at both ends, and it has to be: a booking that started
-     * yesterday evening blocks this morning, and one starting tonight blocks the last slot of the
-     * scanned day. Deriving it here rather than in the service is what stops the loader and the
-     * scanner disagreeing about which day the engine is about to look at.
+     * yesterday evening blocks this morning, and one starting after the last requested midnight can
+     * still block a slot that begins before it. Deriving it here rather than in the service is what
+     * stops the loader and the scanner disagreeing about which day the engine is about to look at.
      */
     public static TimeWindow loadWindow(TimeWindow range, ZoneId zone) {
         List<LocalDate> dates = datesToScan(range, zone);

@@ -58,7 +58,8 @@ public class AvailabilityController {
             @Parameter(description = "First day, inclusive", example = "2026-03-02")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
 
-            @Parameter(description = "Last day, inclusive. At most 62 days after from",
+            @Parameter(description = "Last day, inclusive. The range may span at most 62 days, "
+                    + "both ends counted, so the widest request is to = from + 61",
                     example = "2026-03-08")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
 

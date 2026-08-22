@@ -218,6 +218,35 @@ class AvailabilityEngineTest {
             assertThat(localStarts(slots))
                     .containsExactly("2026-03-03T00:00", "2026-03-03T01:00");
         }
+
+        @Test
+        @DisplayName("a BLOCKED override dated after the range still cuts the slot that runs into it")
+        void aCutOnTheDayAfterTheRangeStillApplies() {
+            List<Slot> slots = query().on(MONDAY)
+                    .staff(new StaffSchedule(DANA, dayShift(DayOfWeek.MONDAY, "22:00", "02:00"),
+                            List.of(blockedBetween(DANA, TUESDAY, "00:00", "06:00")), List.of()))
+                    .lasting(120).every(60)
+                    .slots();
+
+            // Asking for Monday alone, the scan still has to reach forwards into Tuesday: 23:00 is a
+            // Monday start whose two hours run to 01:00, straight through a closure dated Tuesday.
+            // Offering it would be the engine promising a slot the constraint would then refuse.
+            assertThat(localStarts(slots)).containsExactly("2026-03-02T22:00");
+        }
+
+        @Test
+        @DisplayName("the scanned span reaches a day past the range at each end, load window with it")
+        void theScannedSpanReachesPastBothEnds() {
+            TimeWindow monday = new TimeWindow(
+                    parisTime("2026-03-02T00:00"), parisTime("2026-03-03T00:00"));
+
+            assertThat(AvailabilityEngine.datesToScan(monday, PARIS))
+                    .containsExactly(MONDAY.minusDays(1), MONDAY, TUESDAY);
+            // The service loads bookings over exactly those dates, end to end. The far end is what
+            // stops a booking sitting just past the last requested midnight from going unseen.
+            assertThat(AvailabilityEngine.loadWindow(monday, PARIS)).isEqualTo(new TimeWindow(
+                    parisTime("2026-03-01T00:00"), parisTime("2026-03-04T00:00")));
+        }
     }
 
     // ---------------------------------------------------------------------------------
