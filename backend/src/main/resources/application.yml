@@ -164,6 +164,12 @@ app:
   # that makes that hold mean something, and until then turning this on would only lose slots.
   payments:
     enabled: ${PAYMENTS_ENABLED:false}
+  booking:
+    # The PENDING sweeper (D3). Every minute, because the hold is 30 minutes and a slot released a
+    # minute late costs nobody anything. `-` disables it, which the integration suite sets: the
+    # suite moves the clock forward by hours at a time, and a sweep firing on its own schedule
+    # would cancel rows a test is about to assert on. ExpiredBookingSweepIT calls it directly.
+    expiry-sweep-cron: ${BOOKING_EXPIRY_SWEEP_CRON:0 * * * * *}
   stripe:
     # consumed from plan 11 onwards
     secret-key: ${STRIPE_SECRET_KEY:}

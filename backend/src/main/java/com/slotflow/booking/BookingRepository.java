@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 /**
@@ -14,8 +15,16 @@ import org.springframework.data.jpa.repository.Query;
  * <p>The default methods are the point of this interface. Each one gives a plan-facing name to a
  * derived query and puts the status filter in exactly one place, so "active" cannot come to mean
  * something slightly different in the engine than it does in the database's exclusion constraint.
+ *
+ * <p>{@link JpaSpecificationExecutor} is here for one caller, the admin list, and for one reason:
+ * its four filters are all optional and every combination of them has to be ANDed with the caller's
+ * business id. Sixteen derived methods is absurd, and the JPQL alternative —
+ * {@code (:status is null or b.status = :status)} four times over — needs a cast on every line to
+ * tell Postgres what type an untyped null is, and gives the planner one query text for sixteen
+ * different shapes. See {@code BookingSpecifications}.
  */
-public interface BookingRepository extends JpaRepository<Booking, UUID> {
+public interface BookingRepository
+        extends JpaRepository<Booking, UUID>, JpaSpecificationExecutor<Booking> {
 
     // ---------------------------------------------------------------------------------
     //  the engine's hot path

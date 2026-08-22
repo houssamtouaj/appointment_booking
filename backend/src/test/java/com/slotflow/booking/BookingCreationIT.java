@@ -3,6 +3,7 @@ package com.slotflow.booking;
 import static com.slotflow.support.fixtures.Fixtures.aService;
 import static com.slotflow.support.fixtures.Fixtures.anOverride;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,10 +23,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 /**
  * The wave-6 exit demo, and every refusal on the way to it.
  *
- * <p>The first test is the demo as far as this commit reaches: copy a start out of the availability
- * response, book it, watch it and its buffers leave the calendar, then fail to book it twice.
- * Cancelling it and watching the slot come straight back is the other half of the same walk, and it
- * arrives with the cancellation endpoint. Everything after that is one refusal each, because "a start the engine never offered is a 422
+ * <p>The first test is the demo end to end: copy a start out of the availability response, book it,
+ * watch it and its buffers leave the calendar, fail to book it twice, cancel it, watch it come back.
+ * Everything after that is one refusal each, because "a start the engine never offered is a 422
  * with a specific code, and one somebody else already has is a 409" is the distinction this endpoint
  * is built around, and the one a reader will want to see asserted rather than described.
  *
@@ -41,7 +41,8 @@ class BookingCreationIT extends BookingScenario {
     // ---------------------------------------------------------------------------------
 
     @Test
-    @DisplayName("book a slot, lose it and its buffers from the calendar, and fail to rebook it")
+    @DisplayName("book a slot, lose it and its buffers from the calendar, fail to rebook, cancel, "
+            + "and have it back")
     void theWholeRoundTrip() throws Exception {
         Salon salon = solo(aSalonWithBuffers(15, 15));
 
@@ -50,7 +51,7 @@ class BookingCreationIT extends BookingScenario {
         Instant noon = parisTime("2026-03-04T12:00");
         assertThat(before).as("the demo starts from a slot the API actually offered").contains(noon);
 
-        book(salon, noon)
+        PublicBookingResponse created = book(salon, noon)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("CONFIRMED"))
                 // UTC on the wire: Paris is on CET in early March, so noon local is 11:00Z.
@@ -65,7 +66,9 @@ class BookingCreationIT extends BookingScenario {
                 .andExpect(jsonPath("$.cancellationToken").isNotEmpty())
                 // Payments are off this wave, so nothing is ever PENDING and nothing is held.
                 .andExpect(jsonPath("$.expiresAt").doesNotExist())
-                .andExpect(jsonPath("$.checkoutUrl").doesNotExist());
+                .andExpect(jsonPath("$.checkoutUrl").doesNotExist())
+                .andReturn().getResponse().getContentAsString()
+                .transform(this::asBooking);
 
         // 2. The slot is gone, and so is every start whose own buffers reach into what it took:
         //    12:00-13:00 plus fifteen minutes either side costs the calendar 11:45-13:15.
@@ -87,6 +90,18 @@ class BookingCreationIT extends BookingScenario {
                 // candidate is blocked — otherwise one of them would have taken it — so the offer
                 // to retire is the slot itself, and inventing a person to blame would be noise.
                 .andExpect(jsonPath("$.staffId").doesNotExist());
+
+        // 4. Cancelling frees it immediately: the exclusion constraint stops matching a cancelled
+        //    row, so nothing stands between the cancel and the next customer.
+        mockMvc.perform(delete("/api/public/bookings/{token}", created.cancellationToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.depositRefundable").value(false));
+
+        assertThat(startsOn(salon))
+                .as("a cancelled booking releases its slot the instant the transaction commits")
+                .containsExactlyElementsOf(before);
+        book(salon, noon).andExpect(status().isCreated());
     }
 
     // ---------------------------------------------------------------------------------
@@ -263,6 +278,14 @@ class BookingCreationIT extends BookingScenario {
     // ---------------------------------------------------------------------------------
     //  helpers
     // ---------------------------------------------------------------------------------
+
+    private PublicBookingResponse asBooking(String body) {
+        try {
+            return json.readValue(body, PublicBookingResponse.class);
+        } catch (Exception e) {
+            throw new AssertionError("not a booking response: " + body, e);
+        }
+    }
 
     private List<Instant> startsOn(Salon salon) throws Exception {
         String body = mockMvc.perform(availabilityRequest(salon, WEDNESDAY))

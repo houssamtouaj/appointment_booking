@@ -80,6 +80,24 @@ class OpenApiDocumentIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("every endpoint of wave five and wave six is in it")
+    void theBookingEndpointsAreDocumented() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}/availability'].get")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}/bookings'].post")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/public/bookings/{cancellationToken}'].get")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/public/bookings/{cancellationToken}'].delete")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/bookings'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/bookings/{id}'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/bookings/{id}/status'].patch").exists());
+    }
+
+    @Test
     @DisplayName("public operations do not ask the reader for a bearer token")
     void publicOperationsOptOutOfTheGlobalSecurityRequirement() throws Exception {
         // OpenApiConfig applies bearerAuth to the whole document, which is right for a mostly
@@ -94,6 +112,13 @@ class OpenApiDocumentIT extends ApiIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}'].get.security")
                         .isEmpty())
                 .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}/services'].get.security")
+                        .isEmpty())
+                // The booking endpoints most of all: a padlock on "book this slot" is a padlock on
+                // the one thing an anonymous visitor is here to do.
+                .andExpect(jsonPath("$.paths['/api/public/businesses/{slug}/bookings'].post.security")
+                        .isEmpty())
+                .andExpect(jsonPath(
+                        "$.paths['/api/public/bookings/{cancellationToken}'].delete.security")
                         .isEmpty())
                 // logout is public too, and the padlock has to agree: a client whose access token
                 // expired still has to be able to revoke its refresh cookie.

@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The booking path a guest walks: create, then look up what they got.
+ * The booking path a guest walks: create, look up by token, cancel.
  *
  * <h2>The check is an optimisation; the constraint is the guarantee</h2>
  * Everything before the insert exists to produce a good error message. The one thing that makes
@@ -211,13 +211,50 @@ public class PublicBookingService {
     //  the manage page
     // ---------------------------------------------------------------------------------
 
-    /**
-     * The customer's whole view of their booking. The token is the credential; there is no
-     * other, and cancelling through it is the next commit's subject.
-     */
+    /** The customer's whole view of their booking. The token is the credential; there is no other. */
     @Transactional(readOnly = true)
     public PublicBookingResponse byToken(UUID cancellationToken) {
         Booking booking = load(cancellationToken);
+        return withContext(booking, PublicBookingResponse::forToken);
+    }
+
+    /**
+     * Cancels, subject to the cutoff.
+     *
+     * <p>The cutoff is checked for every status rather than only for an active booking, and that
+     * ordering is deliberate. Every non-active status is already at or past its own start — a
+     * completed appointment happened, a no-show was due — so it is past the deadline too, and
+     * {@code 409 CANCELLATION_CUTOFF} with the deadline in the body is a true and useful answer for
+     * all of them. The alternative is a branch per status that mostly says the same thing.
+     *
+     * <p>The one case the matrix still has to catch is a booking cancelled twice inside the cutoff,
+     * which {@link Booking#cancel()} refuses with {@code 409 ILLEGAL_TRANSITION}.
+     *
+     * <p>Cancelling frees the slot the instant this commits: the exclusion constraint's
+     * {@code WHERE status IN ('PENDING', 'CONFIRMED')} stops matching the row, so the same start is
+     * bookable again with no cleanup job in between.
+     */
+    @Transactional
+    public PublicBookingResponse cancel(UUID cancellationToken) {
+        Booking booking = load(cancellationToken);
+        BookingPolicy policy = policyFor(booking);
+        Instant now = clock.instant();
+
+        if (!policy.isCancellable(booking.getStartsAt(), now)) {
+            throw new ApiException(ErrorCode.CANCELLATION_CUTOFF,
+                    "This booking can no longer be cancelled online. Please call the business.")
+                    .with("deadline", policy.cancellationDeadline(booking.getStartsAt()))
+                    .with("startsAt", booking.getStartsAt())
+                    // D7 again, in the refusal as well as in the success: a customer being told
+                    // they cannot cancel must not be left wondering about the money either.
+                    .with("depositRefundable", false);
+        }
+
+        booking.cancel();
+        bookings.save(booking);
+        events.publishEvent(new BookingEvent.Cancelled(booking.getId(), booking.getBusinessId(),
+                BookingEvent.Cancelled.Source.GUEST, now));
+        log.info("Booking {} cancelled by its guest", booking.getId());
         return withContext(booking, PublicBookingResponse::forToken);
     }
 

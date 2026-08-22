@@ -20,7 +20,7 @@ holds its own controller, service, repository, entity and DTOs.
 | `staff` | `User` in the OWNER/STAFF roles, invitations |
 | `availability` | `WorkingHours`, `AvailabilityOverride`, `AvailabilityEngine` |
 | `booking` | `Booking` lifecycle, conflict handling |
-| `payment` | Stripe Checkout session + webhook |
+| `payment` | Stripe Checkout session + webhook; today, the feature flag that keeps it off |
 | `notification` | Thymeleaf email templates, reminder scheduler |
 
 ```
@@ -645,6 +645,154 @@ for one — `AvailabilityQueryCountIT` asserts it from both ends with a Hibernat
 because a per-day loop produces a response nobody can tell apart from the right one and a month
 view that takes five seconds. A service nobody is assigned to skips the three loads entirely.
 
+## Bookings
+
+The point of everything above. A guest picks a start from the availability response, posts it, and
+the **database** — not the application — guarantees they are the only one who got it.
+
+| Method | Path | Auth |
+|---|---|---|
+| `POST` | `/api/public/businesses/{slug}/bookings` | none, rate limited |
+| `GET` | `/api/public/bookings/{cancellationToken}` | the token |
+| `DELETE` | `/api/public/bookings/{cancellationToken}` | the token |
+| `GET` | `/api/bookings?from=&to=&status=&staffId=&page=&size=` | OWNER, STAFF |
+| `GET` | `/api/bookings/{id}` | OWNER, STAFF |
+| `PATCH` | `/api/bookings/{id}/status` | OWNER, STAFF |
+
+```
+booking/Booking.java                  the entity, and the transition matrix that lives on it
+booking/PublicBookingService.java     create, look up by token, cancel
+booking/BookingAdminService.java      the calendar from inside the business
+booking/BookingConflictException.java the 23P01 translation, and only that
+booking/ExpiredBookingSweeper.java    releases abandoned deposit holds (D3)
+booking/BookingEvent.java             what plan 11 and plan 12 subscribe to, after commit
+```
+
+### The double-booking guarantee
+
+```sql
+EXCLUDE USING gist (staff_id WITH =, tstzrange(blocked_from, blocked_to) WITH &&)
+  WHERE (status IN ('PENDING', 'CONFIRMED'))
+```
+
+Everything the service does before the insert is an optimisation and a source of good error
+messages. This constraint is the guarantee, and it is a guarantee precisely because it is *not* a
+read followed by a write: two requests arriving in the same millisecond produce one row and one
+`23P01`, whatever either request believed a moment earlier. `BookingConcurrencyIT` is the test —
+two threads, one `CountDownLatch`, real Postgres, nothing mocked — and it asserts the pair: exactly
+one `201`, exactly one `409`, exactly one row.
+
+It ranges over `blocked_from`/`blocked_to` rather than the appointment (D4), so a booking whose
+*buffers* overlap an existing one is refused too, even though the two appointments are half an hour
+apart. That is the same rule the engine applies, which is what stops the API offering a slot the
+insert would then reject.
+
+**Matched by SQLState, never by name.** Hibernate wraps the violation two or three levels deep, so
+`BookingConflictException.isSlotOverlap` walks the cause chain to `SQLException.getSQLState()` and
+compares `23P01`. A `getMessage().contains("booking_no_overlap")` works today and breaks the day
+somebody renames the constraint — on the one path where breaking means a 500 instead of a 409.
+
+**Deadlocks are the same event with a different exception.** When the two blocked ranges are
+identical the second inserter waits and gets a clean `23P01`; when they merely overlap, each
+transaction can end up waiting on the other's index entry and Postgres kills one with `40P01`. The
+survivor still commits, so the outcome is still exactly one booking — only the loser's exception
+differs, and it is reported as the same `409`.
+
+### 409 or 422: taken versus never on offer
+
+A slot the engine withheld because somebody else has it is a **409**: the client should refetch and
+re-render, and the constraint would have said the same a moment later. A start the calendar would
+never have offered is a **422** with a specific code, because refetching will not change the answer.
+Telling those apart costs no extra query — the engine is a pure function, so
+`AvailabilityService.verify` folds it twice, once against the real calendar and once against the
+same calendar with every booking removed. The difference between the two answers is exactly
+"somebody else got there first".
+
+| Code | Meaning |
+|---|---|
+| `SERVICE_INACTIVE` | the service is not bookable at all |
+| `STAFF_NOT_ASSIGNED` | that person does not perform it — or nobody does |
+| `POLICY_LEAD_TIME` / `POLICY_MAX_ADVANCE` | outside the bookable window; the body carries the boundary |
+| `SLOT_NOT_ON_GRID` | not one of the start times this business offers |
+| `SLOT_OUTSIDE_HOURS` | nobody is working then |
+| `BOOKING_SLOT_TAKEN` | 409; the body echoes the slot so the client can retire that offer |
+
+The grid check is used to *name* a refusal and never to gate one. Plan 09 anchors the grid at each
+open window's own start rather than at midnight, so after a booking ending at 13:15 the next offer
+on a half-hour grid is 13:45 — a start a midnight-anchored modulo would have rejected, and one this
+API really does advertise.
+
+### The lifecycle
+
+| From \ To | CONFIRMED | CANCELLED | COMPLETED | NO_SHOW |
+|---|---|---|---|---|
+| `PENDING` | webhook or sweeper only | yes | no | no |
+| `CONFIRMED` | — | yes | after `endsAt` | after `startsAt` |
+| `CANCELLED` | no | — | no | no |
+| `COMPLETED` | no | no | — | no |
+| `NO_SHOW` | no | yes | yes | — |
+
+Enforced on the entity, not in a controller. Three callers move a booking through its life — the
+admin `PATCH`, the Stripe webhook and the expiry sweeper — so a guard living in one of them protects
+only that one. Illegal moves are `409 ILLEGAL_TRANSITION` naming both states in the body.
+
+`PATCH` refuses `CONFIRMED` from every source state, even the one the entity allows (D2): a deposit
+arriving is what confirms a booking, and staff never press a button to do it. The two time guards
+are not overridable either — a completed appointment in the future is a data-quality bug that
+resurfaces as a wrong number on the dashboard.
+
+### Cancellation
+
+A customer cancels through the token, subject to `cancellationCutoffHours`; past it,
+`409 CANCELLATION_CUTOFF` carries the deadline. Staff cancel through `PATCH` and ignore the cutoff —
+it is a promise made to customers about how late *they* may change their mind, and a salon whose
+stylist calls in sick has to be able to cancel. Either way the slot is free the instant the
+transaction commits, because the constraint's `WHERE` clause stops matching the row; there is no
+cleanup job in between.
+
+**`depositRefundable` is `false`, and it is a field rather than a footnote** (D7). Refunds are out of
+scope, so the money is kept whichever way the customer goes. That has to be disclosed rather than
+discovered, which means the manage page needs it as data it can render next to the button, before
+the click — so it is on the detail payload, on the successful cancel, and on the refusal.
+
+### Deposit holds and the sweeper (D3)
+
+With `app.payments.enabled=false` — the default, and this version's whole configuration — every
+booking is created `CONFIRMED` and nothing reaches Stripe. With it on, a deposit-requiring business
+creates a `PENDING` booking with `expiresAt = now + 30 min`. `PENDING` is inside the exclusion
+constraint, so an abandoned checkout would hold its slot forever; `ExpiredBookingSweeper` runs every
+minute and releases the stale ones.
+
+The sweeper is the one genuine concurrency hot spot outside the constraint, because the payment
+webhook writes the same row. Each booking gets its own transaction, the expiry is re-checked inside
+it, and `@Version` closes the remaining window — a lost race throws `OptimisticLockingFailureException`
+and is treated as a no-op, which is correct, because the only other writer is a payment that
+actually arrived.
+
+### Guest contact details
+
+There is no customer account (D1), so the three contact fields *are* the customer and the
+cancellation token is their only credential. They appear in exactly two responses — the token lookup
+and the admin detail view — and nowhere else: not on the creation response, not in the admin list
+(which carries the name alone, because a leak on a page of forty rows is forty leaks), and not on
+anything the availability endpoint returns.
+
+### Terms are snapshotted (D14)
+
+`priceCents` and both buffers are copied onto the row at creation. Editing a service changes what
+the *next* customer pays and how much calendar the next appointment costs, and leaves every
+appointment already agreed exactly as it was — including the blocked range the constraint is holding
+the slot with.
+
+### After commit, or not at all
+
+`BookingEvent.Created` and `BookingEvent.Cancelled` are published inside the booking transaction and
+delivered by `@TransactionalEventListener(AFTER_COMMIT)`. Nothing subscribes to them yet beyond a log
+line; plan 11 hangs the Checkout session there and plan 12 the two confirmation emails (D10). The
+boundary is in now because retrofitting it later is how a rolled-back booking ends up emailing a
+customer about an appointment nobody has — and `BookingEventIT` asserts that a transaction which
+rolls back notifies nobody, so the wiring is real rather than decorative.
+
 ## Pagination
 
 `?page=&size=` with `size` defaulting to 20 and clamped to 100, returning
@@ -704,6 +852,16 @@ Booking   slot   = aBooking().forService(massage).withStaff(dana).inDays(2).buil
 Every builder starts from a valid, boring default, so a test that says `withBuffers(10, 10)`
 is visibly a test about buffers.
 
+**Concurrency is tested with latches, never with sleeps.** `BookingConcurrencyIT` releases two
+threads at the same instant through two `CountDownLatch`es and asserts the outcome *pair* — one
+`201`, one `409`, one row. A `Thread.sleep` there would make the overlap probabilistic: too short
+and the threads miss each other, too long and the build is slower for nothing, and either way the
+test is a coin flip dressed as an assertion.
+
+**Two jobs are switched off for the whole suite** and called directly instead: the token sweep and
+the booking expiry sweep. Both delete or cancel rows, this suite moves the clock forward by days at
+a time, and which test lost its fixture would otherwise depend on the time of day the build ran.
+
 ## Built so far
 
 - Maven project on Java 21 / Spring Boot 3.5, Docker Compose stack, multi-stage image
@@ -731,12 +889,18 @@ is visibly a test about buffers.
 - The availability engine above: `TimeWindow` and the pure-domain engine, the loader that feeds it
   in three queries, and the one public endpoint the booking calendar polls — with the plan's whole
   test matrix as named tests, DST included, running with no container in under a second
+- Bookings above: the creation path with its six named refusals, the lifecycle behind
+  `PATCH /status`, the token-only manage page, the deposit sweeper, and the after-commit event
+  boundary that plans 11 and 12 hang off — and, underneath all of it, the concurrency test that
+  makes the README's central claim something you can run rather than something you have to believe
 
 ## Not built yet
 
-Bookings, payments and the dashboard. The engine computes slots and a booking page can render a
-calendar from them; nothing can be reserved yet, and a slot stays an offer rather than a hold
-until plan 10 turns one into a row. Email has no
+Payments and the dashboard. A booking can be made, cancelled and moved through its lifecycle, but
+nothing takes money: `app.payments.enabled` is off, so a deposit-requiring business still creates a
+`CONFIRMED` booking rather than a `PENDING` one with a `checkoutUrl`, and the `PENDING` path is
+exercised only by the sweeper's own tests until plan 11 gives it a real producer. Email has no
 transport yet: `NotificationService` is an interface with a logging implementation, so the
-invitation and reset links are read from the api log until plan 12. Build order is tracked in
+invitation and reset links are read from the api log until plan 12, and `BookingEvent` reaches a
+listener that does nothing but log. There are no statistics. Build order is tracked in
 the local project brief (see `docs/`, not committed yet).

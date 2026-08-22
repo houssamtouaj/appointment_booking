@@ -1,6 +1,8 @@
 package com.slotflow.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +49,18 @@ class BookingEventIT extends BookingScenario {
         assertThat(announced.getFirst().awaitingDeposit())
                 .as("payments are off this wave, so nothing is ever created on hold (D2)")
                 .isFalse();
+
+        // Cancelling is announced too, and says who did it — plan 12 owes a customer who cancelled
+        // an acknowledgement and a customer the business cancelled an apology.
+        mockMvc.perform(delete("/api/public/bookings/{token}", created.cancellationToken()))
+                .andExpect(status().isOk());
+        assertThat(bookingEvents.received(BookingEvent.Cancelled.class))
+                .singleElement()
+                .satisfies(cancelled -> {
+                    assertThat(cancelled.bookingId()).isEqualTo(created.id());
+                    assertThat(cancelled.source())
+                            .isEqualTo(BookingEvent.Cancelled.Source.GUEST);
+                });
     }
 
     @Test

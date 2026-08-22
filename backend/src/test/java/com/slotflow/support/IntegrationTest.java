@@ -68,6 +68,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
         // which test it caught would depend on the wall clock. ExpiredTokenSweepIT calls the
         // sweeper directly, which is the only honest way to assert what it deletes.
         "app.security.token-sweep-cron=-",
+        // Same reasoning for the PENDING booking sweeper (D3), and a sharper version of it: several
+        // tests in this suite jump forward past a 30-minute deposit hold to watch something else,
+        // and a sweep firing on its own minute would cancel the booking underneath them.
+        // ExpiredBookingSweepIT calls it directly.
+        "app.booking.expiry-sweep-cron=-",
         // Plan 09's gate is a statement count, and Hibernate reports one only when asked to keep
         // statistics. It is on for the whole suite rather than for the one class that reads it,
         // because a per-class @TestPropertySource forks the context cache and pays for a second

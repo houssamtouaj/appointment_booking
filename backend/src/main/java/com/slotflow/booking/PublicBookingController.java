@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -73,5 +74,20 @@ public class PublicBookingController {
             @Parameter(description = "From the confirmation email; the customer's only credential")
             @PathVariable UUID cancellationToken) {
         return bookings.byToken(cancellationToken);
+    }
+
+    /**
+     * Answers {@code 200} with the cancelled booking rather than {@code 204}, deliberately: the body
+     * carries {@code depositRefundable: false}, and a customer who has just given up their deposit
+     * is owed that in the response to the request that did it, not only in the one before.
+     */
+    @DeleteMapping("/api/public/bookings/{cancellationToken}")
+    @Operation(summary = "Cancel my booking",
+            description = "Subject to the cancellation cutoff; past it, 409 CANCELLATION_CUTOFF "
+                    + "carries the deadline. Staff cancelling through /api/bookings ignore the "
+                    + "cutoff — a business can always cancel. The slot is free for rebooking the "
+                    + "instant this returns.")
+    public PublicBookingResponse cancel(@PathVariable UUID cancellationToken) {
+        return bookings.cancel(cancellationToken);
     }
 }
