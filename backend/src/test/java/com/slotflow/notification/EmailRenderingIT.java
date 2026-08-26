@@ -38,7 +38,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
  *
  * <p>{@code timeout()} on the verification rather than a sleep, because the send genuinely is on
  * another thread and that is the property being exercised. It waits for the condition instead of
- * for the clock, so the only way it takes five seconds is if it is about to fail anyway.
+ * for the clock, so a generous ceiling costs nothing except on a test that was going to fail —
+ * see {@link #SEND_TIMEOUT_MS} for why the ceiling has to be generous.
  *
  * <h2>What is deliberately not asserted</h2>
  * The markup. A test that pins the HTML is a test that fails every time somebody changes a padding
@@ -61,6 +62,25 @@ class EmailRenderingIT extends IntegrationTest {
 
     @MockitoSpyBean
     private JavaMailSender transport;
+
+    /**
+     * How long a verification waits for the {@code @Async} send, and it is deliberately far more
+     * than a send takes.
+     *
+     * <p>The steady-state figure is under 200 ms. The <em>first</em> send in the JVM is not: it pays
+     * once for the Thymeleaf engine, parsing six templates, and building the first mail session, and
+     * that was measured at almost exactly five seconds. So a five-second ceiling put whichever test
+     * happened to run first in this class on a knife edge, and losing that race did not fail one
+     * test — it failed two. The late send arrived after Mockito had reset the spy for the next test,
+     * which then read the previous test's message and asserted the wrong subject against it.
+     *
+     * <p>Warming the path in a {@code @BeforeEach} would be the other fix and a worse one: the
+     * warm-up send is an invocation on the spy, so every verification here would have to reason
+     * about which message it was looking at. Raising a ceiling that is not the assertion costs
+     * nothing while the suite is green, and this number is not a deadline anything is measured
+     * against.
+     */
+    private static final int SEND_TIMEOUT_MS = 20_000;
 
     @BeforeEach
     void doNotActuallySend() {
@@ -194,7 +214,7 @@ class EmailRenderingIT extends IntegrationTest {
 
         // Twice and not three times: the failure this retry covers is a dropped connection, and
         // anything that fails twice is a bad address or a dead host, which asking again will not fix.
-        verify(transport, timeout(5_000).times(2)).send(any(MimeMessage.class));
+        verify(transport, timeout(SEND_TIMEOUT_MS).times(2)).send(any(MimeMessage.class));
     }
 
     // ---------------------------------------------------------------------------------
@@ -204,7 +224,7 @@ class EmailRenderingIT extends IntegrationTest {
     private MimeMessage captured() throws Exception {
         ArgumentCaptor<MimeMessage> sent = ArgumentCaptor.forClass(MimeMessage.class);
         // The send is @Async, which is the property under test as much as the rendering is.
-        verify(transport, timeout(5_000)).send(sent.capture());
+        verify(transport, timeout(SEND_TIMEOUT_MS)).send(sent.capture());
         MimeMessage message = sent.getValue();
         // What the real transport does immediately after this point, and what writes the headers.
         // Without it every part still reports the default text/plain, so an assertion on the

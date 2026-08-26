@@ -28,12 +28,26 @@
         <jjwt.version>0.12.7</jjwt.version>
         <stripe.version>33.3.0</stripe.version>
         <bucket4j.version>8.10.1</bucket4j.version>
+        <!-- Not managed by the Boot parent, so pinning it here is the only pin there is. -->
+        <jacoco.version>0.8.13</jacoco.version>
 
         <!-- Empty by design. Two things append to the test JVM's arguments without touching the
              argLine blocks: an ad-hoc `-Dtest.jvm.args.extra=...` for a one-off check, and
-             JaCoCo's prepare-agent in wave 8 (`<propertyName>jacocoArgs</propertyName>`). Both
-             need a declared default, because an undefined ${...} reaches the JVM literally and
-             it will not start. -->
+             JaCoCo's prepare-agent (`<propertyName>jacocoArgs</propertyName>`). Both need a
+             declared default, because an undefined placeholder reaches the JVM literally and it
+             will not start.
+
+             They are then read with *different* syntax in the argLines below, and that difference
+             is the whole reason this comment is long. `${...}` is resolved once, when Maven builds
+             the POM model, which is before any plugin has run — fine for a value supplied on the
+             command line, and silently useless for one a plugin sets later: prepare-agent does set
+             `jacocoArgs`, and `${jacocoArgs}` has by then already been replaced by the empty
+             default above. The symptom is a green build reporting near-zero coverage, because the
+             report finds whatever stale target/jacoco.exec happens to be on disk.
+
+             `@{...}` is Surefire and Failsafe's own late replacement, evaluated when the plugin
+             forks, which is after prepare-agent. So the agent has to be `@{jacocoArgs}`, and the
+             empty default is still required for `mvn test -Djacoco.skip=true`. -->
         <jacocoArgs></jacocoArgs>
         <test.jvm.args.extra></test.jvm.args.extra>
     </properties>
@@ -250,7 +264,7 @@
                     <argLine>-Duser.language=en -Duser.country=US
                         -Dapp.security.jwt.secret=slotflow-test-signing-key-not-a-secret-0123456789
                         -Dapp.security.bcrypt-strength=4
-                        ${jacocoArgs} ${test.jvm.args.extra}</argLine>
+                        @{jacocoArgs} ${test.jvm.args.extra}</argLine>
                 </configuration>
             </plugin>
 
@@ -264,7 +278,7 @@
                     <argLine>-Duser.language=en -Duser.country=US
                         -Dapp.security.jwt.secret=slotflow-test-signing-key-not-a-secret-0123456789
                         -Dapp.security.bcrypt-strength=4
-                        ${jacocoArgs} ${test.jvm.args.extra}</argLine>
+                        @{jacocoArgs} ${test.jvm.args.extra}</argLine>
                 </configuration>
                 <executions>
                     <execution>
@@ -272,6 +286,90 @@
                             <goal>integration-test</goal>
                             <goal>verify</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+              Coverage, enforced only where it means something (plan 14 step 5).
+
+              Declared after failsafe on purpose: within one phase Maven runs plugins in the order
+              the POM lists them, and `report` has to see the exec file that failsafe:verify has
+              just finished writing to. Swap the two blocks and the report covers unit tests only,
+              silently, and the gates below start measuring the wrong thing.
+            -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <!--
+                      One agent, one exec file, both test phases. `append` defaults to true, so
+                      the failsafe fork adds to what the surefire fork wrote rather than replacing
+                      it: coverage of a class exercised only through an integration test still
+                      counts. Two separate destFiles would need a merge step and would make it
+                      possible to gate on half the evidence.
+
+                      The argument reaches both JVMs through @{jacocoArgs} — the late-evaluated
+                      spelling, for the reason set out at length beside the property declaration:
+                      ${jacocoArgs} is substituted before this goal has run and produces a build
+                      that reports coverage of nothing while passing.
+                    -->
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <propertyName>jacocoArgs</propertyName>
+                        </configuration>
+                    </execution>
+
+                    <!-- The human-readable number the README quotes. -->
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+
+                    <!--
+                      The gate. Two packages, and deliberately no global threshold: a
+                      project-wide number is met by testing getters, and this build would rather
+                      fail on the availability engine than on a DTO.
+
+                      element=PACKAGE with an include list means the rule is evaluated once per
+                      matching package, so a package that matches nothing is not a failure — it is
+                      simply not checked. That is the one failure mode here: a rename to
+                      `com.slotflow.scheduling` would leave a green build with no gate on the two
+                      things worth gating. CoverageGateTest asserts both names, so that rename is a
+                      red test instead of a silent one.
+                    -->
+                    <execution>
+                        <id>check-engine-and-booking</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.slotflow.availability.domain</include>
+                                        <include>com.slotflow.booking</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.90</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

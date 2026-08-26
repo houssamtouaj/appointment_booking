@@ -226,8 +226,12 @@ class ExclusionConstraintIT extends IntegrationTest {
         Instant endsAt = startsAt.plus(durationMinutes, ChronoUnit.MINUTES);
         // A PENDING row has to carry an expiry (booking_pending_expiry_chk): the hold is a
         // deposit in flight, and a hold with no deadline is a slot lost for good.
+        // Derived from the appointment rather than from the wall clock. Nothing in this class reads
+        // it — the constraint does not mention expires_at — so the only requirement is that the
+        // column is populated, and a real now() here would be the one unpinned clock in src/test
+        // for a value no assertion depends on. TestHygieneTest enforces that.
         Instant expiresAt = "PENDING".equals(status)
-                ? Instant.now().plus(15, ChronoUnit.MINUTES)
+                ? startsAt.minus(15, ChronoUnit.MINUTES)
                 : null;
 
         return insertBookingWithBlockedRange(staff, status, startsAt, durationMinutes,

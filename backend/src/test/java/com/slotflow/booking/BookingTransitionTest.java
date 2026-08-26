@@ -254,6 +254,104 @@ class BookingTransitionTest {
         }
     }
 
+    @Nested
+    @DisplayName("what a booking refuses to be built out of")
+    class ConstructionGuards {
+
+        @Test
+        @DisplayName("a service belonging to another business is refused before anything is derived")
+        void aForeignServiceIsRefused() {
+            ServiceOffering theirs = new ServiceOffering(UUID.randomUUID(), "Consultation", 60,
+                    5_000L);
+
+            // The schema's composite foreign key makes this row unwritable anyway, which is exactly
+            // why the entity has to refuse it here: the alternative is a constraint violation on
+            // flush, a 500, and a stack trace naming booking_service_fkey rather than the mistake.
+            assertThatThrownBy(() -> Booking.confirmed(BUSINESS_ID, theirs, STAFF_ID, NINE_AM,
+                    guest(), null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("different business");
+        }
+
+        @Test
+        @DisplayName("a null staff member is refused, and says which field")
+        void aBookingBelongsToSomebody() {
+            assertThatThrownBy(() -> Booking.confirmed(BUSINESS_ID, service(), null, NINE_AM,
+                    guest(), null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("staffId");
+        }
+
+        @Test
+        @DisplayName("a hold with no deadline is refused: that is a slot lost for good (D3)")
+        void aPendingBookingMustExpire() {
+            assertThatThrownBy(() -> Booking.awaitingDeposit(BUSINESS_ID, service(), STAFF_ID,
+                    NINE_AM, guest(), null, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("expiresAt");
+        }
+    }
+
+    @Nested
+    @DisplayName("deposit bookkeeping")
+    class DepositBookkeeping {
+
+        @Test
+        @DisplayName("a deposit larger than the appointment is refused")
+        void aDepositCannotExceedThePrice() {
+            Booking booking = confirmedBooking();
+
+            assertThatThrownBy(() -> booking.recordDepositPaid(booking.getPriceCents() + 1))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("a negative deposit is refused")
+        void aDepositCannotBeNegative() {
+            assertThatThrownBy(() -> confirmedBooking().recordDepositPaid(-1L))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("a deposit covering the whole price leaves nothing outstanding")
+        void theBoundaryIsAllowed() {
+            Booking booking = confirmedBooking();
+
+            booking.recordDepositPaid(booking.getPriceCents());
+
+            assertThat(booking.outstandingCents()).isZero();
+        }
+    }
+
+    @Nested
+    @DisplayName("the reminder stamp")
+    class Reminders {
+
+        @Test
+        @DisplayName("a booking knows whether its reminder has gone out")
+        void stampingMarksItSent() {
+            Booking booking = confirmedBooking();
+            assertThat(booking.isReminderSent()).isFalse();
+
+            booking.markReminderSent(BOOKED_AT);
+
+            assertThat(booking.isReminderSent()).isTrue();
+        }
+
+        @Test
+        @DisplayName("stamping twice throws rather than hiding a double send")
+        void theStampIsNotIdempotent() {
+            Booking booking = confirmedBooking();
+            booking.markReminderSent(BOOKED_AT);
+
+            // Deliberately not a silent no-op. The job's own idempotency is the stamp; a second
+            // stamp means two runs both believed they were the first, and swallowing that would
+            // turn a duplicate email into a fact nobody can find afterwards.
+            assertThatThrownBy(() -> booking.markReminderSent(NINE_AM))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+    }
+
     // ---------------------------------------------------------------------------------
     //  helpers
     // ---------------------------------------------------------------------------------

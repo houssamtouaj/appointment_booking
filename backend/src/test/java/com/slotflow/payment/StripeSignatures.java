@@ -1,7 +1,6 @@
 package com.slotflow.payment;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.HexFormat;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -34,7 +33,10 @@ final class StripeSignatures {
 
     /** A header Stripe would have sent right now. */
     static String sign(String payload, String secret) {
-        long timestamp = System.currentTimeMillis() / 1000L;
+        return sign(payload, secret, System.currentTimeMillis() / 1000L);
+    }
+
+    private static String sign(String payload, String secret, long timestamp) {
         return "t=" + timestamp + ",v1=" + hmac(timestamp + "." + payload, secret);
     }
 
@@ -51,8 +53,10 @@ final class StripeSignatures {
 
     /** Stamped far enough in the past to fall outside Stripe's five-minute tolerance. */
     static String signStale(String payload, String secret) {
-        long timestamp = Instant.now().minusSeconds(3600).getEpochSecond();
-        return "t=" + timestamp + ",v1=" + hmac(timestamp + "." + payload, secret);
+        // Same clock as sign() above, one spelling, for the reason in the class note: the tolerance
+        // is checked against real time inside the library. TestHygieneTest names this file as the
+        // suite's one allowed wall-clock reader, and it can only do that if there is one of them.
+        return sign(payload, secret, System.currentTimeMillis() / 1000L - 3600L);
     }
 
     private static String hmac(String signedPayload, String secret) {

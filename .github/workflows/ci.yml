@@ -57,3 +57,15 @@ jobs:
             backend/target/surefire-reports/
             backend/target/failsafe-reports/
           retention-days: 7
+
+      # `always()`, unlike the step above: the coverage report is most wanted on the run that
+      # just failed its own coverage gate, and jacoco:report runs before jacoco:check for
+      # exactly that reason. A run that never reached the report simply uploads nothing.
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco/
+          if-no-files-found: ignore
+          retention-days: 7
