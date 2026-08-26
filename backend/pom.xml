@@ -28,6 +28,14 @@
         <jjwt.version>0.12.7</jjwt.version>
         <stripe.version>33.3.0</stripe.version>
         <bucket4j.version>8.10.1</bucket4j.version>
+
+        <!-- Empty by design. Two things append to the test JVM's arguments without touching the
+             argLine blocks: an ad-hoc `-Dtest.jvm.args.extra=...` for a one-off check, and
+             JaCoCo's prepare-agent in wave 8 (`<propertyName>jacocoArgs</propertyName>`). Both
+             need a declared default, because an undefined ${...} reaches the JVM literally and
+             it will not start. -->
+        <jacocoArgs></jacocoArgs>
+        <test.jvm.args.extra></test.jvm.args.extra>
     </properties>
 
     <dependencies>
@@ -241,7 +249,8 @@
                     -->
                     <argLine>-Duser.language=en -Duser.country=US
                         -Dapp.security.jwt.secret=slotflow-test-signing-key-not-a-secret-0123456789
-                        -Dapp.security.bcrypt-strength=4</argLine>
+                        -Dapp.security.bcrypt-strength=4
+                        ${jacocoArgs} ${test.jvm.args.extra}</argLine>
                 </configuration>
             </plugin>
 
@@ -254,7 +263,8 @@
                     <!-- Same three arguments, same reasons; see the surefire block above. -->
                     <argLine>-Duser.language=en -Duser.country=US
                         -Dapp.security.jwt.secret=slotflow-test-signing-key-not-a-secret-0123456789
-                        -Dapp.security.bcrypt-strength=4</argLine>
+                        -Dapp.security.bcrypt-strength=4
+                        ${jacocoArgs} ${test.jvm.args.extra}</argLine>
                 </configuration>
                 <executions>
                     <execution>
