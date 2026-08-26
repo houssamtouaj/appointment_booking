@@ -1,0 +1,26 @@
+[(${booking.businessName()})]
+
+WE ARE HOLDING YOUR SLOT
+
+Hello [(${booking.guestName()})], we have put this time aside for you.
+It is not booked yet - pay the deposit and it is yours.
+
+This hold expires at [(${booking.holdExpiresText()})]. After that the slot goes
+back on sale.
+
+What    : [(${booking.serviceName()})]
+When    : [(${booking.whenText()})] until [(${booking.untilText()})]
+With    : [(${booking.staffName()})]
+Deposit : [(${booking.depositDueText()})] of [(${booking.priceText()})]
+[# th:if="${booking.checkoutUrl() != null}"]
+Pay the deposit:
+[(${booking.checkoutUrl()})]
+[/]
+Deposits are non-refundable, including if you cancel.
+
+View this booking:
+[(${booking.manageUrl()})]
+
+--
+Sent by SlotFlow on behalf of the business named above. Please do not reply to
+this address - it is not monitored.

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head><meta charset="UTF-8"><title>Your appointment has been cancelled</title></head>
+<body style="margin:0;padding:24px;background:#f9fafb;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#111827">
+<div style="max-width:560px;margin:0 auto;background:#ffffff;padding:32px;border-radius:8px">
+
+    <div th:replace="~{email/_parts :: header(${booking.businessName()})}"></div>
+
+    <h1 style="margin:0 0 16px;font-size:20px;font-weight:600">Your appointment has been cancelled</h1>
+
+    <!--/* Three senders, three different sentences. A customer who cancelled wants an
+           acknowledgement; a customer whose business cancelled is owed an apology; a customer whose
+           deposit hold lapsed never had a booking at all and should be told that plainly rather
+           than being apologised to for something that did not happen. */-->
+    <p style="margin:0 0 16px;line-height:22px" th:switch="${cancelledBy}">
+        <span th:case="'GUEST'">
+            Hello <span th:text="${booking.guestName()}">Alex</span>, this confirms that you
+            cancelled the appointment below. Nothing further is needed.
+        </span>
+        <span th:case="'BUSINESS'">
+            Hello <span th:text="${booking.guestName()}">Alex</span>, we are sorry — we have had to
+            cancel the appointment below. Please book again at a time that suits you, or get in
+            touch and we will find you one.
+        </span>
+        <span th:case="'EXPIRY'">
+            Hello <span th:text="${booking.guestName()}">Alex</span>, the deposit for the
+            appointment below did not arrive in time, so we have released the slot. You are welcome
+            to book again.
+        </span>
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;margin:0 0 24px">
+        <tr>
+            <td style="padding:8px 0;color:#6b7280;width:110px">What</td>
+            <td style="padding:8px 0" th:text="${booking.serviceName()}">Service</td>
+        </tr>
+        <tr>
+            <td style="padding:8px 0;color:#6b7280">When</td>
+            <td style="padding:8px 0;text-decoration:line-through;color:#6b7280">
+                <span th:text="${booking.whenText()}">Tue 14 Oct, 15:00 CEST</span>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:8px 0;color:#6b7280">With</td>
+            <td style="padding:8px 0" th:text="${booking.staffName()}">Dana</td>
+        </tr>
+    </table>
+
+    <!--/* D7 again, and this is the message where it matters most: it is the one a customer reads
+           immediately after the money stopped being refundable. */-->
+    <p th:if="${booking.depositPaidCents() > 0}"
+       style="margin:0;color:#6b7280;font-size:13px;line-height:20px">
+        The deposit of <span th:text="${booking.depositPaidText()}">13.50</span> is
+        non-refundable and has not been returned.
+    </p>
+
+    <div th:replace="~{email/_parts :: footer}"></div>
+</div>
+</body>
+</html>

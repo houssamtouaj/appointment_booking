@@ -73,6 +73,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
         // and a sweep firing on its own minute would cancel the booking underneath them.
         // ExpiredBookingSweepIT calls it directly.
         "app.booking.expiry-sweep-cron=-",
+        // And the reminder job, which is the sharpest case of all three: it stamps
+        // reminder_sent_at, the stamp is deliberately irreversible, and half this suite books
+        // appointments a day or two out — exactly the window the job reminds. A run firing on its
+        // own schedule would consume a test's booking before the test looked at it.
+        // BookingReminderJobIT calls it directly.
+        "app.booking.reminder-cron=-",
         // Plan 09's gate is a statement count, and Hibernate reports one only when asked to keep
         // statistics. It is on for the whole suite rather than for the one class that reads it,
         // because a per-class @TestPropertySource forks the context cache and pays for a second

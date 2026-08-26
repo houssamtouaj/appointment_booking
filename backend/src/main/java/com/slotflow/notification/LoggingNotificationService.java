@@ -1,47 +1,55 @@
 package com.slotflow.notification;
 
+import com.slotflow.common.web.FrontendLinks;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * The wave-3 stand-in for plan 12: it builds the real link and writes it to the log.
+ * Every message this application would have sent, written to the log instead.
  *
- * <p>Not a no-op, and that distinction is the point. The link is assembled exactly as the mail will
- * assemble it, so the URL shape the SPA has to route is settled now rather than in wave 7, and the
- * invite-and-accept flow is demonstrable end to end today — the exit demo takes the accept link
- * from these lines. {@code LoggingNotificationServiceTest} pins that shape, because "settled" and
- * "whatever the stub happens to emit" are otherwise the same thing.
+ * <p>Selected by {@code app.mail.enabled=false}, and it is not a stub any more — it is the demo
+ * profile's transport. The deployed demo must survive a mail relay that stops answering exactly as
+ * it must survive an expired Stripe key: with this bean in place the whole feature is inert,
+ * bookings still complete, invitations still work for whoever can read the log, and nothing in the
+ * request path can fail because of SMTP. Turning mail on without a relay is what breaks, which is
+ * the right way round.
  *
- * <p>It logs at {@code INFO} with the token in it, which would be indefensible in production and is
- * correct here: there is no mail transport yet, so the alternative is a flow nobody can complete.
- * Plan 12 deletes this class rather than editing it.
+ * <p>It logs the tokens, which would be indefensible in production and is the point here: the
+ * environments that select it are the ones where nobody can read the mail, so the alternative is a
+ * flow nobody can complete. That is also why {@code app.mail.enabled} defaults to <em>on</em> —
+ * this has to be asked for.
+ *
+ * <p>The links come from {@link com.slotflow.common.web.FrontendLinks} rather than being built
+ * here, so the URL a developer copies out of the log is the same string
+ * {@link MailNotificationService} would have put
+ * in the mail. A second copy of that logic is how the two drift apart and the log stops being
+ * evidence.
  */
 @Service
+@ConditionalOnProperty(name = "app.mail.enabled", havingValue = "false")
 public class LoggingNotificationService implements NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingNotificationService.class);
 
-    private final String frontendBaseUrl;
+    private final FrontendLinks links;
 
-    public LoggingNotificationService(@Value("${app.frontend.base-url}") String frontendBaseUrl) {
-        this.frontendBaseUrl = frontendBaseUrl;
+    public LoggingNotificationService(FrontendLinks links) {
+        this.links = links;
     }
 
     @Override
     public void sendPasswordReset(Recipient recipient, String rawToken, Instant expiresAt) {
         log.info("""
 
-                        --- password reset (no mail transport until plan 12) --------------------
+                        --- password reset (mail disabled) -------------------------------------
                         to      : {} <{}>
                         expires : {}
                         link    : {}
                         ------------------------------------------------------------------------""",
-                recipient.fullName(), recipient.email(), expiresAt,
-                passwordResetLink(rawToken));
+                recipient.fullName(), recipient.email(), expiresAt, links.passwordReset(rawToken));
     }
 
     @Override
@@ -49,53 +57,49 @@ public class LoggingNotificationService implements NotificationService {
                                     String rawToken, Instant expiresAt) {
         log.info("""
 
-                        --- staff invitation (no mail transport until plan 12) ------------------
+                        --- staff invitation (mail disabled) ------------------------------------
                         to      : {} <{}>
                         business: {}
                         expires : {}
                         link    : {}
                         ------------------------------------------------------------------------""",
                 recipient.fullName(), recipient.email(), businessName, expiresAt,
-                invitationLink(rawToken));
+                links.invitation(rawToken));
     }
 
-    /** {@code {frontend}/accept-invitation/{token}} — see {@link #link}. */
-    String invitationLink(String rawToken) {
-        return link("/accept-invitation", rawToken);
+    @Override
+    public void sendBookingReceived(BookingNotification booking) {
+        logBooking("booking received", booking, "pay     : " + booking.checkoutUrl()
+                + "\nhold    : until " + booking.holdExpiresText());
     }
 
-    /** {@code {frontend}/reset-password/{token}} — see {@link #link}. */
-    String passwordResetLink(String rawToken) {
-        return link("/reset-password", rawToken);
+    @Override
+    public void sendBookingConfirmed(BookingNotification booking) {
+        logBooking("booking confirmed", booking, null);
     }
 
-    /**
-     * <b>The token is a path segment, not a query parameter.</b> This is the one component that
-     * mints these URLs, so it is the one place that can undo the reason
-     * {@link com.slotflow.staff.PublicInvitationController} takes its token in the path: a query
-     * string is handed to third parties. It travels in the {@code Referer} header of every asset the
-     * page loads, it is kept verbatim in browser history and in synced-profile backups, and every
-     * analytics beacon on the page reports the full URL including its query. A path segment goes to
-     * none of those, and what is in this URL is a live credential — seven days for an invitation,
-     * one hour for a reset.
-     *
-     * <p>It is encoded rather than trusted. {@link com.slotflow.security.SecretTokens} emits
-     * base64url, so nothing needs escaping today; relying on that in the one place a secret becomes
-     * a URL is how a change of token format turns into a broken link, or into a token containing a
-     * slash that silently means a different route.
-     *
-     * <p><b>What this assumes of the SPA.</b> Two routes, {@code /accept-invitation/:token} and
-     * {@code /reset-password/:token}, and both read the token from the path. Nothing serves them
-     * yet — {@code frontend/} is still a scaffold — which is exactly why the shape is settled here:
-     * plan 12 replaces this class, and by then the decision should already be made rather than
-     * inherited from whatever the stub happened to build.
-     */
-    private String link(String path, String rawToken) {
-        return UriComponentsBuilder.fromUriString(frontendBaseUrl)
-                .path(path)
-                .pathSegment(rawToken)
-                .build()
-                .encode()
-                .toUriString();
+    @Override
+    public void sendBookingCancelled(BookingNotification booking, CancelledBy cancelledBy) {
+        logBooking("booking cancelled", booking, "by      : " + cancelledBy);
+    }
+
+    @Override
+    public void sendBookingReminder(BookingNotification booking) {
+        logBooking("booking reminder", booking, null);
+    }
+
+    private void logBooking(String what, BookingNotification booking, String extra) {
+        log.info("""
+
+                        --- {} (mail disabled) ---------------------------------
+                        to      : {} <{}>
+                        booking : {}
+                        what    : {} with {} at {}
+                        when    : {}{}
+                        manage  : {}
+                        ------------------------------------------------------------------------""",
+                what, booking.guestName(), booking.recipient().email(), booking.bookingId(),
+                booking.serviceName(), booking.staffName(), booking.businessName(),
+                booking.whenText(), extra == null ? "" : "\n" + extra, booking.manageUrl());
     }
 }

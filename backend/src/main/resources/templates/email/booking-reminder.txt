@@ -1,0 +1,17 @@
+[(${booking.businessName()})]
+
+SEE YOU TOMORROW
+
+Hello [(${booking.guestName()})], a reminder about your appointment.
+
+What : [(${booking.serviceName()})]
+When : [(${booking.whenText()})] until [(${booking.untilText()})]
+With : [(${booking.staffName()})]
+[# th:if="${booking.depositPaidCents() > 0}"]To pay: [(${booking.outstandingText()})]
+[/]
+Cannot make it? Cancel here:
+[(${booking.manageUrl()})]
+
+--
+Sent by SlotFlow on behalf of the business named above. Please do not reply to
+this address - it is not monitored.

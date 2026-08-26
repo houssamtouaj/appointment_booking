@@ -108,7 +108,14 @@ app:
   cors:
     # comma-separated. 5173 is the Vite dev server; production origins come from the env.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  # Whether this deployment sends mail at all. Off selects NotificationService's logging
+  # implementation: no SMTP, no templates, every message and its links written to the log instead.
+  # That is the demo profile, and the switch that keeps a dead relay from taking a feature down.
+  # On by default, because the opposite is a deployment that quietly sends nothing and looks
+  # identical to a working one until a customer says they never got their confirmation.
   mail:
+    enabled: ${MAIL_ENABLED:true}
+    # The envelope sender. A relay will refuse a From it does not own, so this differs per deploy.
     from: ${MAIL_FROM:no-reply@slotflow.local}
   # D12. In-memory Bucket4j buckets, so these budgets are per instance: a two-container deploy
   # doubles them. Honest for a single-instance demo; a real one moves the store to Redis and
@@ -128,8 +135,9 @@ app:
     guest-booking:
       capacity: 5
       window: PT1H
-  # Where the SPA is served from. Only used to build the links in outbound mail — the reset
-  # link and the invitation link — which until plan 12 are written to the log instead.
+  # Where the SPA is served from. Only used to build the links in outbound mail: the reset link,
+  # the invitation link and the manage-booking link that every customer-facing message carries.
+  # The routes those assume are pinned by NotificationLinksTest.
   frontend:
     base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
   security:
@@ -170,6 +178,11 @@ app:
     # suite moves the clock forward by hours at a time, and a sweep firing on its own schedule
     # would cancel rows a test is about to assert on. ExpiredBookingSweepIT calls it directly.
     expiry-sweep-cron: ${BOOKING_EXPIRY_SWEEP_CRON:0 * * * * *}
+    # The 24-hour reminder (plan 12). Every fifteen minutes; the job's window overlaps deliberately
+    # so a missed run catches up, and reminder_sent_at makes the overlap free. `-` disables it, and
+    # the integration suite sets that for the same reason it disables the sweeper: BookingReminderJob
+    # is called directly by the test that asserts what it sends.
+    reminder-cron: ${BOOKING_REMINDER_CRON:0 */15 * * * *}
   stripe:
     # consumed from plan 11 onwards
     secret-key: ${STRIPE_SECRET_KEY:}

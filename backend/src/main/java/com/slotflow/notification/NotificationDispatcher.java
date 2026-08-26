@@ -19,11 +19,13 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * application publishes outside a transaction today; a test or a future scheduled job might.
  *
  * <p>A failure in here can no longer roll anything back — the transaction is already committed —
- * but it does still reach the caller and become a 500 over a request that in fact succeeded. That is
- * not papered over with a {@code catch}: swallowing it would leave an owner believing a mail went
- * out that did not. Plan 12 is where it belongs, by making the send {@code @Async} so a bounced SMTP
- * connection is a retry on a worker thread rather than anything the request ever sees. Until then
- * the implementation is {@link LoggingNotificationService} and cannot fail.
+ * but it would still reach the caller and become a 500 over a request that in fact succeeded. That
+ * is not papered over with a {@code catch}, and it does not need to be: the implementation is
+ * {@code @Async}, so a bounced SMTP connection is a retry on a worker thread and this method has
+ * returned long before it happens. What is left to throw is a bug in composing the message, and an
+ * owner who asked for an invitation is exactly the person who should hear that it did not go — they
+ * are the one who can resend it. {@link BookingNotifier} makes the opposite call for the opposite
+ * reason: a guest who has just booked cannot resend anything.
  */
 @Component
 class NotificationDispatcher {

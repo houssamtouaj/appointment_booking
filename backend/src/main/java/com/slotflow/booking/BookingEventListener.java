@@ -20,10 +20,12 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * a worse failure than delivering early. Nothing in the application publishes outside a transaction
  * today; a test or a future scheduled job might.
  *
- * <p>Plan 11 adds the Checkout session on {@link BookingEvent.Created} when a deposit is owed, and
- * plan 12 adds the two confirmation emails (D10) and the cancellation notice. Both go here, or in a
- * second listener beside it — never back inside {@code PublicBookingService}, where they would run
- * before the row is durable.
+ * <p>Plan 12's mail went into a second listener beside this one,
+ * {@code com.slotflow.notification.BookingNotifier}, rather than into this method. Two subscribers
+ * on the same phase rather than one that does two jobs: a mail failure must not be able to stop a
+ * log line, and the notification layer has to reach four repositories this package has no reason to
+ * know about. What both share is the phase — never back inside {@code PublicBookingService}, where
+ * they would run before the row is durable.
  */
 @Component
 class BookingEventListener {
@@ -37,6 +39,9 @@ class BookingEventListener {
                     "Booking {} created in business {}{}",
                     created.bookingId(), created.businessId(),
                     created.awaitingDeposit() ? " awaiting a deposit" : "");
+            case BookingEvent.Confirmed confirmed -> log.info(
+                    "Booking {} confirmed by a deposit of {} minor units",
+                    confirmed.bookingId(), confirmed.depositPaidCents());
             case BookingEvent.Cancelled cancelled -> log.info(
                     "Booking {} cancelled by {} at {}",
                     cancelled.bookingId(), cancelled.source(), cancelled.at());

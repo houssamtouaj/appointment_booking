@@ -1,0 +1,17 @@
+[(${businessName})]
+
+YOU HAVE BEEN INVITED
+
+Hello [(${recipientName})], you have been invited to join [(${businessName})] on
+SlotFlow. The link below is where you choose a password and your account becomes
+active.
+
+Accept the invitation:
+[(${link})]
+
+This invitation is valid for [(${validFor})] and expires on [(${expiresAt})].
+If you were not expecting it, ignore this message - nothing happens until the
+link is used.
+
+--
+Sent by SlotFlow. Please do not reply to this address - it is not monitored.

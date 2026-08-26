@@ -1,39 +1,44 @@
-package com.slotflow.notification;
+package com.slotflow.common.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * The shape of the two links this stub builds, which is the only thing about it worth asserting.
+ * The shape of the three links every outbound message is built around.
  *
- * <p>It is also the reason the stub is not a no-op: the URLs it assembles are the routes the SPA
- * has to serve, so they are settled here in wave 3 rather than discovered in wave 7 when plan 12
- * replaces the class. That makes the shape a published decision, and a decision is worth a test.
+ * <p>These URLs are the routes the SPA has to serve, so they are a published decision rather than
+ * whatever the code happens to emit — which is why they were settled in wave 3, against the logging
+ * stub, and are asserted here now that both implementations mint them through one component.
  */
-class LoggingNotificationServiceTest {
+class FrontendLinksTest {
 
     private static final String BASE_URL = "https://app.slotflow.test";
 
-    private final LoggingNotificationService notifications =
-            new LoggingNotificationService(BASE_URL);
+    private final FrontendLinks links = new FrontendLinks(BASE_URL);
 
     @Test
     @DisplayName("the token is a path segment, never a query parameter")
     void tokensTravelInThePath() {
         String token = "OxedfiNOXWixf3de6KdNlaar75pnPBgOf5vUxcD9BmQ";
+        UUID cancellationToken = UUID.fromString("7c4f2f1e-2f7a-4a2b-9c1e-1f0b8b1d2a33");
 
         // PublicInvitationController argues the token is a path segment specifically because a
         // query string leaks through Referer headers, browser history and analytics beacons — and
         // this is the one component that mints the URL, so a query parameter here reintroduces
-        // exactly the threat the controller's contract was shaped around. A seven-day credential
-        // and a one-hour one, both in a place the browser hands to third parties.
-        assertThat(notifications.invitationLink(token))
+        // exactly the threat the controller's contract was shaped around. A seven-day credential,
+        // a one-hour one, and one that lives as long as the booking does, all in a place the
+        // browser hands to third parties.
+        assertThat(links.invitation(token))
                 .isEqualTo(BASE_URL + "/accept-invitation/" + token)
                 .doesNotContain("?");
-        assertThat(notifications.passwordResetLink(token))
+        assertThat(links.passwordReset(token))
                 .isEqualTo(BASE_URL + "/reset-password/" + token)
+                .doesNotContain("?");
+        assertThat(links.manageBooking(cancellationToken))
+                .isEqualTo(BASE_URL + "/booking/" + cancellationToken)
                 .doesNotContain("?");
     }
 
@@ -43,17 +48,15 @@ class LoggingNotificationServiceTest {
         // SecretTokens emits base64url, so today nothing needs escaping. Relying on that in the one
         // place a token becomes a URL is how a change of token format turns into a broken link, or
         // worse, a path that means something else.
-        assertThat(notifications.invitationLink("a/b c?d"))
+        assertThat(links.invitation("a/b c?d"))
                 .isEqualTo(BASE_URL + "/accept-invitation/a%2Fb%20c%3Fd");
     }
 
     @Test
     @DisplayName("a base URL with a trailing slash does not produce a double one")
     void theBaseUrlIsJoinedCleanly() {
-        LoggingNotificationService trailing =
-                new LoggingNotificationService(BASE_URL + "/");
+        FrontendLinks trailing = new FrontendLinks(BASE_URL + "/");
 
-        assertThat(trailing.invitationLink("token"))
-                .isEqualTo(BASE_URL + "/accept-invitation/token");
+        assertThat(trailing.invitation("token")).isEqualTo(BASE_URL + "/accept-invitation/token");
     }
 }

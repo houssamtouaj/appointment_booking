@@ -1,0 +1,21 @@
+[(${booking.businessName()})]
+
+YOUR APPOINTMENT IS CONFIRMED
+
+Hello [(${booking.guestName()})], this is your confirmation. The attached calendar
+file adds it to your calendar in one click.
+
+What  : [(${booking.serviceName()})]
+When  : [(${booking.whenText()})] until [(${booking.untilText()})]
+With  : [(${booking.staffName()})]
+Price : [(${booking.priceText()})]
+[# th:if="${booking.depositPaidCents() > 0}"]Deposit paid: [(${booking.depositPaidText()})] - [(${booking.outstandingText()})] due at your appointment
+[/]
+View or cancel this booking:
+[(${booking.manageUrl()})]
+[# th:if="${booking.depositPaidCents() > 0}"]
+Deposits are non-refundable, including if you cancel.
+[/]
+--
+Sent by SlotFlow on behalf of the business named above. Please do not reply to
+this address - it is not monitored.

@@ -42,6 +42,24 @@ public sealed interface BookingEvent {
     }
 
     /**
+     * A deposit arrived and the booking stopped being a hold (D2). Published by the Stripe webhook
+     * and by nothing else — staff never confirm anything, and a booking that needed no deposit was
+     * born {@code CONFIRMED} and announced itself through {@link Created}.
+     *
+     * <p>That is precisely why this is a separate event rather than a second {@code Created} or a
+     * flag on it: the two paths owe the customer a different number of emails. No deposit is one
+     * message, a deposit is <em>received</em> then <em>confirmed</em>, and a design where both
+     * paths publish the same event is the design that sends two confirmations for one booking
+     * (D10). Here the confirmation email has exactly one publisher.
+     *
+     * @param depositPaidCents what Stripe actually took, in minor units, so a subscriber does not
+     *                         have to re-read the row to say what was charged
+     */
+    record Confirmed(UUID bookingId, UUID businessId, long depositPaidCents)
+            implements BookingEvent {
+    }
+
+    /**
      * A booking stopped holding its slot, whoever ended it.
      *
      * @param source who cancelled, because the three callers want different messages: a customer

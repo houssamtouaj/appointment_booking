@@ -15,9 +15,13 @@ import java.time.Instant;
  * message only ever describes something that is really there.
  *
  * <p>Publishing an event rather than registering a {@code TransactionSynchronization} at each call
- * site keeps the rule in one place. There are two call sites today and plan 12 adds several more — a
- * booking confirmation, a reminder, a cancellation — and "remember to defer this one too" is not a
- * rule, it is a hope.
+ * site keeps the rule in one place. "Remember to defer this one too" is not a rule, it is a hope.
+ *
+ * <p><b>Bookings do not travel this way.</b> They publish {@code BookingEvent} and
+ * {@link BookingNotifier} decides what each one means in an inbox, because a booking's consequences
+ * are not all emails — plan 11 hangs a Checkout session off the same event. These two records are
+ * the cases where the message <em>is</em> the event: nothing else in the system cares that somebody
+ * asked for a password reset.
  *
  * <p>Sealed, so the dispatcher's {@code switch} is exhaustive: a third kind of message added here
  * without a branch there is a compile error rather than a message nobody receives.

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--/*
+  The two pieces every email repeats, kept in one file so that changing the footer does not mean
+  editing six templates and missing one.
+
+  Deliberately not a whole-page layout fragment. A layout that owns <html> and <body> and takes the
+  content as a parameter reads well in a web application and badly here: email clients strip and
+  rewrite the document shell in ways that differ per client, so the shell is the part most likely
+  to need a per-template exception. Each template owns its own, and shares only the two blocks that
+  are genuinely identical.
+
+  Inline styles throughout, and no <style> block: Gmail strips <style> from the HTML part of a
+  multipart message, and a design that only survives in one client is worse than no design.
+*/-->
+<body>
+
+<div th:fragment="header(businessName)"
+     style="border-bottom:1px solid #e5e7eb;padding-bottom:12px;margin-bottom:24px">
+    <span style="font-size:18px;font-weight:600;color:#111827" th:text="${businessName}">Business</span>
+</div>
+
+<div th:fragment="footer"
+     style="border-top:1px solid #e5e7eb;margin-top:32px;padding-top:16px;color:#6b7280;font-size:12px;line-height:18px">
+    <p style="margin:0">
+        Sent by SlotFlow on behalf of the business named above. Please do not reply to this
+        address — it is not monitored.
+    </p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head><meta charset="UTF-8"><title>Your appointment is confirmed</title></head>
+<body style="margin:0;padding:24px;background:#f9fafb;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#111827">
+<div style="max-width:560px;margin:0 auto;background:#ffffff;padding:32px;border-radius:8px">
+
+    <div th:replace="~{email/_parts :: header(${booking.businessName()})}"></div>
+
+    <h1 style="margin:0 0 16px;font-size:20px;font-weight:600">Your appointment is confirmed</h1>
+
+    <p style="margin:0 0 16px;line-height:22px">
+        Hello <span th:text="${booking.guestName()}">Alex</span>, this is your confirmation. The
+        calendar attachment adds it to your calendar in one click.
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;margin:0 0 24px">
+        <tr>
+            <td style="padding:8px 0;color:#6b7280;width:110px">What</td>
+            <td style="padding:8px 0" th:text="${booking.serviceName()}">Service</td>
+        </tr>
+        <tr>
+            <td style="padding:8px 0;color:#6b7280">When</td>
+            <!--/* whenText() carries the zone abbreviation. A bare 15:00 in a confirmation is a
+                   support ticket waiting to happen — see BookingNotification. */-->
+            <td style="padding:8px 0;font-weight:600">
+                <span th:text="${booking.whenText()}">Tue 14 Oct, 15:00 CEST</span>
+                until <span th:text="${booking.untilText()}">16:00 CEST</span>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:8px 0;color:#6b7280">With</td>
+            <td style="padding:8px 0" th:text="${booking.staffName()}">Dana</td>
+        </tr>
+        <tr>
+            <td style="padding:8px 0;color:#6b7280">Price</td>
+            <td style="padding:8px 0" th:text="${booking.priceText()}">45.00</td>
+        </tr>
+        <tr th:if="${booking.depositPaidCents() > 0}">
+            <td style="padding:8px 0;color:#6b7280">Deposit paid</td>
+            <td style="padding:8px 0">
+                <span th:text="${booking.depositPaidText()}">13.50</span>
+                — <span th:text="${booking.outstandingText()}">31.50</span> due at your appointment
+            </td>
+        </tr>
+    </table>
+
+    <p style="margin:0 0 24px">
+        <a th:href="${booking.manageUrl()}"
+           style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600">
+            View or cancel this booking
+        </a>
+    </p>
+
+    <!--/* D7, in the confirmation and not only in the terms: a customer must not discover that the
+           deposit is gone at the moment they try to cancel. */-->
+    <p th:if="${booking.depositPaidCents() > 0}"
+       style="margin:0;color:#6b7280;font-size:13px;line-height:20px">
+        Deposits are non-refundable, including if you cancel.
+    </p>
+
+    <div th:replace="~{email/_parts :: footer}"></div>
+</div>
+</body>
+</html>

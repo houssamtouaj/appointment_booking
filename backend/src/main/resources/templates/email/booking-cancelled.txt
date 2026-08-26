@@ -1,0 +1,28 @@
+[(${booking.businessName()})]
+
+YOUR APPOINTMENT HAS BEEN CANCELLED
+[# th:switch="${cancelledBy}"]
+[# th:case="'GUEST'"]
+Hello [(${booking.guestName()})], this confirms that you cancelled the
+appointment below. Nothing further is needed.
+[/]
+[# th:case="'BUSINESS'"]
+Hello [(${booking.guestName()})], we are sorry - we have had to cancel the
+appointment below. Please book again at a time that suits you, or get in touch
+and we will find you one.
+[/]
+[# th:case="'EXPIRY'"]
+Hello [(${booking.guestName()})], the deposit for the appointment below did not
+arrive in time, so we have released the slot. You are welcome to book again.
+[/]
+[/]
+What : [(${booking.serviceName()})]
+When : [(${booking.whenText()})]
+With : [(${booking.staffName()})]
+[# th:if="${booking.depositPaidCents() > 0}"]
+The deposit of [(${booking.depositPaidText()})] is non-refundable and has not
+been returned.
+[/]
+--
+Sent by SlotFlow on behalf of the business named above. Please do not reply to
+this address - it is not monitored.
