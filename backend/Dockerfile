@@ -31,7 +31,12 @@ EXPOSE 8080
 # Containers get a slice of the host, not the whole machine: let the JVM see the cgroup limit.
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -Duser.timezone=UTC"
 
+# The port is resolved the same way application.yml resolves it - SERVER_PORT, then the
+# platform's PORT, then 8080 - because a probe that hardcodes 8080 reports a perfectly
+# healthy container as unhealthy the moment either variable is set, which is the normal
+# case on Railway, Render and Fly.
 HEALTHCHECK --interval=15s --timeout=3s --start-period=45s --retries=5 \
-    CMD wget -qO- http://localhost:8080/actuator/health | grep -q '"status":"UP"' || exit 1
+    CMD wget -qO- "http://localhost:${SERVER_PORT:-${PORT:-8080}}/actuator/health" \
+        | grep -q '"status":"UP"' || exit 1
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]

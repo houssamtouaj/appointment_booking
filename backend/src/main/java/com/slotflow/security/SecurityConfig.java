@@ -1,8 +1,10 @@
 package com.slotflow.security;
 
+import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -89,13 +91,28 @@ public class SecurityConfig {
             "/actuator/health/**",
     };
 
+    /**
+     * The demo profile's one-click sign-in, kept out of {@link #PUBLIC_PATHS} on purpose.
+     *
+     * <p>{@code POST /api/auth/demo-login} hands out a session for a real tenant with no credential
+     * presented, so it must not be openable by a deployment that merely forgot to think about it.
+     * Listing it above would open the path in every environment — harmless while the controller is
+     * {@code @Profile("demo")} and absent, and a genuine hole the moment somebody drops that
+     * annotation for a local experiment. Here, the two have to be wrong together.
+     */
+    private static final String DEMO_LOGIN_PATH = "/api/auth/demo-login";
+
+    private static final String DEMO_PROFILE = "demo";
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService,
                                            ProblemAuthenticationEntryPoint entryPoint,
                                            ProblemAccessDeniedHandler accessDeniedHandler,
+                                           Environment environment,
                                            @Qualifier("corsConfigurationSource")
                                            CorsConfigurationSource corsConfigurationSource)
             throws Exception {
+        String[] publicPaths = publicPaths(environment);
         return http
                 // Wired from the qualified bean rather than through Customizer.withDefaults().
                 // withDefaults() looks up a bean *named* corsConfigurationSource and, when it
@@ -123,13 +140,26 @@ public class SecurityConfig {
                         // CORS preflights carry no credentials by definition, so they have to pass
                         // before authorisation or every cross-origin request fails at the preflight.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(PUBLIC_PATHS).permitAll()
+                        .requestMatchers(publicPaths).permitAll()
                         .anyRequest().authenticated())
                 // Before the (disabled) username/password filter, which is simply the conventional
                 // anchor point for "where authentication happens" in the chain.
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService),
                         UsernamePasswordAuthenticationFilter.class)
                 .build();
+    }
+
+    /**
+     * The allowlist for this environment: the constant above, plus the demo sign-in when and only
+     * when the {@code demo} profile is active.
+     */
+    private static String[] publicPaths(Environment environment) {
+        if (!environment.matchesProfiles(DEMO_PROFILE)) {
+            return PUBLIC_PATHS;
+        }
+        String[] paths = Arrays.copyOf(PUBLIC_PATHS, PUBLIC_PATHS.length + 1);
+        paths[PUBLIC_PATHS.length] = DEMO_LOGIN_PATH;
+        return paths;
     }
 
     /**

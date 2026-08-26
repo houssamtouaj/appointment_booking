@@ -64,7 +64,11 @@ spring:
         queue-capacity: 100
 
 server:
-  port: ${SERVER_PORT:8080}
+  # SERVER_PORT first, then PORT, then 8080. The middle one is not padding: Railway, Render, Fly and
+  # Heroku all inject PORT and expect the process to bind it, and Spring reads only the first
+  # spelling — so without this chain the container starts, listens on 8080, answers nothing the
+  # platform routes to it, and fails its health check with a perfectly healthy application inside.
+  port: ${SERVER_PORT:${PORT:8080}}
   shutdown: graceful
   error:
     include-message: never

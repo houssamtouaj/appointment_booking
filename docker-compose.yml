@@ -61,6 +61,12 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      # `demo` by default, which is what makes `docker compose up` from a clean clone yield a
+      # *seeded* API rather than an empty one: a sign-in screen with no account behind it is not a
+      # working stack, however green the health check is. The seeder skips entirely once the demo
+      # business exists, so this costs nothing on a restart. Note `-` and not `:-`: setting
+      # SPRING_PROFILES_ACTIVE= (empty) in .env gives a bare instance, which `:-` would ignore.
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE-demo}
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-slotflow}
       DB_USERNAME: ${POSTGRES_USER:-slotflow}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
