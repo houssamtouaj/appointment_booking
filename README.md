@@ -1,5 +1,7 @@
 # SlotFlow — Multi-Tenant Appointment & Booking Platform
 
+[![CI](https://github.com/houssamtouaj/appointment_booking/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/houssamtouaj/appointment_booking/actions/workflows/ci.yml)
+
 A booking platform where any service business (clinic, salon, tutor, coach, studio)
 defines its availability rules and takes online appointments with deposit payments.
 
