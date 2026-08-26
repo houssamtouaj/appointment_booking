@@ -1,0 +1,7 @@
+# The Maven wrapper is executed by /bin/sh on the CI runner. core.autocrlf=true on a
+# Windows clone would otherwise be free to hand it back with CRLF endings, and a shell
+# script with a trailing \r dies on its first line with an unreadable error. Pin it.
+mvnw text eol=lf
+
+# Its Windows counterpart is only ever run by cmd.exe.
+mvnw.cmd text eol=crlf
