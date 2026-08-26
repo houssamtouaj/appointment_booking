@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.slotflow.staff.User;
 import com.slotflow.support.ApiIntegrationTest;
+import java.util.Base64;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -262,13 +263,39 @@ class AuthFlowIT extends ApiIntegrationTest {
     void tamperedTokensAreRefused() throws Exception {
         Tenant tenant = aTenant();
         String token = jwtService.issue(tenant.owner());
-        // Flip the last character of the signature: same claims, wrong MAC.
-        String forged = token.substring(0, token.length() - 1)
-                + (token.endsWith("A") ? "B" : "A");
+        String forged = withCorruptedSignature(token);
 
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + forged))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    /**
+     * Same claims, genuinely different MAC.
+     *
+     * <p>The obvious version of this — replace the last character of the signature with {@code A},
+     * or with {@code B} if it was already {@code A} — is wrong exactly one time in sixteen, which
+     * is why it survived six waves and then failed a CI run on a commit that had already passed.
+     *
+     * <p>An HS256 signature is 32 bytes, and base64url encodes it as 43 characters: 258 bits of
+     * alphabet carrying 256 bits of signature. The final character holds only four significant
+     * bits, so a canonical encoder always leaves its low two bits clear and only sixteen of the
+     * sixty-four characters can ever appear there — {@code A E I M Q U Y c g k o s w 0 4 8}. A
+     * decoder discards those low bits again, which puts {@code A B C D} in one collision group.
+     *
+     * <p>So when the signature happened to end in {@code A}, the replacement {@code B} decoded
+     * back to the very same 32 bytes: a token that was never forged, correctly answered with 200,
+     * failing an assertion that demanded 401. One in sixteen, measured at 6.07% over 100k samples.
+     *
+     * <p>Flipping a bit in the decoded bytes cannot collide, because every one of those bits is
+     * significant.
+     */
+    private static String withCorruptedSignature(String token) {
+        int lastDot = token.lastIndexOf('.');
+        byte[] signature = Base64.getUrlDecoder().decode(token.substring(lastDot + 1));
+        signature[0] ^= 0x01;
+        return token.substring(0, lastDot + 1)
+                + Base64.getUrlEncoder().withoutPadding().encodeToString(signature);
     }
 
     // ---------------------------------------------------------------------------------
