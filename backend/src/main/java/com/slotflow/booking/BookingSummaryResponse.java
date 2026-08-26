@@ -25,7 +25,14 @@ public record BookingSummaryResponse(
         BookingStatus status,
         long priceCents) {
 
-    static BookingSummaryResponse of(Booking booking) {
+    /**
+     * Public, because the dashboard's {@code upcoming} list is the same row shape as this one.
+     *
+     * <p>Reused rather than copied deliberately: two records with the same six fields drift the
+     * moment one of them gains a seventh, and the field this one is careful <em>not</em> to carry —
+     * the guest's email address — is exactly the kind of thing a second copy quietly adds.
+     */
+    public static BookingSummaryResponse of(Booking booking) {
         return new BookingSummaryResponse(booking.getId(), booking.getServiceId(),
                 booking.getStaffId(), booking.getGuestName(),
                 booking.getStartsAt(), booking.getEndsAt(),
