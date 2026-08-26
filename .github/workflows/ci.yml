@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    # Wave branches are pushed before the fast-forward into dev, so this is where the signal
+    # matters. main is here for release merges.
+    branches: [main, dev, 'feat/**', 'fix/**', 'chore/**']
+    paths: ['backend/**', '.github/workflows/ci.yml']
+  pull_request:
+    branches: [main, dev]
+    paths: ['backend/**', '.github/workflows/ci.yml']
+
+# Pushing a fix two minutes after a push should not leave both runs competing for a runner.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: mvn verify
+    runs-on: ubuntu-latest
+    # A hung container start would otherwise burn the 6-hour default.
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+          # Resolved from the repository root, NOT from defaults.run.working-directory --
+          # that applies to `run:` steps only. A wrong path here does not fail the build,
+          # it just silently never caches.
+          cache-dependency-path: backend/pom.xml
+
+      # Docker is present on ubuntu-latest, so Testcontainers needs no setup step. No secrets
+      # either: the JWT signing key and the bcrypt strength come from the surefire and
+      # failsafe argLine, and Postgres comes from the container.
+      - name: Build and test
+        run: ./mvnw -B -ntp verify
+
+      # Same root-relative rule as cache-dependency-path: an action, not a `run`.
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/
+          retention-days: 7
