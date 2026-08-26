@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.slotflow.business.BookingPolicy;
+import com.slotflow.support.BookingScenario;
 import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;

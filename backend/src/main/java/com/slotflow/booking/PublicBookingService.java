@@ -11,6 +11,7 @@ import com.slotflow.catalog.ServiceOfferingRepository;
 import com.slotflow.common.error.ApiException;
 import com.slotflow.common.error.ErrorCode;
 import com.slotflow.common.web.RateLimiter;
+import com.slotflow.payment.DepositService;
 import com.slotflow.payment.PaymentProperties;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.Clock;
@@ -85,14 +86,15 @@ public class PublicBookingService {
     private final AvailabilityService availability;
     private final RateLimiter rateLimiter;
     private final PaymentProperties payments;
+    private final DepositService deposits;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public PublicBookingService(BusinessRepository businesses, ServiceOfferingRepository services,
                                 BookingPolicyRepository policies, BookingRepository bookings,
                                 AvailabilityService availability, RateLimiter rateLimiter,
-                                PaymentProperties payments, ApplicationEventPublisher events,
-                                Clock clock) {
+                                PaymentProperties payments, DepositService deposits,
+                                ApplicationEventPublisher events, Clock clock) {
         this.businesses = businesses;
         this.services = services;
         this.policies = policies;
@@ -100,6 +102,7 @@ public class PublicBookingService {
         this.availability = availability;
         this.rateLimiter = rateLimiter;
         this.payments = payments;
+        this.deposits = deposits;
         this.events = events;
         this.clock = clock;
     }
@@ -151,6 +154,21 @@ public class PublicBookingService {
                         request.notes());
 
         insert(booking);
+        if (booking.getStatus() == BookingStatus.PENDING) {
+            // A network call inside a transaction, deliberately and with the alternatives weighed.
+            // The 201 has to carry a checkoutUrl (plan 11), so the session cannot be opened later
+            // on a worker thread; and it cannot be opened *before* the insert, because Stripe needs
+            // the booking id in its metadata and because opening a session for a slot somebody else
+            // is about to win would leave a live payment page for an appointment that does not
+            // exist. After the insert is the only order in which both are true.
+            //
+            // The cost is that Stripe's latency is held inside the row lock. That is bounded by the
+            // client's own timeout, it happens only for deposit-taking businesses, and the failure
+            // mode is the right one: a refusal rolls the booking back, so a customer never ends up
+            // holding a slot they have no way to pay for.
+            deposits.openCheckout(booking, business, service, now);
+            bookings.saveAndFlush(booking);
+        }
 
         // Inside the transaction, delivered after it commits. Nothing a customer receives may
         // describe a booking that did not survive its own insert; see BookingEvent.

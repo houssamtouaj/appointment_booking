@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.slotflow.notification.NotificationService.CancelledBy;
+import com.slotflow.support.BookingScenario;
 import com.slotflow.support.RecordingNotificationService.SentAboutBooking;
 import com.slotflow.support.RecordingNotificationService.SentAboutBooking.Kind;
 import org.junit.jupiter.api.DisplayName;

@@ -115,6 +115,18 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
     @Column(length = 255, unique = true)
     private String stripeSessionId;
 
+    /**
+     * Stripe's hosted page for the outstanding deposit.
+     *
+     * <p>Stored rather than rebuilt, because it cannot be rebuilt: Stripe returns the URL once,
+     * when the session is created, and the session id alone will not produce it. Three readers need
+     * it and only one of them is the response to the request that created it — the "we are holding
+     * your slot" email (D10) and the manage page are the other two, and without them a customer
+     * whose browser crashed mid-checkout has a slot held for thirty minutes and no way to claim it.
+     */
+    @Column(length = 500)
+    private String stripeCheckoutUrl;
+
     /** {@code text} in the schema, so no length here either: a note is prose. */
     private String notes;
 
@@ -295,7 +307,7 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
      * dropped in silence — and only a booking still holding its slot for a deposit has any business
      * being sent to Checkout at all.
      */
-    public void attachCheckoutSession(String stripeSessionId) {
+    public void attachCheckoutSession(String stripeSessionId, String stripeCheckoutUrl) {
         if (this.stripeSessionId != null) {
             throw new IllegalStateException("this booking already has a Checkout session");
         }
@@ -306,7 +318,10 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
             throw new IllegalStateException(
                     "only a booking awaiting a deposit can be sent to Checkout");
         }
+        // Both or neither. A session id with no URL is a booking the webhook can resolve and the
+        // customer cannot pay; a URL with no session id is the reverse, and worse.
         this.stripeSessionId = requireNotNull(stripeSessionId, "stripeSessionId");
+        this.stripeCheckoutUrl = requireNotNull(stripeCheckoutUrl, "stripeCheckoutUrl");
     }
 
     public void recordDepositPaid(long amountCents) {

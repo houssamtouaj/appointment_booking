@@ -210,18 +210,25 @@ class BookingTransitionTest {
     @DisplayName("the Checkout session")
     class CheckoutSession {
 
+        /**
+         * Stripe returns this once, at creation, and it cannot be rebuilt from the session id -
+         * which is why the booking stores both and why they are attached together.
+         */
+        private static final String CHECKOUT_URL = "https://checkout.stripe.test/c/pay/cs_test";
+
         @Test
         @DisplayName("a session id is attached once and never replaced")
         void attachingASecondSessionIsRefused() {
             Booking pending = bookingIn(BookingStatus.PENDING);
-            pending.attachCheckoutSession("cs_test_first");
+            pending.attachCheckoutSession("cs_test_first", CHECKOUT_URL);
 
             // Overwriting it would leave the first session's webhook with nothing to resolve
             // through findByStripeSessionId, so a genuine payment event would be dropped in
             // silence. "One booking per Checkout session" is what makes replay harmless.
-            assertThatThrownBy(() -> pending.attachCheckoutSession("cs_test_second"))
+            assertThatThrownBy(() -> pending.attachCheckoutSession("cs_test_second", CHECKOUT_URL))
                     .isInstanceOf(IllegalStateException.class);
             assertThat(pending.getStripeSessionId()).isEqualTo("cs_test_first");
+            assertThat(pending.getStripeCheckoutUrl()).isEqualTo(CHECKOUT_URL);
         }
 
         @Test
@@ -229,16 +236,17 @@ class BookingTransitionTest {
         void aConfirmedBookingCannotBeSentToCheckout() {
             Booking confirmed = bookingIn(BookingStatus.CONFIRMED);
 
-            assertThatThrownBy(() -> confirmed.attachCheckoutSession("cs_test_late"))
+            assertThatThrownBy(() -> confirmed.attachCheckoutSession("cs_test_late", CHECKOUT_URL))
                     .isInstanceOf(IllegalStateException.class);
             assertThat(confirmed.getStripeSessionId()).isNull();
+            assertThat(confirmed.getStripeCheckoutUrl()).isNull();
         }
 
         @Test
         @DisplayName("confirming keeps the session id, so a replayed webhook still resolves")
         void confirmingKeepsTheSessionId() {
             Booking pending = bookingIn(BookingStatus.PENDING);
-            pending.attachCheckoutSession("cs_test_first");
+            pending.attachCheckoutSession("cs_test_first", CHECKOUT_URL);
 
             pending.confirm();
 

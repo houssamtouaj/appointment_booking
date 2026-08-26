@@ -12,6 +12,7 @@ import com.slotflow.availability.AvailabilityOverrideRepository;
 import com.slotflow.availability.SlotResponse;
 import com.slotflow.business.BookingPolicy;
 import com.slotflow.catalog.ServiceOffering;
+import com.slotflow.support.BookingScenario;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;

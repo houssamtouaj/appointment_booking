@@ -66,10 +66,14 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       MAIL_HOST: mailhog
       MAIL_PORT: 1025
+      MAIL_ENABLED: ${MAIL_ENABLED:-true}
       MAIL_FROM: ${MAIL_FROM:-no-reply@slotflow.local}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env — see .env.example}
       REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-false}
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:5173}
+      # Off by default, so the stack comes up with no Stripe account at all. On without a
+      # secret key is a startup failure, deliberately - see .env.example.
+      PAYMENTS_ENABLED: ${PAYMENTS_ENABLED:-false}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8080}

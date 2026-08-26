@@ -36,13 +36,27 @@ class SharedHarnessIT extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("V1 has been applied exactly once, whether or not the container was reused")
+    @DisplayName("every migration has been applied exactly once, whether or not the container was reused")
     void migrationsRanOnce() {
         // Reuse is enabled locally and ignored in CI, so this has to hold both ways: a fresh
-        // container migrates on startup, a reused one already has the history row.
+        // container migrates on startup, a reused one already has the history rows.
+        //
+        // Asserted as "no version appears twice" rather than as a count. A count is a number that
+        // has to be edited every time a wave adds a migration, and a test whose expected value is
+        // routinely bumped is a test nobody reads before bumping it. What must never happen is a
+        // version applied twice, or a failed row left behind - neither of which a count would
+        // notice once it had been bumped.
+        assertThat(jdbc.queryForObject("""
+                SELECT count(*) - count(DISTINCT version) FROM flyway_schema_history
+                """, Integer.class))
+                .as("a version applied twice")
+                .isZero();
         assertThat(jdbc.queryForObject(
-                "SELECT count(*) FROM flyway_schema_history WHERE success", Integer.class))
-                .isEqualTo(1);
+                "SELECT count(*) FROM flyway_schema_history WHERE NOT success", Integer.class))
+                .as("a migration left in the history as failed")
+                .isZero();
+        // V1 is the baseline and stays first: it is immutable, and a later file that sorted ahead
+        // of it would run against an empty database and then find the tables already there.
         assertThat(jdbc.queryForObject(
                 "SELECT version FROM flyway_schema_history WHERE installed_rank = 1", String.class))
                 .isEqualTo("1");

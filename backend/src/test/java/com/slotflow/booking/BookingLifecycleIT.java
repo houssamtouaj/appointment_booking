@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.slotflow.support.BookingScenario;
 import com.slotflow.support.TestTime;
 import java.time.Duration;
 import java.time.Instant;

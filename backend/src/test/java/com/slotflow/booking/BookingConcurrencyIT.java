@@ -2,6 +2,7 @@ package com.slotflow.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.slotflow.support.BookingScenario;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;

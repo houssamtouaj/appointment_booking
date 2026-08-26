@@ -69,7 +69,20 @@ public enum ErrorCode {
     /** The one the exclusion constraint produces. Carries the requested slot in the body. */
     BOOKING_SLOT_TAKEN(HttpStatus.CONFLICT, "Slot already booked"),
     ILLEGAL_TRANSITION(HttpStatus.CONFLICT, "Illegal status transition"),
-    CANCELLATION_CUTOFF(HttpStatus.CONFLICT, "Past the cancellation cutoff");
+    CANCELLATION_CUTOFF(HttpStatus.CONFLICT, "Past the cancellation cutoff"),
+
+    // --- Payments (plan 11) ------------------------------------------------------------
+    /**
+     * Stripe refused or could not be reached. A {@code 502} and not a {@code 500}: the request was
+     * fine and a dependency was not, so a client retrying in a minute may well succeed.
+     */
+    PAYMENT_UNAVAILABLE(HttpStatus.BAD_GATEWAY, "Payments are temporarily unavailable"),
+    /**
+     * The only thing standing between this API and anyone who can POST to a public path claiming a
+     * booking is paid. The body says nothing beyond this — no header echo, no reason, no timestamp
+     * comparison — because every detail is a hint to somebody trying to forge one.
+     */
+    WEBHOOK_SIGNATURE_INVALID(HttpStatus.BAD_REQUEST, "Invalid webhook signature");
 
     /**
      * Namespace for the {@code type} member of every problem body. It is a stable identifier

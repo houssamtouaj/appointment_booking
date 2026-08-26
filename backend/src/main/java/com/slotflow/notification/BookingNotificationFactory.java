@@ -2,6 +2,7 @@ package com.slotflow.notification;
 
 import com.slotflow.booking.Booking;
 import com.slotflow.booking.BookingRepository;
+import com.slotflow.booking.BookingStatus;
 import com.slotflow.business.Business;
 import com.slotflow.business.BusinessRepository;
 import com.slotflow.catalog.ServiceOffering;
@@ -96,9 +97,11 @@ class BookingNotificationFactory {
                 business.depositFor(booking.getPriceCents()),
                 booking.getDepositPaidCents(),
                 booking.getExpiresAt(),
-                // Plan 11 fills this in. Until it does, no booking is ever created PENDING — the
-                // payments flag is off — so the one template that reads it is unreachable.
-                null,
+                // Only while there is something to pay, matching PublicBookingResponse. The column
+                // outlives the payment — it is what the confirming webhook resolved — and a "pay
+                // the deposit" link in a mail about a booking that is already paid is a customer
+                // paying twice.
+                booking.getStatus() == BookingStatus.PENDING ? booking.getStripeCheckoutUrl() : null,
                 links.manageBooking(booking.getCancellationToken()));
     }
 

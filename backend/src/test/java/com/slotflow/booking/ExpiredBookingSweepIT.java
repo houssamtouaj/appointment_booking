@@ -4,6 +4,7 @@ import static com.slotflow.support.fixtures.Fixtures.aBooking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.slotflow.support.BookingScenario;
 import com.slotflow.support.TestTime;
 import java.time.Duration;
 import java.time.Instant;

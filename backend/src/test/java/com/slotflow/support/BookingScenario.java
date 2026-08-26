@@ -1,4 +1,4 @@
-package com.slotflow.booking;
+package com.slotflow.support;
 
 import static com.slotflow.support.fixtures.Fixtures.aService;
 import static com.slotflow.support.fixtures.Fixtures.workingHours;
@@ -7,13 +7,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.slotflow.availability.WorkingHoursRepository;
+import com.slotflow.booking.BookingRepository;
+import com.slotflow.booking.PublicBookingResponse;
 import com.slotflow.business.BookingPolicy;
 import com.slotflow.catalog.ServiceOffering;
 import com.slotflow.catalog.ServiceOfferingRepository;
 import com.slotflow.catalog.StaffService;
 import com.slotflow.catalog.StaffServiceRepository;
 import com.slotflow.staff.User;
-import com.slotflow.support.ApiIntegrationTest;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,12 +33,17 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * {@code @TestPropertySource} of its own, so that every subclass keeps sharing the one application
  * context {@code IntegrationTest} pays for. It adds fixtures and request builders, nothing else.
  *
+ * <p>It lives in {@code support} rather than beside the booking tests because three packages' tests
+ * now book something: the booking flow itself, the notifications that hang off it (plan 12), and
+ * the deposit path (plan 11). A fixture that half the suite extends is harness, not a detail of one
+ * package.
+ *
  * <p><b>Wednesday, not Monday.</b> {@code TestTime.NOW} is Monday 09:00 UTC — ten in the morning in
  * Paris — so half of Monday is already behind the lead time, and a test whose expected answer moves
  * with the policy is a test about the wrong thing. Wednesday is a clean 09:00–17:00 day in the
  * business zone, which is 08:00–16:00 UTC in early March.
  */
-abstract class BookingScenario extends ApiIntegrationTest {
+public abstract class BookingScenario extends ApiIntegrationTest {
 
     protected static final ZoneId PARIS = ZoneId.of("Europe/Paris");
 
@@ -61,15 +67,15 @@ abstract class BookingScenario extends ApiIntegrationTest {
     /** Two staff on the same weekday template, one bookable service. */
     protected record Salon(Tenant tenant, ServiceOffering service, User dana, User sam) {
 
-        UUID businessId() {
+        public UUID businessId() {
             return tenant.id();
         }
 
-        String slug() {
+        public String slug() {
             return tenant.business().getSlug();
         }
 
-        UUID serviceId() {
+        public UUID serviceId() {
             return service.getId();
         }
     }

@@ -137,7 +137,7 @@ app:
       window: PT1H
   # Where the SPA is served from. Only used to build the links in outbound mail: the reset link,
   # the invitation link and the manage-booking link that every customer-facing message carries.
-  # The routes those assume are pinned by NotificationLinksTest.
+  # The routes those assume are pinned by FrontendLinksTest.
   frontend:
     base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
   security:
@@ -168,8 +168,12 @@ app:
     token-sweep-cron: ${TOKEN_SWEEP_CRON:0 15 3 * * *}
   # D2/D3. Off means every booking is created CONFIRMED and nothing ever reaches Stripe, which is
   # what keeps the deployed demo working when a test key expires. On, a deposit-requiring business
-  # creates a PENDING booking holding its slot for 30 minutes; plan 11 supplies the checkout URL
-  # that makes that hold mean something, and until then turning this on would only lose slots.
+  # creates a PENDING booking that holds its slot for 30 minutes and carries a Stripe Checkout URL,
+  # and the booking is confirmed by the webhook rather than by anything the browser reports.
+  #
+  # Turning this on without STRIPE_SECRET_KEY is a startup failure, deliberately: the alternative is
+  # a deployment that boots, serves every page, and fails on the first customer who tries to pay -
+  # by which point their slot has been held for half an hour for nothing.
   payments:
     enabled: ${PAYMENTS_ENABLED:false}
   booking:
@@ -184,6 +188,11 @@ app:
     # is called directly by the test that asserts what it sends.
     reminder-cron: ${BOOKING_REMINDER_CRON:0 */15 * * * *}
   stripe:
-    # consumed from plan 11 onwards
+    # Environment only, and no defaults on purpose: a committed fallback would look like
+    # configuration and behave like a live credential. Blank is valid - it is what app.payments
+    # being off means - and StripeProperties never prints either of them.
+    #
+    # The webhook secret is the whole authentication of POST /api/webhooks/stripe. Anyone who can
+    # reach that path can claim a booking is paid; only somebody holding this can prove it.
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}

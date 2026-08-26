@@ -31,9 +31,11 @@ import java.util.UUID;
  *                          {@link BookingPolicy#isCancellable} answers, resolved server-side so the
  *                          page does not have to reimplement the cutoff arithmetic
  * @param cancellationDeadline the instant after which it stops being true
- * @param checkoutUrl       where to pay the deposit. Always absent in this version: payments are
- *                          plan 11, and with them disabled no booking is ever created
- *                          {@code PENDING} in the first place
+ * @param checkoutUrl       Stripe's hosted page for the outstanding deposit. Present on a
+ *                          {@code PENDING} booking and absent on every other, which is the same
+ *                          thing said twice: nothing is created {@code PENDING} unless a deposit is
+ *                          owed, and confirming clears neither the URL nor the need to stop
+ *                          offering it — see {@code build} below
  */
 public record PublicBookingResponse(
         UUID id,
@@ -89,6 +91,10 @@ public record PublicBookingResponse(
                 // alone would offer it.
                 booking.isActive() && policy.isCancellable(booking.getStartsAt(), now),
                 policy.cancellationDeadline(booking.getStartsAt()),
-                null, guest);
+                // Offered only while there is something to pay. The column outlives the payment —
+                // it is what the confirmation webhook resolved — and a paid booking still showing a
+                // "pay the deposit" button is a customer paying twice.
+                booking.getStatus() == BookingStatus.PENDING ? booking.getStripeCheckoutUrl() : null,
+                guest);
     }
 }

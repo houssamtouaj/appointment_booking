@@ -12,7 +12,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  * three links, and a second copy is how the SPA ends up with two route shapes to support. The
  * routes it assumes — {@code /accept-invitation/:token}, {@code /reset-password/:token} and
  * {@code /booking/:token} — are the frontend's published contract, and
- * {@code NotificationLinksTest} pins them, because "settled" and "whatever the code happens to
+ * {@code FrontendLinksTest} pins them, because "settled" and "whatever the code happens to
  * emit" are otherwise the same thing.
  *
  * <h2>The token is a path segment, not a query parameter</h2>
@@ -57,6 +57,27 @@ public class FrontendLinks {
      */
     public String manageBooking(UUID cancellationToken) {
         return link("/booking", cancellationToken.toString());
+    }
+
+    /**
+     * Where Stripe returns a customer after Checkout: the manage page, with a hint about which
+     * button they pressed.
+     *
+     * <p>The hint is a query parameter and not a path segment, and that is the opposite choice from
+     * everything above for the opposite reason: {@code checkout=success} is not a credential, it is
+     * a flag the page uses to decide whether to say "thank you" or "no problem". It is also not
+     * <em>evidence</em>. The page still reads the booking, because a redirect is something a
+     * browser did and a payment is something the webhook confirmed — anyone can type this URL.
+     *
+     * @param paid true for the success URL, false for the one Stripe uses when the customer backs
+     *             out. Both land on the same page; a customer who abandoned checkout still has a
+     *             live hold for the rest of the thirty minutes and needs somewhere to resume
+     */
+    public String bookingCheckoutReturn(UUID cancellationToken, boolean paid) {
+        return UriComponentsBuilder.fromUriString(manageBooking(cancellationToken))
+                .queryParam("checkout", paid ? "success" : "cancelled")
+                .build()
+                .toUriString();
     }
 
     private String link(String path, String rawToken) {
