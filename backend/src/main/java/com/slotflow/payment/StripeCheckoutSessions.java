@@ -24,6 +24,12 @@ import org.springframework.stereotype.Component;
  * startup failure instead. With payments disabled the key is not required and nothing here is ever
  * called: no booking is created {@code PENDING}, so no session is ever opened.
  *
+ * <h2>Cards only</h2>
+ * {@link #paramsFor} pins {@code payment_method_types} instead of inheriting whatever the Stripe
+ * account has switched on. A deposit here holds a slot for thirty minutes, and a payment method
+ * that settles in three days cannot hold anything — see the comment on the builder line, and
+ * {@code StripeWebhookService.isPaid} for the half of that decision the webhook enforces.
+ *
  * <h2>One client, built once and lazily</h2>
  * {@link StripeClient} is thread-safe and owns the connection pool, so a per-call instance would
  * throw away every keep-alive on a path that runs inside a booking transaction. It is built on
@@ -83,6 +89,16 @@ class StripeCheckoutSessions implements CheckoutSessions {
                 // A one-off payment, not a subscription and not a saved card. The deposit is the
                 // whole of this integration's relationship with the customer's money.
                 .setMode(SessionCreateParams.Mode.PAYMENT)
+                // Cards only, and stated here rather than left to the account's dashboard. Every
+                // delayed-notification method - SEPA debit, Bacs, Boleto, OXXO, Konbini, several
+                // of the buy-now-pay-later options - completes its session with
+                // payment_status: "unpaid" and settles days later, which a thirty-minute slot hold
+                // cannot survive: the session expires long before the money arrives, so the
+                // customer pays for an appointment the sweeper has already given away. Enabling one
+                // in the dashboard would otherwise change this application's behaviour with no
+                // change to this repository. StripeWebhookService.isPaid is the second half of the
+                // same decision.
+                .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
                 .setSuccessUrl(request.successUrl())
                 .setCancelUrl(request.cancelUrl())
                 // Pre-fills the field and, more usefully, is what the receipt goes to.

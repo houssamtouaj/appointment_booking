@@ -176,6 +176,45 @@ class StripeWebhookIT extends PaymentScenario {
     }
 
     @Test
+    @DisplayName("a completed session that is not paid yet confirms nothing")
+    void anUnpaidCompletionIsNotAConfirmation() throws Exception {
+        Salon salon = aSalonTakingDeposits();
+        PublicBookingResponse held = bookOk(salon, NINE_AM);
+
+        // Every delayed-notification method - SEPA debit, Boleto, OXXO, several of the BNPL
+        // options - completes its session with payment_status "unpaid" and settles days later, or
+        // fails. Acting on this one would record a deposit that does not exist, clear the hold so
+        // the sweeper can no longer reclaim the slot, and email a confirmation for money that may
+        // never arrive. StripeCheckoutSessions pins the session to cards so it should not happen;
+        // this is the half that makes enabling a method in the Stripe dashboard fail closed.
+        deliver(unpaid("evt_unpaid", held.id(), sessionIdOf(held), 1_500L))
+                .andExpect(status().isOk());
+
+        Booking after = bookings.findById(held.id()).orElseThrow();
+        assertThat(after.getStatus()).isEqualTo(BookingStatus.PENDING);
+        assertThat(after.getDepositPaidCents()).isZero();
+        // Still held, so the sweeper can still give the slot back.
+        assertThat(after.getExpiresAt()).isNotNull();
+        assertThat(notifications.bookingMailFor(held.id(), Kind.CONFIRMED)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("a completed session carrying no id is not trusted to name a booking")
+    void aSessionWithoutAnIdIsIgnored() throws Exception {
+        Salon salon = aSalonTakingDeposits();
+        PublicBookingResponse held = bookOk(salon, NINE_AM);
+
+        // The consistency check exists because two sessions for one row mean confirming from the
+        // wrong one records the wrong amount. An absent id used to satisfy that check rather than
+        // fail it, which waved through precisely the case it was written for.
+        deliver(withoutSessionId("evt_no_session_id", held.id(), 1_500L))
+                .andExpect(status().isOk());
+
+        assertThat(bookings.findById(held.id()).orElseThrow().getStatus())
+                .isEqualTo(BookingStatus.PENDING);
+    }
+
+    @Test
     @DisplayName("an event type nobody handles is accepted and ignored")
     void anUnknownTypeIsStillA200() throws Exception {
         String payload = """
@@ -197,6 +236,35 @@ class StripeWebhookIT extends PaymentScenario {
         return event(eventId, "checkout.session.completed", bookingId, sessionId,
                 """
                 , "amount_total": %d, "currency": "eur", "payment_status": "paid"\
+                """.formatted(amountTotal));
+    }
+
+    /**
+     * A completed session with no {@code id} on the data object at all.
+     *
+     * <p>Hand-written rather than routed through {@link #event}, because that one always writes the
+     * field and the case under test is its absence - which {@code asText(null)} renders as a null
+     * the consistency check has to treat as a mismatch.
+     */
+    private static String withoutSessionId(String eventId, UUID bookingId, long amountTotal) {
+        return """
+                {"id": "%s",
+                 "object": "event",
+                 "api_version": "2020-08-27",
+                 "created": 1772000000,
+                 "type": "checkout.session.completed",
+                 "data": {"object": {"object": "checkout.session",
+                          "metadata": {"bookingId": "%s", "businessId": "%s"},
+                          "amount_total": %d, "currency": "eur", "payment_status": "paid"}}}
+                """.formatted(eventId, bookingId, UUID.randomUUID(), amountTotal);
+    }
+
+    /** The same session, finished but not settled - what a delayed payment method sends first. */
+    private static String unpaid(String eventId, UUID bookingId, String sessionId,
+                                 long amountTotal) {
+        return event(eventId, "checkout.session.completed", bookingId, sessionId,
+                """
+                , "amount_total": %d, "currency": "eur", "payment_status": "unpaid"\
                 """.formatted(amountTotal));
     }
 

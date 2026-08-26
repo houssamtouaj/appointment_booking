@@ -135,10 +135,18 @@ public interface BookingRepository
      * construction rather than by hoping it does not run twice.
      */
     default List<Booking> findDueReminders(Instant windowStart, Instant windowEnd) {
-        return findByStatusAndReminderSentAtIsNullAndStartsAtBetween(
+        return findByStatusAndReminderSentAtIsNullAndStartsAtBetweenOrderByStartsAtAscIdAsc(
                 BookingStatus.CONFIRMED, windowStart, windowEnd);
     }
 
-    List<Booking> findByStatusAndReminderSentAtIsNullAndStartsAtBetween(
+    /**
+     * Ordered soonest first, and the id breaks the tie.
+     *
+     * <p>Unordered, a batch comes back in whatever order the plan produced, which makes "the job
+     * skipped a booking" depend on the plan rather than on the code. Soonest first is also the order
+     * that matters if a run is interrupted: the appointment closest to happening is the one whose
+     * reminder is worth least by the time the next run picks it up.
+     */
+    List<Booking> findByStatusAndReminderSentAtIsNullAndStartsAtBetweenOrderByStartsAtAscIdAsc(
             BookingStatus status, Instant from, Instant to);
 }

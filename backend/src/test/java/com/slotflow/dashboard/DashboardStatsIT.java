@@ -169,6 +169,26 @@ class DashboardStatsIT extends BookingScenario {
     }
 
     @Test
+    @DisplayName("one bound without the other is refused, not paired with half a default")
+    void halfARangeIsRejected() throws Exception {
+        Salon salon = solo(aSalon());
+        completed(salon, "2026-03-03T10:00", 5_000L);
+
+        // The two bounds default as a pair - this week's Monday and the following one - and the
+        // query fills each in independently. So a lone "to" was silently read as "from this Monday
+        // until last February": an empty interval, a 200, and every figure zero. Indistinguishable
+        // from a quiet month, which is the whole failure the backwards-range check exists to stop.
+        mockMvc.perform(statsAsOwner(salon).param("to", "2026-02-01"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("from"));
+
+        mockMvc.perform(statsAsOwner(salon).param("from", "2027-01-01"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value("to"));
+    }
+
+    @Test
     @DisplayName("an unknown tz is a 422 naming the field, not a database error")
     void anUnknownZoneIsAValidationFailure() throws Exception {
         Salon salon = solo(aSalon());

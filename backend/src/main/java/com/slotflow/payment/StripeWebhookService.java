@@ -49,7 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
  * which refuses outright when the event's API version differs from the library's. That mismatch is
  * not hypothetical: it is what happens when the Stripe account is upgraded, or when the CLI is a
  * version ahead of the pinned dependency, and its failure mode would be every webhook 500ing at
- * once with a message about API versions. Three field reads out of a JSON tree do not care.
+ * once with a message about API versions. A handful of field reads out of a JSON tree do not care.
  *
  * <h2>The race with the sweeper</h2>
  * A customer can pay in the same second the sweeper decides they have not (D3). The booking is
@@ -66,6 +66,9 @@ public class StripeWebhookService {
 
     private static final String CHECKOUT_COMPLETED = "checkout.session.completed";
     private static final String CHECKOUT_EXPIRED = "checkout.session.expired";
+
+    /** The only value of {@code payment_status} that means the money is there. */
+    private static final String PAID = "paid";
 
     private final StripeEventRepository events;
     private final BookingRepository bookings;
@@ -192,7 +195,7 @@ public class StripeWebhookService {
 
     private void confirm(UUID bookingId, JsonNode session) {
         Booking booking = load(bookingId).orElse(null);
-        if (booking == null || !sessionMatches(booking, session)) {
+        if (booking == null || !sessionMatches(booking, session) || !isPaid(session, bookingId)) {
             return;
         }
         if (booking.getStatus() != BookingStatus.PENDING) {
@@ -298,11 +301,41 @@ public class StripeWebhookService {
      */
     private static boolean sessionMatches(Booking booking, JsonNode session) {
         String eventSessionId = session.path("id").asText(null);
-        if (eventSessionId == null || eventSessionId.equals(booking.getStripeSessionId())) {
+        if (eventSessionId != null && eventSessionId.equals(booking.getStripeSessionId())) {
             return true;
         }
+        // A payload with no session id at all fails here rather than passing. Treating an absent
+        // id as "no disagreement" would wave through precisely the case this method exists to
+        // catch, and there is no session a checkout event could be about other than its own.
         log.warn("Stripe event names session {} but booking {} holds {} - ignoring it",
                 eventSessionId, booking.getId(), booking.getStripeSessionId());
+        return false;
+    }
+
+    /**
+     * That the money actually arrived, and is not merely on its way.
+     *
+     * <p>A completed session is not a paid session. Every delayed-notification payment method —
+     * SEPA debit, Bacs, Boleto, OXXO, Konbini, some of the buy-now-pay-later options — sends
+     * {@code checkout.session.completed} with {@code payment_status: "unpaid"} the moment the
+     * customer finishes the form, and settles or fails days later in an
+     * {@code async_payment_succeeded} / {@code async_payment_failed} event. Confirming on the first
+     * one would record a deposit that does not exist, clear the hold so the sweeper can no longer
+     * reclaim the slot, and email the customer a confirmation — for a payment that may never land.
+     *
+     * <p>{@code StripeCheckoutSessions} pins the session to cards, which cannot do this, so in this
+     * deployment the check should never fire. It is here because that pin is one builder line in
+     * another class and the account's dashboard is the other half of the decision: a method enabled
+     * there, or that line removed, must fail closed. The booking stays {@code PENDING} and the
+     * sweeper releases the slot, which is the safe side of a payment nobody can see yet.
+     */
+    private static boolean isPaid(JsonNode session, UUID bookingId) {
+        String status = session.path("payment_status").asText("");
+        if (PAID.equals(status)) {
+            return true;
+        }
+        log.warn("Stripe completed the session for booking {} with payment_status {} - "
+                + "not confirming it until the money is actually there", bookingId, status);
         return false;
     }
 

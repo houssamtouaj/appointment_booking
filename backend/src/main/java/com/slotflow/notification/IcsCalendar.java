@@ -33,6 +33,13 @@ import java.util.Locale;
  * RFC 5545 specifies CRLF, and the strict parsers — Outlook among them — reject a file that uses
  * bare newlines. That failure shows up as "the attachment does nothing when I click it", which is
  * the least diagnosable bug this feature can have.
+ *
+ * <h2>Lines are folded at 75 octets, and that is the same bug</h2>
+ * RFC 5545 §3.1 also caps a content line at 75 octets, continuing it on the next line indented by
+ * one space. A {@code DESCRIPTION} carrying a manage URL with a UUID in it is comfortably over the
+ * cap, and a strict parser handed an over-long line truncates the property or rejects the file —
+ * arriving as the same undiagnosable silence as a bare newline. The fold counts octets rather than
+ * characters, because the limit is on the encoded form, and it never cuts a character in half.
  */
 final class IcsCalendar {
 
@@ -43,6 +50,9 @@ final class IcsCalendar {
 
     private static final String CRLF = "\r\n";
 
+    /** RFC 5545 §3.1, counted in octets of the encoded form and excluding the break. */
+    private static final int LIMIT = 75;
+
     private IcsCalendar() {
     }
 
@@ -52,7 +62,7 @@ final class IcsCalendar {
      *                    clock rather than from {@code Instant.now()} so a test can pin it
      */
     static byte[] forBooking(BookingNotification booking, Instant generatedAt) {
-        String body = String.join(CRLF,
+        String body = fold(
                 "BEGIN:VCALENDAR",
                 "VERSION:2.0",
                 "PRODID:-//SlotFlow//Booking//EN",
@@ -73,6 +83,56 @@ final class IcsCalendar {
                 "END:VEVENT",
                 "END:VCALENDAR") + CRLF;
         return body.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Every content line, folded and joined with CRLF.
+     *
+     * <p>The continuation marker is CRLF plus one space, and that space counts against the next
+     * line's 75 — which is why a continuation carries 74 octets of content and the first line
+     * carries 75. Unfolding is the exact reverse: a reader strips CRLF-space and the original line
+     * comes back, escapes and all, so a fold is free to land inside an escaped pair.
+     *
+     * <p>What it must not land inside is a UTF-8 character. A business name one {@code é} outside
+     * ASCII is a two-octet sequence that a naive cut would split across the fold — which unfolds to
+     * the same bytes but is not valid UTF-8 while it is on the wire, and that is enough for a strict
+     * reader to give up on the file. So the cut backs off over any trailing octet first.
+     */
+    private static String fold(String... lines) {
+        StringBuilder folded = new StringBuilder();
+        for (String line : lines) {
+            if (!folded.isEmpty()) {
+                folded.append(CRLF);
+            }
+            appendFolded(folded, line);
+        }
+        return folded.toString();
+    }
+
+    private static void appendFolded(StringBuilder target, String line) {
+        byte[] octets = line.getBytes(StandardCharsets.UTF_8);
+        if (octets.length <= LIMIT) {
+            target.append(line);
+            return;
+        }
+        int start = 0;
+        while (start < octets.length) {
+            boolean continuation = start > 0;
+            int end = Math.min(start + (continuation ? LIMIT - 1 : LIMIT), octets.length);
+            while (end > start + 1 && end < octets.length && isTrailingOctet(octets[end])) {
+                end--;
+            }
+            if (continuation) {
+                target.append(CRLF).append(' ');
+            }
+            target.append(new String(octets, start, end - start, StandardCharsets.UTF_8));
+            start = end;
+        }
+    }
+
+    /** {@code 10xxxxxx} — the second, third or fourth octet of a UTF-8 character. */
+    private static boolean isTrailingOctet(byte octet) {
+        return (octet & 0xC0) == 0x80;
     }
 
     /**

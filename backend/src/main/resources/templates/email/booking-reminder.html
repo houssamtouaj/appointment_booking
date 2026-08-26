@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head><meta charset="UTF-8"><title>Your appointment is tomorrow</title></head>
+<head><meta charset="UTF-8"><title>A reminder about your appointment</title></head>
 <body style="margin:0;padding:24px;background:#f9fafb;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#111827">
 <div style="max-width:560px;margin:0 auto;background:#ffffff;padding:32px;border-radius:8px">
 
     <div th:replace="~{email/_parts :: header(${booking.businessName()})}"></div>
 
-    <h1 style="margin:0 0 16px;font-size:20px;font-weight:600">See you tomorrow</h1>
+    <!--/* Not "tomorrow". BookingReminderJob aims at 24 hours but its window reaches down to one
+           hour, deliberately, so a delayed or restarted run sends this the same morning - and a
+           reminder that says "tomorrow" about an appointment three hours away is worse than no
+           reminder at all. whenText() is the same string the subject line uses. */-->
+    <h1 style="margin:0 0 16px;font-size:20px;font-weight:600">
+        See you <span th:text="${booking.whenText()}">Tue 14 Oct, 15:00 CEST</span>
+    </h1>
 
     <p style="margin:0 0 16px;line-height:22px">
         Hello <span th:text="${booking.guestName()}">Alex</span>, a reminder about your

@@ -63,7 +63,11 @@ public class BookingReminderJob {
 
     private static final Logger log = LoggerFactory.getLogger(BookingReminderJob.class);
 
-    /** How far ahead a reminder is aimed. The number in the templates' "tomorrow". */
+    /**
+     * How far ahead a reminder is aimed. Nominal only — see the class note on the window, and note
+     * that the templates say when the appointment is rather than "tomorrow", because a catch-up run
+     * can send this eleven hours ahead.
+     */
     static final Duration LEAD = Duration.ofHours(24);
 
     /** Above the lead, so a run at 09:03 still catches a booking that was due at 09:00. */
@@ -117,7 +121,20 @@ public class BookingReminderJob {
         return sent;
     }
 
-    /** @return whether this run is the one that reminded it */
+    /**
+     * One booking, and never more than one booking's worth of damage.
+     *
+     * <p>The broad catch is the load-bearing part. {@link #stamp} composes the message inside the
+     * transaction, and {@code BookingNotificationFactory} throws {@link IllegalStateException} for a
+     * booking whose business, service or staff row has gone — so without this, one such row ends the
+     * {@code for} loop in {@link #run()} and every booking after it in the batch goes unreminded.
+     * This job is deliberately global across tenants and the batch comes back in a stable order,
+     * which turns that from "one bad run" into one row starving reminders for <em>every</em>
+     * business on every run from now on. A row nobody can build a message for is logged and skipped;
+     * it is not allowed to speak for the batch.
+     *
+     * @return whether this run is the one that reminded it
+     */
     private boolean remind(UUID id, Instant now) {
         BookingNotification notification;
         try {
@@ -127,13 +144,24 @@ public class BookingReminderJob {
             // payment webhook. Whatever it was, this run is no longer entitled to speak for it.
             log.debug("Booking {} was written by somebody else mid-run; leaving it alone", id);
             return false;
+        } catch (RuntimeException couldNotStamp) {
+            log.error("Could not prepare the reminder for booking {}; skipping it", id,
+                    couldNotStamp);
+            return false;
         }
         if (notification == null) {
             return false;
         }
-        // Outside the transaction on purpose: the stamp is committed by the time anything is sent,
-        // so a failure here costs one reminder rather than producing two.
-        mail.sendBookingReminder(notification);
+        try {
+            // Outside the transaction on purpose: the stamp is committed by the time anything is
+            // sent, so a failure here costs one reminder rather than producing two.
+            mail.sendBookingReminder(notification);
+        } catch (RuntimeException couldNotSend) {
+            // The stamp is already committed, so this reminder is gone either way — see the class
+            // note on stamping first. What must not follow is the rest of the batch going with it.
+            log.error("Could not send the reminder for booking {}", id, couldNotSend);
+            return false;
+        }
         return true;
     }
 

@@ -1,6 +1,6 @@
 [(${booking.businessName()})]
 
-SEE YOU TOMORROW
+SEE YOU [(${booking.whenText()})]
 
 Hello [(${booking.guestName()})], a reminder about your appointment.
 

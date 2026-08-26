@@ -35,6 +35,9 @@ import org.springframework.transaction.annotation.Transactional;
  * endpoint does with its own {@code from}/{@code to}. The two endpoints have to agree about what
  * "this week" covers, and the only way to guarantee that is to pick one convention and say so in
  * both places.
+ *
+ * <p>They are a pair: both, for a chosen range, or neither, for the current week. One without the
+ * other is refused — see {@link #rejectUnusableRange}.
  */
 @Service
 public class DashboardService {
@@ -51,7 +54,7 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardStatsResponse stats(LocalDate from, LocalDate to, String tz) {
-        rejectBackwardsRange(from, to);
+        rejectUnusableRange(from, to);
         // Validated here rather than in the query, because it is interpolated into AT TIME ZONE:
         // an unknown zone has to be a 422 naming the field, not a Postgres error surfacing as a 500.
         String zone = tz == null || tz.isBlank() ? null : BusinessFields.timezone(tz, "tz").getId();
@@ -81,14 +84,29 @@ public class DashboardService {
     }
 
     /**
-     * A backwards range is a mistake worth naming.
+     * A range that cannot mean what the caller thinks it means.
      *
-     * <p>The query would answer it — an empty interval matches nothing, so every figure comes back
-     * zero — and that is precisely why it is refused: a dashboard full of zeroes reads as "a quiet
-     * month", not as "your date pickers are the wrong way round".
+     * <p>Two mistakes, refused for the same reason. The query would answer either of them — an
+     * empty interval matches nothing, so every figure comes back zero — and that is precisely why
+     * neither is allowed: a dashboard full of zeroes reads as "a quiet month", not as "your date
+     * pickers are the wrong way round".
+     *
+     * <ul>
+     *   <li><b>Backwards.</b> {@code to} before {@code from}, which is the obvious one.</li>
+     *   <li><b>Half a range.</b> One bound without the other. The default is a <em>pair</em> — the
+     *       current week's Monday and the following one — and the query fills each bound in
+     *       independently, so one supplied bound is silently paired with half of that default:
+     *       {@code ?to=2026-02-01} means "from this Monday to last February", an empty interval and
+     *       the identical wall of zeroes. Refusing it is also the only answer that does not depend
+     *       on the business timezone, which lives in the query rather than out here.</li>
+     * </ul>
      */
-    private static void rejectBackwardsRange(LocalDate from, LocalDate to) {
-        if (from != null && to != null && to.isBefore(from)) {
+    private static void rejectUnusableRange(LocalDate from, LocalDate to) {
+        if ((from == null) != (to == null)) {
+            throw ApiException.invalidField(from == null ? "from" : "to",
+                    "must be supplied together with " + (from == null ? "to" : "from"));
+        }
+        if (from != null && to.isBefore(from)) {
             throw ApiException.invalidField("to", "must not be before from");
         }
     }

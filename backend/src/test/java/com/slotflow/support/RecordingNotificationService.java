@@ -70,6 +70,15 @@ public class RecordingNotificationService implements NotificationService {
      */
     private volatile RuntimeException failure;
 
+    /**
+     * When set, sends about this one booking throw and every other send works.
+     *
+     * <p>{@link #failure} cannot express the property {@code BookingReminderIT} needs: that one
+     * unsendable booking does not take the rest of the batch with it. A job looping over rows has to
+     * be asserted against a batch in which exactly one row is poisoned.
+     */
+    private final Map<UUID, RuntimeException> failuresByBooking = new ConcurrentHashMap<>();
+
     // ---------------------------------------------------------------------------------
     //  the interface
     // ---------------------------------------------------------------------------------
@@ -151,17 +160,27 @@ public class RecordingNotificationService implements NotificationService {
         this.failure = failure;
     }
 
+    /** Makes sends about one booking throw, and leaves every other booking alone. */
+    public void failSendsAbout(UUID bookingId, RuntimeException failure) {
+        failuresByBooking.put(bookingId, failure);
+    }
+
     /** Called before every test, so one test's mail cannot be read by the next. */
     public void clear() {
         invitations.clear();
         passwordResets.clear();
         bookingMail.clear();
         failure = null;
+        failuresByBooking.clear();
     }
 
     private void record(SentAboutBooking.Kind kind, BookingNotification booking,
                         CancelledBy cancelledBy) {
         failIfAsked();
+        RuntimeException poisoned = failuresByBooking.get(booking.bookingId());
+        if (poisoned != null) {
+            throw poisoned;
+        }
         bookingMail.add(new SentAboutBooking(kind, booking, cancelledBy));
     }
 

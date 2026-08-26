@@ -102,10 +102,6 @@ public record BookingNotification(
         return Money.format(priceCents - depositPaidCents, currency);
     }
 
-    public boolean hasDeposit() {
-        return depositDueCents > 0 || depositPaidCents > 0;
-    }
-
     public String guestName() {
         return recipient.fullName();
     }

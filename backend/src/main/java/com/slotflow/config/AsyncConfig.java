@@ -1,5 +1,7 @@
 package com.slotflow.config;
 
+import com.slotflow.notification.BookingNotification;
+import com.slotflow.notification.NotificationService.Recipient;
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 import org.slf4j.Logger;
@@ -24,10 +26,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * bounced SMTP handshake in this application happens on one of these threads, and "the customer
  * never got the confirmation" must not be a thing you find out from the customer.
  *
- * <p>So the handler is ours, and it logs the arguments. A booking notification carries the booking
- * id and the recipient's address in its parameters, which turns an invisible failure into a line
- * you can grep by booking id — the same identifier {@code PublicBookingService} already logs when
- * the row was created, so the two ends of the story join up.
+ * <p>So the handler is ours, and it names the send that died. {@link #describe} prints the booking
+ * id for a booking notification — the same identifier {@code PublicBookingService} already logs when
+ * the row was created, so the two ends of the story join up — and the class name for anything whose
+ * {@code toString} has not been checked for a customer's details.
  *
  * <p>{@link #getAsyncExecutor()} returns {@code null} deliberately: that is the documented way to
  * tell {@link AsyncConfigurer} "keep looking", so the executor stays Boot's auto-configured
@@ -58,10 +60,15 @@ public class AsyncConfig implements AsyncConfigurer {
     /**
      * The arguments, rendered short.
      *
-     * <p>Types only, never values. {@code Arrays.toString} on a {@code BookingNotification} would
-     * print a customer's name, address and phone number into a log line that is kept for months and
-     * shipped to whatever aggregator the deploy uses. The point of this handler is to say which
-     * send died, and the method name plus the shape of its arguments does that.
+     * <p>{@code Arrays.toString} over the lot is not an option: a {@link Recipient} or a raw token
+     * would print a customer's name, address or a working credential into a log line that is kept
+     * for months and shipped to whatever aggregator the deploy uses. So the rendering is an
+     * allowlist — a type is printed only where its {@code toString} has been written for this log
+     * and holds nothing but an identifier — and everything else falls back to its class name.
+     *
+     * <p>{@link BookingNotification} is on that list, which is the difference between "a booking
+     * mail died" and a line you can grep by booking id. Its {@code toString} is identity only and
+     * says so, for exactly this reason.
      */
     private static String describe(Object... params) {
         return params.length == 0
@@ -73,6 +80,12 @@ public class AsyncConfig implements AsyncConfigurer {
     }
 
     private static String describeArgument(Object argument) {
-        return argument == null ? "null" : argument.getClass().getSimpleName();
+        if (argument == null) {
+            return "null";
+        }
+        if (argument instanceof BookingNotification booking) {
+            return booking.toString();
+        }
+        return argument.getClass().getSimpleName();
     }
 }

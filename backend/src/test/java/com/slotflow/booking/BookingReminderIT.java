@@ -60,6 +60,30 @@ class BookingReminderIT extends BookingScenario {
     }
 
     @Test
+    @DisplayName("one unsendable booking does not take the rest of the batch with it")
+    void oneBadRowDoesNotStarveTheBatch() throws Exception {
+        Salon salon = solo(aSalon());
+        // Soonest first is the batch order, so the poisoned row is reached before the other one.
+        PublicBookingResponse poisoned = bookOk(salon, NINE_AM);
+        PublicBookingResponse healthy = bookOk(salon, NINE_AM.plus(Duration.ofHours(1)));
+        notifications.failSendsAbout(poisoned.id(),
+                new IllegalStateException("booking " + poisoned.id() + " has no staff row"));
+
+        clock.setTo(A_DAY_BEFORE);
+        reminders.run();
+
+        // The job is global across tenants and the batch is ordered, so an exception escaping the
+        // loop would not cost one reminder - it would cost every booking after it, on this run and
+        // on every run after it, for every business. BookingNotificationFactory throws exactly this
+        // for a booking whose business, service or staff row has gone.
+        assertThat(notifications.bookingMailFor(healthy.id(), Kind.REMINDER)).hasSize(1);
+        assertThat(notifications.bookingMailFor(poisoned.id(), Kind.REMINDER)).isEmpty();
+        // Stamped all the same: the stamp goes in before the send and is deliberately irreversible,
+        // so a reminder nobody could send is one nobody receives rather than one sent twice later.
+        assertThat(reminderSentAt(poisoned.id())).isEqualTo(A_DAY_BEFORE);
+    }
+
+    @Test
     @DisplayName("a cancelled booking is never reminded")
     void cancelledBookingsAreLeftAlone() throws Exception {
         Salon salon = solo(aSalon());

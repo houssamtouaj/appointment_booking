@@ -18,14 +18,19 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * event would be dropped in silence, which is a worse failure than sending early. Nothing in the
  * application publishes outside a transaction today; a test or a future scheduled job might.
  *
- * <p>A failure in here can no longer roll anything back — the transaction is already committed —
- * but it would still reach the caller and become a 500 over a request that in fact succeeded. That
- * is not papered over with a {@code catch}, and it does not need to be: the implementation is
- * {@code @Async}, so a bounced SMTP connection is a retry on a worker thread and this method has
- * returned long before it happens. What is left to throw is a bug in composing the message, and an
- * owner who asked for an invitation is exactly the person who should hear that it did not go — they
- * are the one who can resend it. {@link BookingNotifier} makes the opposite call for the opposite
- * reason: a guest who has just booked cannot resend anything.
+ * <p>There is no {@code catch} in here, and there is nothing for one to catch. The transaction has
+ * already committed, so a throw could not roll anything back; it could only turn a request that in
+ * fact succeeded into a 500. It cannot even do that: every {@link MailNotificationService} method is
+ * {@code @Async}, so this method has returned before the message is composed, let alone sent, and
+ * {@link EmailSender} logs a render failure and a twice-failed delivery against a reference rather
+ * than throwing at all. {@code AsyncConfig}'s handler is the backstop for anything past that.
+ *
+ * <p><b>Which means a failed invitation is a log line and not an error the owner sees</b>, even
+ * though the owner is the one who could resend it. That is the cost of sending after commit on a
+ * worker thread, and the alternative is worse: a synchronous send makes a dead SMTP relay fail an
+ * invitation that has already been created, and the owner retries into a duplicate. The reference in
+ * every {@link EmailSender} log line is what makes the failure findable instead of invisible; a
+ * durable outbox is the real answer, at a scale this project does not claim.
  */
 @Component
 class NotificationDispatcher {
