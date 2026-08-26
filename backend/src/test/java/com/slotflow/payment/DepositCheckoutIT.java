@@ -7,16 +7,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.slotflow.booking.BookingStatus;
 import com.slotflow.booking.PublicBookingResponse;
 import com.slotflow.catalog.ServiceOffering;
-import com.slotflow.catalog.StaffService;
-import com.slotflow.catalog.StaffServiceRepository;
 import com.slotflow.support.RecordingNotificationService.SentAboutBooking.Kind;
-import com.slotflow.support.fixtures.Fixtures;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Currency;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * What a deposit-taking business's {@code POST /bookings} does.
@@ -27,9 +23,6 @@ import org.springframework.beans.factory.annotation.Autowired;
  * these tests read what was sent to Stripe rather than only what came back.
  */
 class DepositCheckoutIT extends PaymentScenario {
-
-    @Autowired
-    private StaffServiceRepository assignments;
 
     @Test
     @DisplayName("a deposit-taking booking is held, not confirmed, and comes back with a pay link")
@@ -79,7 +72,7 @@ class DepositCheckoutIT extends PaymentScenario {
         Salon salon = aSalonTakingDeposits(33);
         ServiceOffering odd = aServicePricedAt(salon, 1_235L);
 
-        PublicBookingResponse created = bookOdd(salon, odd);
+        PublicBookingResponse created = bookAt11(salon, odd);
 
         assertThat(checkouts.openedFor(created.id()).amountCents()).isEqualTo(408L);
     }
@@ -133,34 +126,8 @@ class DepositCheckoutIT extends PaymentScenario {
         // And the slot is still free. A PENDING row with nowhere to pay would hold it for thirty
         // minutes and give the customer nothing to click.
         assertThat(bookings.findActiveForStaffBetween(
-                java.util.List.of(salon.dana().getId()), NINE_AM, NINE_AM.plusSeconds(1)))
+                List.of(salon.dana().getId()), NINE_AM, NINE_AM.plusSeconds(1)))
                 .isEmpty();
         assertThat(notifications.bookingMail()).isEmpty();
-    }
-
-    // ---------------------------------------------------------------------------------
-    //  fixtures
-    // ---------------------------------------------------------------------------------
-
-    /** A second service on the same salon, priced so that the deposit does not divide evenly. */
-    private ServiceOffering aServicePricedAt(Salon salon, long priceCents) {
-        ServiceOffering service = services.save(Fixtures.aService()
-                .forBusiness(salon.tenant().business())
-                .withName("Trim")
-                .withDuration(60)
-                .withPriceCents(priceCents)
-                .build());
-        assignments.save(new StaffService(salon.businessId(), salon.dana().getId(),
-                service.getId()));
-        return service;
-    }
-
-    private PublicBookingResponse bookOdd(Salon salon, ServiceOffering service) throws Exception {
-        Instant elevenAm = parisTime("2026-03-04T11:00");
-        String body = mockMvc.perform(bookRequest(salon.slug(), service.getId(), elevenAm,
-                        salon.dana().getId(), "alex@example.test"))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-        return json.readValue(body, PublicBookingResponse.class);
     }
 }

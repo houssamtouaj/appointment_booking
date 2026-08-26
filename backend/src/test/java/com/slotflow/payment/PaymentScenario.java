@@ -1,8 +1,16 @@
 package com.slotflow.payment;
 
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.slotflow.booking.PublicBookingResponse;
 import com.slotflow.business.Business;
+import com.slotflow.catalog.ServiceOffering;
+import com.slotflow.catalog.StaffService;
+import com.slotflow.catalog.StaffServiceRepository;
 import com.slotflow.support.BookingScenario;
 import com.slotflow.support.RecordingCheckoutSessions;
+import com.slotflow.support.fixtures.Fixtures;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -47,6 +55,9 @@ abstract class PaymentScenario extends BookingScenario {
     @Autowired
     protected RecordingCheckoutSessions checkouts;
 
+    @Autowired
+    protected StaffServiceRepository assignments;
+
     @BeforeEach
     void emptyTheCheckoutRecorder() {
         checkouts.clear();
@@ -69,6 +80,36 @@ abstract class PaymentScenario extends BookingScenario {
         business.setDepositPolicy(true, percent);
         businesses.save(business);
         return salon;
+    }
+
+    /**
+     * A second service on the same salon, priced so that the deposit does not divide evenly.
+     *
+     * <p>Lives here rather than in one test because two of them need it: the charge has to be the
+     * rounded value and so does what ends up stored, and a rounding claim proved on two different
+     * prices is not a claim about anything.
+     */
+    protected ServiceOffering aServicePricedAt(Salon salon, long priceCents) {
+        ServiceOffering service = services.save(Fixtures.aService()
+                .forBusiness(salon.tenant().business())
+                .withName("Trim " + priceCents)
+                .withDuration(60)
+                .withPriceCents(priceCents)
+                .build());
+        assignments.save(new StaffService(salon.businessId(), salon.dana().getId(),
+                service.getId()));
+        return service;
+    }
+
+    /** Books that service at 11:00 Paris, clear of the 09:00 slot the other tests use. */
+    protected PublicBookingResponse bookAt11(Salon salon, ServiceOffering service)
+            throws Exception {
+        Instant elevenAm = parisTime("2026-03-04T11:00");
+        String body = mockMvc.perform(bookRequest(salon.slug(), service.getId(), elevenAm,
+                        salon.dana().getId(), "alex@example.test"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return json.readValue(body, PublicBookingResponse.class);
     }
 
     @TestConfiguration

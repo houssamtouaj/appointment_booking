@@ -55,6 +55,22 @@ class StripeWebhookIT extends PaymentScenario {
     }
 
     @Test
+    @DisplayName("the rounded deposit is what is stored, not the raw percentage")
+    void theStoredDepositIsTheRoundedOne() throws Exception {
+        // 33% of 1235 is 407.55, and DepositCheckoutIT proves 408 is what reaches Stripe. This is
+        // the other half of the same claim: the value that comes back is the value that is kept,
+        // so there is no point in the round trip at which a second division could disagree.
+        Salon salon = aSalonTakingDeposits(33);
+        PublicBookingResponse held = bookAt11(salon, aServicePricedAt(salon, 1_235L));
+
+        deliver(completed("evt_rounded", held.id(), sessionIdOf(held), 408L))
+                .andExpect(status().isOk());
+
+        assertThat(bookings.findById(held.id()).orElseThrow().getDepositPaidCents())
+                .isEqualTo(408L);
+    }
+
+    @Test
     @DisplayName("replaying the same event id changes nothing and still answers 200")
     void aReplayIsANoOp() throws Exception {
         Salon salon = aSalonTakingDeposits();

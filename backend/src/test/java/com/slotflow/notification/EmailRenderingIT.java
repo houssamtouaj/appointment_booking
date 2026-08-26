@@ -165,6 +165,25 @@ class EmailRenderingIT extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("an invitation names the business and states its seven-day expiry")
+    void invitationsExplainThemselves() throws Exception {
+        Instant inAWeek = clock.instant().plusSeconds(7 * 24 * 3600);
+
+        notifications.sendStaffInvitation(
+                new NotificationService.Recipient("sam@example.test", "Sam Stylist"),
+                "Dana Salon", "invite-token", inAWeek);
+
+        MimeMessage message = captured();
+        assertThat(message.getSubject()).isEqualTo("You have been invited to join Dana Salon");
+        assertThat(textPartsOf(message)).allSatisfy(body -> assertThat(body)
+                .contains("/accept-invitation/invite-token")
+                .contains("Dana Salon")
+                // Plan 06's expiry, stated in words and as an instant: "7 days" is what a reader
+                // acts on, the timestamp is what they check on day six.
+                .contains("7 days"));
+    }
+
+    @Test
     @DisplayName("a dead relay is retried once, then swallowed - it never reaches the caller")
     void aDeadRelayIsNotTheCallersProblem() {
         doThrow(new MailSendException("relay refused the connection"))
