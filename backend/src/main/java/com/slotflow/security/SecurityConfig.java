@@ -40,8 +40,10 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * There is no session and no server-rendered form. Authorisation on every protected endpoint is the
  * {@code Authorization} header, which a browser never attaches on its own, so the classic CSRF
  * vector does not exist. The exception is the refresh cookie, which a browser <em>would</em> attach:
- * that is why it is {@code SameSite=Lax} and scoped to {@code /api/auth}, which means a cross-site
- * {@code POST} does not carry it at all. The reasoning is in {@link RefreshTokenCookie}; disabling
+ * that is why it is {@code SameSite=Lax} by default and scoped to {@code /api/auth}, which means a
+ * cross-site {@code POST} does not carry it at all. A cross-site deployment has to relax that to
+ * {@code SameSite=None}, and {@link RefreshTokenCookie} sets out exactly what that trades away —
+ * an unobservable forced rotation or logout, and nothing wider. The reasoning is there; disabling
  * {@code csrf} here is a conclusion, not an omission.
  *
  * <h2>3. 401 and 403 are ours, not Spring's</h2>

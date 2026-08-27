@@ -20,11 +20,25 @@ import org.springframework.stereotype.Component;
  *       README says otherwise.</li>
  *   <li>{@code Path=/api/auth} — the cookie is attached to {@code /refresh} and {@code /logout}
  *       and to nothing else, so ordinary admin traffic never carries it.</li>
- *   <li>{@code SameSite=Lax} — this is the CSRF answer. A cross-site {@code POST} does not send a
- *       Lax cookie at all, so the two endpoints that read it cannot be driven from another origin;
- *       and no other endpoint accepts a cookie for anything, because authorisation everywhere else
- *       is the {@code Authorization} header. That is why {@code csrf()} stays disabled in
- *       {@link SecurityConfig} rather than being disabled by omission.</li>
+ *   <li>{@code SameSite=Lax} — this is the CSRF answer, and it is the default. A cross-site
+ *       {@code POST} does not send a Lax cookie at all, so the two endpoints that read it cannot
+ *       be driven from another origin; and no other endpoint accepts a cookie for anything,
+ *       because authorisation everywhere else is the {@code Authorization} header. That is why
+ *       {@code csrf()} stays disabled in {@link SecurityConfig} rather than being disabled by
+ *       omission.
+ *       <p><b>A cross-site deployment cannot keep it.</b> With the SPA on one registrable domain
+ *       and the API on another — the demo puts them on Vercel and Render — every call from the
+ *       SPA is cross-site, so a Lax cookie is never attached and {@code /refresh} 401s for a
+ *       reason no log explains. Those deployments set {@code REFRESH_COOKIE_SAME_SITE=None}
+ *       (with {@code Secure}, which {@link AuthProperties.RefreshCookie} enforces) and give up
+ *       this half of the argument. What still holds there: the cookie is unreadable to script,
+ *       it is attached to two endpoints only, neither returns anything an attacker's page can
+ *       read because {@code CorsConfig} is a strict origin allowlist, and neither grants any
+ *       authority beyond the victim's own session. What is lost: a page on another origin can
+ *       cause a rotation or a logout it cannot observe. If that nuisance ever needs closing,
+ *       close it by requiring a custom request header on the two endpoints — a header no
+ *       cross-origin form can set without a preflight the allowlist denies — not by returning
+ *       to Lax, which does not work at all in that topology.</li>
  *   <li>{@code Secure} — configuration, not a constant: false on plain-HTTP localhost, true in
  *       every deployed environment ({@code REFRESH_COOKIE_SECURE=true}).</li>
  *   <li>Consequences for the client: CORS must send {@code allowCredentials}, the origin list can

@@ -150,13 +150,19 @@ app:
       secret: ${JWT_SECRET:}
       access-token-ttl: PT15M
       refresh-token-ttl: P7D
-    # The refresh token's transport: httpOnly cookie, SameSite=Lax, scoped to /api/auth.
+    # The refresh token's transport: httpOnly cookie, scoped to /api/auth.
     # The name and path are constants in RefreshTokenCookie; only these two vary by environment.
     refresh-cookie:
       # true wherever a browser reaches the API over TLS. False on plain-HTTP localhost, or the
       # browser silently drops the cookie and every refresh fails with no visible cause.
       secure: ${REFRESH_COOKIE_SECURE:false}
-      same-site: Lax
+      # Lax by default because localhost:5173 -> localhost:8080 is same-site, and Lax is the CSRF
+      # answer described in RefreshTokenCookie. A deployment that puts the SPA on one registrable
+      # domain and the API on another (Vercel + Render) is cross-site, and a Lax cookie is not
+      # attached to a cross-site request at all: refresh 401s and every session dies at the
+      # access-token TTL. Those deployments must set None — which browsers only honour together
+      # with Secure, so AuthProperties refuses the unsafe half of that pair at startup.
+      same-site: ${REFRESH_COOKIE_SAME_SITE:Lax}
     # D6: single-use, one hour. Plan 06: invitations last a week.
     password-reset-ttl: PT1H
     invitation-ttl: P7D

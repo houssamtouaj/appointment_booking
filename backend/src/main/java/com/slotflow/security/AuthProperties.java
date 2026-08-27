@@ -1,6 +1,7 @@
 package com.slotflow.security;
 
 import java.time.Duration;
+import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -63,12 +64,34 @@ public record AuthProperties(
      *
      * @param secure   false on plain-HTTP localhost, true everywhere a browser talks TLS
      * @param sameSite {@code Lax} by default — see {@link RefreshTokenCookie} for why that is the
-     *                 CSRF answer for this cookie
+     *                 CSRF answer for this cookie, and what a cross-site deployment gives up by
+     *                 setting {@code None}
      */
     public record RefreshCookie(boolean secure, String sameSite) {
 
+        private static final Set<String> ATTRIBUTES = Set.of("Lax", "Strict", "None");
+
+        /**
+         * Both checks fail the startup rather than the request, because both failures are
+         * otherwise invisible: a misspelt attribute is emitted verbatim and every browser
+         * silently falls back to Lax, and {@code None} without {@code Secure} is a cookie every
+         * modern browser rejects outright — in both cases the server looks healthy and only the
+         * refresh call, fifteen minutes into a session, ever says otherwise.
+         */
         public RefreshCookie {
-            sameSite = sameSite == null || sameSite.isBlank() ? "Lax" : sameSite;
+            sameSite = sameSite == null || sameSite.isBlank() ? "Lax" : sameSite.trim();
+            String canonical = sameSite;
+            sameSite = ATTRIBUTES.stream()
+                    .filter(attribute -> attribute.equalsIgnoreCase(canonical))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "app.auth.refresh-cookie.same-site (REFRESH_COOKIE_SAME_SITE) must be "
+                                    + "one of Lax, Strict or None; got " + canonical));
+            if ("None".equals(sameSite) && !secure) {
+                throw new IllegalArgumentException(
+                        "app.auth.refresh-cookie.same-site=None requires secure=true "
+                                + "(REFRESH_COOKIE_SECURE), or the browser drops the cookie");
+            }
         }
     }
 

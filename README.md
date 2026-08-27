@@ -101,8 +101,11 @@ clause is what makes a cancelled slot immediately rebookable.
 as a SHA-256 hash, and single use: presenting one revokes it and issues a successor linked to it.
 Presenting an already-rotated token is therefore not an error, it is evidence — the chain is
 treated as stolen and every session that user holds is revoked, with `401 REFRESH_REUSED`. The
-token travels in an `HttpOnly`, `SameSite=Lax` cookie scoped to `/api/auth`, which is also the
-whole CSRF answer: no other endpoint accepts a cookie for anything.
+token travels in an `HttpOnly` cookie scoped to `/api/auth`, `SameSite=Lax` wherever the SPA and
+the API share a domain — which is also the whole CSRF answer, since no other endpoint accepts a
+cookie for anything. Splitting them across Vercel and Render makes every call cross-site, where a
+Lax cookie is simply never sent, so that deployment sets `SameSite=None; Secure` and accepts the
+one residual: another origin can force a rotation or a logout it has no way to read.
 
 **Tenant isolation comes from the token, and reads answer 404.** Every admin query is filtered by
 the `business_id` in the access token — never from a path or query parameter, so there is no

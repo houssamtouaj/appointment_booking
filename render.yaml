@@ -23,6 +23,11 @@ databases:
   - name: slotflow-postgres
     databaseName: slotflow
     user: slotflow
+    # Must match the web service's region below. Render defaults a blueprint database to its
+    # own default region rather than to the region of whatever references it, and the internal
+    # hostname in DB_URL is not routable across regions — so a mismatch here is not a latency
+    # problem, it is the first deploy dying on Flyway with a connection timeout.
+    region: frankfurt
     # Free tier: 1 GB, and expires after 30 days. The demo is rebuilt from the seeder on any
     # empty database, which is the honest answer to "what is your backup story" for a demo —
     # and it is why the seeder is idempotent rather than a one-shot migration.
@@ -79,6 +84,13 @@ services:
       # any log to say why.
       - key: REFRESH_COOKIE_SECURE
         value: "true"
+      # None, not the Lax default, because the SPA is on Vercel and the API is on onrender.com:
+      # that is a cross-site request, and a Lax cookie is not attached to one. Left at Lax the
+      # SPA's POST /api/auth/refresh arrives with no cookie, 401s, and every deployed session
+      # dies at the fifteen-minute access-token TTL with no way to recover. None is only safe
+      # alongside REFRESH_COOKIE_SECURE=true above, which AuthProperties enforces at startup.
+      - key: REFRESH_COOKIE_SAME_SITE
+        value: "None"
 
       # --- URLs -------------------------------------------------------------------------
       # Both are set in the dashboard, after the frontend has a URL. CORS_ALLOWED_ORIGINS is
@@ -88,11 +100,13 @@ services:
         sync: false
       - key: FRONTEND_BASE_URL
         sync: false
+      # Also the dashboard, and it has to be the full https:// origin. `fromService … property:
+      # host` resolves to a bare hostname, and Render has no way to prefix a scheme onto it — a
+      # schemeless value lands in the OpenAPI document's servers[0].url, where a URL without a
+      # scheme is a *relative* one, so every Swagger "Try it out" resolves against the docs page
+      # and 404s. Set it to https://slotflow-api.onrender.com once the service has its hostname.
       - key: PUBLIC_API_URL
-        fromService:
-          name: slotflow-api
-          type: web
-          property: host
+        sync: false
       # Render terminates TLS at its own proxy and overwrites X-Forwarded-For, so the rate
       # limiter keys on the real client rather than on one IP for the whole internet.
       - key: FORWARD_HEADERS_STRATEGY
