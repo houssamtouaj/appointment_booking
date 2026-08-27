@@ -1,0 +1,10 @@
+# Revisions that only moved whitespace. `git blame` skips them, so a reformatted
+# line still names the commit that wrote the code rather than the one that
+# reindented it. GitHub reads this file automatically; locally it needs
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only ever add a commit here that changed nothing but formatting.
+
+# Spotless: one-time reformat, no behaviour change (plan 16).
+8ca6f215ec8bc2a1ae62d76440844b457e39f9be

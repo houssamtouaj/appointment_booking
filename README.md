@@ -160,6 +160,7 @@ afternoon somebody is in a hurry.
 | Rate limiting | Bucket4j, in-memory, per IP and per guest email |
 | API docs | springdoc-openapi → Swagger UI |
 | Tests | JUnit 5, Testcontainers, MockMvc + spring-security-test, JaCoCo |
+| Formatting | Spotless + the Eclipse formatter, checked at `validate` so it fails in seconds |
 | CI | GitHub Actions — `mvn -B verify` on every push and PR |
 | Frontend | React 18 + TypeScript + Vite (separate deployable) |
 
@@ -229,6 +230,11 @@ a DTO. The engine itself is at **100 %** branch coverage and the booking package
 project-wide branch coverage is **82.8 %**, reported here rather than enforced. A test asserts that
 both package names still exist, because a JaCoCo rule naming a package that no longer matches
 anything is not a failure: it is simply no longer checked.
+
+Formatting is the build's problem, not yours: `./mvnw spotless:apply` fixes whatever the gate
+reports. It runs at `validate`, so a mis-indented line fails in about five seconds rather than
+after the tests. The rules live in `backend/eclipse-formatter.xml`, and the two that matter are
+that it never re-joins a line you split and never reflows a comment.
 
 Two claims the suite proves rather than asserts in prose. **No double booking:** two threads
 aligned on a `CountDownLatch` race for one slot, and the assertion is on the outcome pair — one

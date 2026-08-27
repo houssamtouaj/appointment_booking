@@ -30,6 +30,14 @@
         <bucket4j.version>8.10.1</bucket4j.version>
         <!-- Not managed by the Boot parent, so pinning it here is the only pin there is. -->
         <jacoco.version>0.8.13</jacoco.version>
+        <!-- Both pinned, and the second for a reason the first does not share: a formatter
+             release reflows lines the previous one left alone, and that arrives as a red
+             build on somebody's unrelated change. 4.39 is what spotless 3.10.0 would have
+             chosen anyway; it is written down so that the next plugin bump is a decision
+             rather than a surprise. 4.36 through 4.38 format this codebase differently, so
+             a bump means running spotless:apply and reading the diff, in its own commit. -->
+        <spotless-maven-plugin.version>3.10.0</spotless-maven-plugin.version>
+        <eclipse-jdt.version>4.39</eclipse-jdt.version>
 
         <!-- Empty by design. Two things append to the test JVM's arguments without touching the
              argLine blocks: an ad-hoc `-Dtest.jvm.args.extra=...` for a one-off check, and
@@ -182,6 +190,72 @@
 
     <build>
         <plugins>
+            <!--
+              Formatting, held by the build rather than by hand.
+
+              Bound to `validate`, not `verify`: bound late a formatting failure arrives after
+              four minutes of tests, bound here it arrives in about ten seconds, before anything
+              is compiled. The failure a developer hits most often should be the one that costs
+              least. `./mvnw spotless:apply` fixes whatever it reports.
+
+              Only src/main/java and src/test/java are in scope — nothing under target/ — so the
+              MapStruct *Impl classes and everything else the annotation processors write stay
+              out of it without needing an exclusion.
+            -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless-maven-plugin.version}</version>
+                <configuration>
+                    <!--
+                      This is a Windows repository: core.autocrlf=true, and a .gitattributes that
+                      pins mvnw to LF and mvnw.cmd to CRLF. Left on a default that disagrees with
+                      git's own normalisation, Spotless reports every file in the project as
+                      needing formatting — on the developer's machine only, never in CI — and the
+                      resulting hunt is long and boring. Deferring to git settles it once.
+                    -->
+                    <lineEndings>GIT_ATTRIBUTES</lineEndings>
+                    <java>
+                        <!--
+                          The Eclipse formatter, driven by eclipse-formatter.xml beside this
+                          POM, and not google-java-format. That was the plan's first choice,
+                          and it was measured before it was believed: AOSP mode rewrote 265 of
+                          290 files and ~10,200 lines, growing the source by 8%. It re-decides
+                          every line break from scratch, and its decisions are not this
+                          codebase's — a three-line orElseThrow became eight, one token per
+                          line down a staircase of indentation. Nothing in that diff was an
+                          improvement, and the plan this implements says in as many words to be
+                          suspicious of an enormous first commit that calls itself value.
+
+                          So: a formatter that enforces indentation, width and whitespace, and
+                          leaves the author's line breaks alone (join_wrapped_lines=false) and
+                          comments entirely untouched. That is 145 files and ~1,350 lines here,
+                          a seventh of the alternative, and all of it indentation rather than
+                          rewritten prose: the wrapped continuation lines this codebase aligned
+                          under an opening paren move to a plain 8-space continuation, and no
+                          comment text is reflowed at all.
+
+                          It is still not nothing, and it is not meant to be a cleanup. What it
+                          buys is the next drive-by edit from a different editor.
+                        -->
+                        <eclipse>
+                            <version>${eclipse-jdt.version}</version>
+                            <file>${project.basedir}/eclipse-formatter.xml</file>
+                        </eclipse>
+                        <removeUnusedImports/>
+                        <trimTrailingWhitespace/>
+                        <endWithNewline/>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check</id>
+                        <phase>validate</phase>
+                        <goals><goal>check</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
