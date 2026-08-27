@@ -241,11 +241,19 @@ never touches each have a named test.
 
 ### Static analysis
 
-Every push is analysed by **SonarQube Cloud** in the same job that runs the tests —
-`./mvnw verify sonar:sonar -Dsonar.qualitygate.wait=true`, in that order, because Sonar reads the
-JaCoCo XML rather than measuring anything itself, and because `qualitygate.wait` is what turns a
-red gate into a red build instead of a red website nobody visits. A failed coverage gate stops the
-build before the upload, so there is no analysis recorded for a commit that was never green.
+Pushes to `dev` and `main`, and every pull request, are analysed by **SonarQube Cloud** in the
+same job that runs the tests — `./mvnw verify sonar:sonar -Dsonar.qualitygate.wait=true`, in that
+order, because Sonar reads the JaCoCo XML rather than measuring anything itself. A failed coverage
+gate stops the build before the upload, so no analysis is ever recorded for a commit that was
+never green, and `qualitygate.wait` is what turns a red gate into a red build rather than a red
+website nobody visits.
+
+Wave branches are built and tested but not analysed, which is a limit of the free plan rather than
+a choice: branch analysis is a paid feature, and a free organisation is refused its own
+non-main-branch data. Uploading an analysis nobody can open buys nothing, and a branch with no
+gate makes `qualitygate.wait` poll for something that does not exist — reported, unhelpfully, as
+"Not authorized or project not found". Feedback before a merge comes from opening a pull request,
+which the free plan does cover.
 
 The coverage badge reads higher than the branch figures quoted above, and both are right: Sonar's
 `coverage` metric counts lines and conditions together (~90 %), while the numbers above are branch
