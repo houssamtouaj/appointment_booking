@@ -31,6 +31,23 @@
         <!-- Not managed by the Boot parent, so pinning it here is the only pin there is. -->
         <jacoco.version>0.8.13</jacoco.version>
 
+        <!-- Static analysis, plan 16. The scanner is invoked by name from CI and is never bound
+             to a phase, so these properties sit unused on a laptop build. -->
+        <sonar-maven-plugin.version>5.7.0.6970</sonar-maven-plugin.version>
+        <sonar.organization>houssamtouaj</sonar.organization>
+        <sonar.projectKey>houssamtouaj_appointment_booking</sonar.projectKey>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <!-- Sonar reports coverage; it never measures it. This names the file the jacoco
+             `report` execution below already writes at `verify`, which is the whole reason the CI
+             command is a single invocation in one fixed order: `verify sonar:sonar`. Point it at a
+             file that is not on disk yet and the dashboard reads 0 % coverage without failing
+             anything, which looks exactly like a testing problem and is not one.
+
+             Relative — resolved against the module base directory — and on one line: the
+             multi-line spelling in Sonar's own documentation relies on the scanner trimming
+             newlines out of the value, and there is nothing to gain from depending on that. -->
+        <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+
         <!-- Empty by design. Two things append to the test JVM's arguments without touching the
              argLine blocks: an ad-hoc `-Dtest.jvm.args.extra=...` for a one-off check, and
              JaCoCo's prepare-agent (`<propertyName>jacocoArgs</propertyName>`). Both need a
@@ -372,6 +389,22 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!--
+              The scanner, plan 16. Declared with no <executions> on purpose: CI calls the goal by
+              name (`./mvnw -B -ntp verify sonar:sonar -Dsonar.qualitygate.wait=true`) and nothing
+              binds it to a lifecycle phase, so `./mvnw verify` on a laptop neither reaches
+              sonarcloud.io nor needs a token. Binding it would make every local build depend on a
+              secret and a network.
+
+              Pinned like everything else here. Unpinned, Maven resolves the newest scanner release
+              on each run, which allows "the analysis changed and no commit did".
+            -->
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>${sonar-maven-plugin.version}</version>
             </plugin>
         </plugins>
     </build>

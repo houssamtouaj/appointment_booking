@@ -37,6 +37,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Not a tuning knob: Sonar decides which lines are "new code" from git blame, and the
+          # default depth-1 clone gives it no history to blame, so it grades either everything or
+          # nothing as new. Both fail silently -- a green run whose gate judged the wrong lines.
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -48,11 +53,26 @@ jobs:
           # it just silently never caches.
           cache-dependency-path: backend/pom.xml
 
-      # Docker is present on ubuntu-latest, so Testcontainers needs no setup step. No secrets
-      # either: the JWT signing key and the bcrypt strength come from the surefire and
-      # failsafe argLine, and Postgres comes from the container.
-      - name: Build and test
-        run: ./mvnw -B -ntp verify
+      # Docker is present on ubuntu-latest, so Testcontainers needs no setup step. The tests
+      # themselves still need no secrets: the JWT signing key and the bcrypt strength come from
+      # the surefire and failsafe argLine, and Postgres comes from the container. SONAR_TOKEN
+      # below is the only one, and it is used by the analysis, not by anything under test.
+      #
+      # One invocation, and the order inside it is load-bearing. `verify` has to finish before
+      # `sonar:sonar` looks for target/site/jacoco/jacoco.xml, and a useful consequence of putting
+      # them in one command is that a failed coverage gate stops the build before anything is
+      # uploaded -- so Sonar never records an analysis for a commit that was never green.
+      #
+      # `sonar.qualitygate.wait=true` is what makes a red gate a red build. Without it the analysis
+      # uploads, the gate fails on the dashboard, and this job reports success.
+      #
+      # SONAR_TOKEN is a repository secret and is absent on pull requests from forks, where this
+      # step therefore fails rather than skipping. Nobody forks this repository; if that changes,
+      # guard the step with `if: env.SONAR_TOKEN != ''` rather than dropping the wait.
+      - name: Build, test and analyse
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./mvnw -B -ntp verify sonar:sonar -Dsonar.qualitygate.wait=true
 
       # Same root-relative rule as cache-dependency-path: an action, not a `run`.
       - name: Upload test reports
