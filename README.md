@@ -1,8 +1,6 @@
 # SlotFlow — Multi-Tenant Appointment & Booking Platform
 
 [![CI](https://github.com/houssamtouaj/appointment_booking/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/houssamtouaj/appointment_booking/actions/workflows/ci.yml)
-[![Quality gate](https://sonarcloud.io/api/project_badges/measure?project=houssamtouaj_appointment_booking&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=houssamtouaj_appointment_booking)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=houssamtouaj_appointment_booking&metric=coverage)](https://sonarcloud.io/component_measures?id=houssamtouaj_appointment_booking&metric=coverage)
 
 **Any service business — clinic, salon, tutor, coach, studio — defines its availability rules
 once and takes online appointments with deposit payments. Multi-tenant, with double booking
@@ -162,8 +160,7 @@ afternoon somebody is in a hurry.
 | Rate limiting | Bucket4j, in-memory, per IP and per guest email |
 | API docs | springdoc-openapi → Swagger UI |
 | Tests | JUnit 5, Testcontainers, MockMvc + spring-security-test, JaCoCo |
-| CI | GitHub Actions — `mvn -B verify sonar:sonar` on every push and PR, one job |
-| Static analysis | SonarQube Cloud, quality gate enforced in CI; coverage read from the JaCoCo XML |
+| CI | GitHub Actions — `mvn -B verify` on every push and PR |
 | Frontend | React 18 + TypeScript + Vite (separate deployable) |
 
 ## Running it locally
@@ -238,46 +235,6 @@ aligned on a `CountDownLatch` race for one slot, and the assertion is on the out
 `201`, one `409` — not on which thread won. **Correct availability:** the DST transition, the
 midnight-crossing shift, the split shift, and the buffer that blocks a slot the appointment itself
 never touches each have a named test.
-
-### Static analysis
-
-Pushes to `dev` and `main`, and every pull request, are analysed by **SonarQube Cloud** in the
-same job that runs the tests — `./mvnw verify sonar:sonar -Dsonar.qualitygate.wait=true`, in that
-order, because Sonar reads the JaCoCo XML rather than measuring anything itself. A failed coverage
-gate stops the build before the upload, so no analysis is ever recorded for a commit that was
-never green, and `qualitygate.wait` is what turns a red gate into a red build rather than a red
-website nobody visits.
-
-Wave branches are built and tested but not analysed, which is a limit of the free plan rather than
-a choice: branch analysis is a paid feature, and a free organisation is refused its own
-non-main-branch data. Uploading an analysis nobody can open buys nothing, and a branch with no
-gate makes `qualitygate.wait` poll for something that does not exist — reported, unhelpfully, as
-"Not authorized or project not found". Feedback before a merge comes from opening a pull request,
-which the free plan does cover.
-
-The coverage badge reads higher than the branch figures quoted above, and both are right: Sonar's
-`coverage` metric counts lines and conditions together (~90 %), while the numbers above are branch
-coverage alone. Neither includes Lombok's generated `equals`/`hashCode`/`toString`/builders, because
-`backend/lombok.config` asks Lombok for the `@Generated` annotation that JaCoCo and Sonar both
-skip. Without it, methods no test calls directly sit in the denominator and the number reads as a
-testing failure rather than the configuration one it is.
-
-The gate is Sonar's default **Clean as You Code**: it grades new and changed code only. On an
-existing codebase that is the difference between a signal and a wall — accumulated debt lands in
-the backlog as information, while anything written from here has to arrive with no new bugs or
-vulnerabilities, hotspots reviewed, ≥ 80 % coverage on the new lines and ≤ 3 % duplication.
-Raising it to an all-code gate is how a gate gets switched off.
-
-Security hotspots are resolved on the dashboard **with a written reason, never with a
-`sonar.exclusions` entry in the POM** — the two that Sonar is right to raise and wrong about here
-are the disabled CSRF filter (stateless API, bearer header everywhere, one `SameSite`-scoped
-cookie under `/api/auth`; the argument is in `SecurityConfig`'s class Javadoc) and the demo
-credentials, which are published a few lines up this file on purpose. An exclusion would hide both
-from the next person to read the project; a reviewed hotspot hands them the reasoning.
-
-Sonar is not a formatter and has no `--fix`, so formatting here is still held by hand. Measured
-across `src`, that is holding: median line 44 characters, p95 99, longest 118, four-space indent
-throughout. If it ever drifts, Spotless is additive and bolts on without touching any of this.
 
 ## Deploying
 

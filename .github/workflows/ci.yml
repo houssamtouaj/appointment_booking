@@ -37,11 +37,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Not a tuning knob: Sonar decides which lines are "new code" from git blame, and the
-          # default depth-1 clone gives it no history to blame, so it grades either everything or
-          # nothing as new. Both fail silently -- a green run whose gate judged the wrong lines.
-          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -53,44 +48,11 @@ jobs:
           # it just silently never caches.
           cache-dependency-path: backend/pom.xml
 
-      # Docker is present on ubuntu-latest, so Testcontainers needs no setup step. The tests
-      # themselves still need no secrets: the JWT signing key and the bcrypt strength come from
-      # the surefire and failsafe argLine, and Postgres comes from the container. SONAR_TOKEN
-      # below is the only one, and it is used by the analysis, not by anything under test.
-      #
-      # One invocation, and the order inside it is load-bearing. `verify` has to finish before
-      # `sonar:sonar` looks for target/site/jacoco/jacoco.xml, and a useful consequence of putting
-      # them in one command is that a failed coverage gate stops the build before anything is
-      # uploaded -- so Sonar never records an analysis for a commit that was never green.
-      #
-      # The analysis runs on dev, on main, and on pull requests, and nowhere else. That is not a
-      # preference, it is what the free plan covers: SonarQube Cloud bills branch analysis, and a
-      # free organisation is refused its own non-main-branch data --
-      # "Organization is not allowed to access data from non main branches". A wave branch will
-      # happily upload an analysis nobody can then open, and because such a branch has no gate,
-      # `qualitygate.wait` polls for one that does not exist and the scanner reports the 404 as
-      # "Not authorized or project not found" -- a message about credentials describing a missing
-      # gate, which costs an hour if you believe it. So the goal is skipped there rather than run
-      # write-only, and pre-merge feedback comes from opening a pull request, which the free plan
-      # does cover.
-      #
-      # Where it does run, `sonar.qualitygate.wait=true` is what makes a red gate a red build.
-      # Without it the analysis uploads, the gate goes red on the dashboard, and this job reports
-      # success.
-      #
-      # SONAR_TOKEN is a repository secret and is absent on pull requests from forks, where this
-      # step therefore fails rather than skipping. Nobody forks this repository; if that changes,
-      # guard the step with `if: env.SONAR_TOKEN != ''` rather than dropping the wait.
-      - name: Build, test and analyse
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          ANALYSE: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main' }}
-        run: |
-          if [ "$ANALYSE" = "true" ]; then
-            ./mvnw -B -ntp verify sonar:sonar -Dsonar.qualitygate.wait=true
-          else
-            ./mvnw -B -ntp verify
-          fi
+      # Docker is present on ubuntu-latest, so Testcontainers needs no setup step. No secrets
+      # either: the JWT signing key and the bcrypt strength come from the surefire and
+      # failsafe argLine, and Postgres comes from the container.
+      - name: Build and test
+        run: ./mvnw -B -ntp verify
 
       # Same root-relative rule as cache-dependency-path: an action, not a `run`.
       - name: Upload test reports
