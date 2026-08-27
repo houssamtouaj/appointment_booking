@@ -711,7 +711,7 @@ class AvailabilityEngineTest {
     }
 
     private static List<WorkingHours> split(String morningFrom, String morningTo,
-                                            String afternoonFrom, String afternoonTo) {
+            String afternoonFrom, String afternoonTo) {
         return List.of(
                 workingHours().forStaff(DANA).on(DayOfWeek.MONDAY)
                         .from(morningFrom).to(morningTo).build(),
@@ -726,12 +726,12 @@ class AvailabilityEngineTest {
     }
 
     private static AvailabilityOverride blockedBetween(UUID staffId, LocalDate date,
-                                                       String from, String to) {
+            String from, String to) {
         return anOverride().forStaff(staffId).on(date).between(from, to).blocked().build();
     }
 
     private static AvailabilityOverride extraBetween(UUID staffId, LocalDate date,
-                                                     String from, String to) {
+            String from, String to) {
         return anOverride().forStaff(staffId).on(date).between(from, to).extra().build();
     }
 

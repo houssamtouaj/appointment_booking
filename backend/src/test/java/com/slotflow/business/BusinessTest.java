@@ -76,7 +76,7 @@ class BusinessTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {-1, 101, 1000})
+    @ValueSource(ints = { -1, 101, 1000 })
     @DisplayName("a percentage outside 0-100 is refused before the database sees it")
     void refusesImpossiblePercentages(int percent) {
         Business business = business();
@@ -95,7 +95,7 @@ class BusinessTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"ab", "has spaces", "under_score", "Ünïcode", "dots.not.allowed"})
+    @ValueSource(strings = { "ab", "has spaces", "under_score", "Ünïcode", "dots.not.allowed" })
     @DisplayName("a slug that would fail the check constraint fails here first")
     void refusesAnUnusableSlug(String slug) {
         assertThatThrownBy(() -> new Business(slug, "Name",

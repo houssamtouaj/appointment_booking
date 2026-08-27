@@ -32,8 +32,7 @@ public final class BookingBuilder {
     private String notes;
     private Instant depositExpiresAt;
 
-    BookingBuilder() {
-    }
+    BookingBuilder() {}
 
     public BookingBuilder forBusiness(Business business) {
         return forBusiness(business.getId());

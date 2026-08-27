@@ -29,7 +29,7 @@ class GuestContactTest {
 
     @ParameterizedTest(name = "phone \"{0}\" becomes null")
     @NullAndEmptySource
-    @ValueSource(strings = {"   ", "\t"})
+    @ValueSource(strings = { "   ", "\t" })
     @DisplayName("a blank phone number is stored as absent, not as an empty string")
     void aBlankPhoneIsNull(String phone) {
         // An empty string in the column would serialise as `"phone": ""` and render as a phone
@@ -46,7 +46,7 @@ class GuestContactTest {
 
     @ParameterizedTest(name = "name \"{0}\"")
     @NullAndEmptySource
-    @ValueSource(strings = {"  "})
+    @ValueSource(strings = { "  " })
     @DisplayName("a booking with nobody's name on it is refused, and the message says which field")
     void theNameIsRequired(String name) {
         assertThatThrownBy(() -> new GuestContact(name, "lea@example.com", null))
@@ -56,7 +56,7 @@ class GuestContactTest {
 
     @ParameterizedTest(name = "email \"{0}\"")
     @NullAndEmptySource
-    @ValueSource(strings = {"  "})
+    @ValueSource(strings = { "  " })
     @DisplayName("a booking with no address is refused: there is nowhere to send the manage link")
     void theEmailIsRequired(String email) {
         assertThatThrownBy(() -> new GuestContact("Léa", email, null))

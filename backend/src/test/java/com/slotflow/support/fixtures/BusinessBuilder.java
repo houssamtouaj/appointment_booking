@@ -19,8 +19,7 @@ public final class BusinessBuilder {
     private boolean depositRequired;
     private int depositPercent;
 
-    BusinessBuilder() {
-    }
+    BusinessBuilder() {}
 
     public BusinessBuilder withSlug(String slug) {
         this.slug = slug;

@@ -114,8 +114,8 @@ class StripeWebhookIT extends PaymentScenario {
         PublicBookingResponse held = bookOk(salon, NINE_AM);
 
         mockMvc.perform(post(WEBHOOK_PATH)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(completed("evt_bare", held.id(), sessionIdOf(held), 1_500L)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(completed("evt_bare", held.id(), sessionIdOf(held), 1_500L)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("WEBHOOK_SIGNATURE_INVALID"));
 
@@ -133,7 +133,7 @@ class StripeWebhookIT extends PaymentScenario {
         // Correctly signed, an hour old. Stripe's tolerance is five minutes, which is what turns a
         // request captured off the wire into one that stops working.
         mockMvc.perform(webhook(payload,
-                        StripeSignatures.signStale(payload, PaymentScenario.WEBHOOK_SECRET)))
+                StripeSignatures.signStale(payload, PaymentScenario.WEBHOOK_SECRET)))
                 .andExpect(status().isBadRequest());
 
         assertThat(bookings.findById(held.id()).orElseThrow().getStatus())
@@ -232,7 +232,7 @@ class StripeWebhookIT extends PaymentScenario {
     // ---------------------------------------------------------------------------------
 
     private static String completed(String eventId, UUID bookingId, String sessionId,
-                                    long amountTotal) {
+            long amountTotal) {
         return event(eventId, "checkout.session.completed", bookingId, sessionId,
                 """
                 , "amount_total": %d, "currency": "eur", "payment_status": "paid"\
@@ -261,7 +261,7 @@ class StripeWebhookIT extends PaymentScenario {
 
     /** The same session, finished but not settled - what a delayed payment method sends first. */
     private static String unpaid(String eventId, UUID bookingId, String sessionId,
-                                 long amountTotal) {
+            long amountTotal) {
         return event(eventId, "checkout.session.completed", bookingId, sessionId,
                 """
                 , "amount_total": %d, "currency": "eur", "payment_status": "unpaid"\
@@ -282,7 +282,7 @@ class StripeWebhookIT extends PaymentScenario {
      * the account's API version and the library's do not agree.
      */
     private static String event(String eventId, String type, UUID bookingId, String sessionId,
-                                String extra) {
+            String extra) {
         return """
                 {"id": "%s",
                  "object": "event",

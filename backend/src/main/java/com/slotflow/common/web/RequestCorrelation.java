@@ -25,8 +25,7 @@ public final class RequestCorrelation {
      */
     private static final int MAX_LENGTH = 64;
 
-    private RequestCorrelation() {
-    }
+    private RequestCorrelation() {}
 
     /** The current request's id, or {@code null} outside a request (a scheduled job). */
     public static String current() {

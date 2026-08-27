@@ -31,11 +31,9 @@ public final class Problems {
      * {@code code} is already doing the wrong thing, but it should at least not see two spellings
      * of the same sentence.
      */
-    public static final String VALIDATION_DETAIL =
-            "The request contains invalid fields. See errors for the details.";
+    public static final String VALIDATION_DETAIL = "The request contains invalid fields. See errors for the details.";
 
-    private Problems() {
-    }
+    private Problems() {}
 
     public static ProblemDetail of(ErrorCode code, String detail) {
         return of(code, code.status(), detail);
@@ -68,11 +66,11 @@ public final class Problems {
      * that called it, so the caller gets Boot's fallback error page instead of the 422 this class
      * exists to guarantee.
      */
-    private static final Comparator<ValidationError> BY_FIELD_THEN_MESSAGE =
-            Comparator.comparing(ValidationError::field,
-                            Comparator.nullsFirst(Comparator.<String>naturalOrder()))
-                    .thenComparing(ValidationError::message,
-                            Comparator.nullsFirst(Comparator.<String>naturalOrder()));
+    private static final Comparator<ValidationError> BY_FIELD_THEN_MESSAGE = Comparator.comparing(
+            ValidationError::field,
+            Comparator.nullsFirst(Comparator.<String>naturalOrder()))
+            .thenComparing(ValidationError::message,
+                    Comparator.nullsFirst(Comparator.<String>naturalOrder()));
 
     /**
      * Sorted, because Hibernate Validator reports violations in an unspecified order and an

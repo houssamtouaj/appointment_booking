@@ -61,14 +61,14 @@ public abstract class CrossTenantTestBase extends ApiIntegrationTest {
      * @param body        JSON for a write, null for a read
      */
     protected record CrossTenantCase(HttpMethod method, String foreignPath, String ownPath,
-                                     String body) {
+            String body) {
 
         public static CrossTenantCase read(String foreignPath, String ownPath) {
             return new CrossTenantCase(HttpMethod.GET, foreignPath, ownPath, null);
         }
 
         public static CrossTenantCase write(HttpMethod method, String foreignPath, String ownPath,
-                                            String body) {
+                String body) {
             return new CrossTenantCase(method, foreignPath, ownPath, body);
         }
 

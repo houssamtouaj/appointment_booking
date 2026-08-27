@@ -25,8 +25,7 @@ import java.util.Locale;
  */
 final class Money {
 
-    private Money() {
-    }
+    private Money() {}
 
     static String format(long minorUnits, Currency currency) {
         NumberFormat format = NumberFormat.getCurrencyInstance(Locale.ENGLISH);

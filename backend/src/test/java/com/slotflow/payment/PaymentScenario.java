@@ -106,7 +106,7 @@ abstract class PaymentScenario extends BookingScenario {
             throws Exception {
         Instant elevenAm = parisTime("2026-03-04T11:00");
         String body = mockMvc.perform(bookRequest(salon.slug(), service.getId(), elevenAm,
-                        salon.dana().getId(), "alex@example.test"))
+                salon.dana().getId(), "alex@example.test"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return json.readValue(body, PublicBookingResponse.class);

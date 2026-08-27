@@ -22,8 +22,8 @@ class AvailabilityOverrideTest {
     @Test
     @DisplayName("a whole-day block is a day off for one staff member")
     void wholeDayBlock() {
-        AvailabilityOverride override =
-                AvailabilityOverride.blockedDay(BUSINESS_ID, STAFF_ID, CHRISTMAS, "Annual leave");
+        AvailabilityOverride override = AvailabilityOverride.blockedDay(BUSINESS_ID, STAFF_ID, CHRISTMAS,
+                "Annual leave");
 
         assertThat(override.isWholeDay()).isTrue();
         assertThat(override.isBlocked()).isTrue();
@@ -35,8 +35,7 @@ class AvailabilityOverrideTest {
     @Test
     @DisplayName("a business-wide closure has no staff id, so it cannot drift as staff change (D5)")
     void businessWideClosure() {
-        AvailabilityOverride closure =
-                AvailabilityOverride.businessWideClosure(BUSINESS_ID, CHRISTMAS, "Closed");
+        AvailabilityOverride closure = AvailabilityOverride.businessWideClosure(BUSINESS_ID, CHRISTMAS, "Closed");
 
         // One row rather than one per staff member. The alternative silently stops covering
         // anybody hired after the closure was entered.
@@ -83,8 +82,7 @@ class AvailabilityOverrideTest {
     @Test
     @DisplayName("one time without the other is refused: it is a bug, never a meaning")
     void halfARangeIsRefused() {
-        AvailabilityOverride override =
-                AvailabilityOverride.blockedDay(BUSINESS_ID, STAFF_ID, CHRISTMAS, null);
+        AvailabilityOverride override = AvailabilityOverride.blockedDay(BUSINESS_ID, STAFF_ID, CHRISTMAS, null);
 
         assertThatThrownBy(() -> override.setTimes(LocalTime.of(9, 0), null))
                 .isInstanceOf(IllegalArgumentException.class);

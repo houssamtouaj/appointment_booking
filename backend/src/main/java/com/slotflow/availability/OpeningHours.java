@@ -31,7 +31,7 @@ import java.util.Map;
  * @param closesNextDay true when the latest end falls on the following date
  */
 public record OpeningHours(DayOfWeek dayOfWeek, LocalTime opensAt, LocalTime closesAt,
-                           boolean closesNextDay) {
+        boolean closesNextDay) {
 
     private static final int MINUTES_PER_DAY = 24 * 60;
 
@@ -52,10 +52,10 @@ public record OpeningHours(DayOfWeek dayOfWeek, LocalTime opensAt, LocalTime clo
         for (WorkingHours range : ranges) {
             int opens = range.startMinuteOfDay();
             int closes = opens + range.durationMinutes();
-            hull.merge(range.getDayOfWeek(), new int[] {opens, closes},
+            hull.merge(range.getDayOfWeek(), new int[] { opens, closes },
                     (existing, candidate) -> new int[] {
                             Math.min(existing[0], candidate[0]),
-                            Math.max(existing[1], candidate[1])});
+                            Math.max(existing[1], candidate[1]) });
         }
 
         List<OpeningHours> week = new ArrayList<>(hull.size());

@@ -113,9 +113,9 @@ public class RateLimiter {
 
     private RateLimitProperties.Limit limitFor(Scope scope) {
         return switch (scope) {
-            case LOGIN -> properties.login();
-            case PUBLIC_WRITE -> properties.publicWrite();
-            case GUEST_BOOKING -> properties.guestBooking();
+        case LOGIN -> properties.login();
+        case PUBLIC_WRITE -> properties.publicWrite();
+        case GUEST_BOOKING -> properties.guestBooking();
         };
     }
 

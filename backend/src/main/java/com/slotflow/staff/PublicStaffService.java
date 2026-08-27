@@ -46,7 +46,7 @@ public class PublicStaffService {
     private final StaffMapper mapper;
 
     public PublicStaffService(BusinessRepository businesses, UserRepository users,
-                              StaffServiceRepository assignments, StaffMapper mapper) {
+            StaffServiceRepository assignments, StaffMapper mapper) {
         this.businesses = businesses;
         this.users = users;
         this.assignments = assignments;

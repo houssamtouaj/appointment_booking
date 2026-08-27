@@ -67,8 +67,8 @@ public class AvailabilityOverride extends AbstractMutableEntity implements Tenan
     private String reason;
 
     private AvailabilityOverride(UUID businessId, UUID staffId, LocalDate date,
-                                 LocalTime startTime, LocalTime endTime,
-                                 OverrideType type, String reason) {
+            LocalTime startTime, LocalTime endTime,
+            OverrideType type, String reason) {
         this.businessId = requireNotNull(businessId, "businessId");
         this.staffId = staffId;
         this.date = requireNotNull(date, "date");
@@ -79,15 +79,15 @@ public class AvailabilityOverride extends AbstractMutableEntity implements Tenan
 
     /** A day off for one staff member. */
     public static AvailabilityOverride blockedDay(UUID businessId, UUID staffId,
-                                                 LocalDate date, String reason) {
+            LocalDate date, String reason) {
         return new AvailabilityOverride(businessId, staffId, date, null, null,
                 OverrideType.BLOCKED, reason);
     }
 
     /** Part of a day blocked out for one staff member: an appointment elsewhere, a long lunch. */
     public static AvailabilityOverride blockedRange(UUID businessId, UUID staffId, LocalDate date,
-                                                    LocalTime startTime, LocalTime endTime,
-                                                    String reason) {
+            LocalTime startTime, LocalTime endTime,
+            String reason) {
         return new AvailabilityOverride(businessId, staffId, date,
                 requireNotNull(startTime, "startTime"), requireNotNull(endTime, "endTime"),
                 OverrideType.BLOCKED, reason);
@@ -95,8 +95,8 @@ public class AvailabilityOverride extends AbstractMutableEntity implements Tenan
 
     /** Extra hours outside the weekly template. Always a range; never a whole day. */
     public static AvailabilityOverride extraHours(UUID businessId, UUID staffId, LocalDate date,
-                                                  LocalTime startTime, LocalTime endTime,
-                                                  String reason) {
+            LocalTime startTime, LocalTime endTime,
+            String reason) {
         return new AvailabilityOverride(businessId, staffId, date,
                 requireNotNull(startTime, "startTime"), requireNotNull(endTime, "endTime"),
                 OverrideType.EXTRA, reason);
@@ -104,7 +104,7 @@ public class AvailabilityOverride extends AbstractMutableEntity implements Tenan
 
     /** The whole business is shut, whoever is on the payroll that day (D5). OWNER-only in plan 08. */
     public static AvailabilityOverride businessWideClosure(UUID businessId, LocalDate date,
-                                                           String reason) {
+            String reason) {
         return new AvailabilityOverride(businessId, null, date, null, null,
                 OverrideType.BLOCKED, reason);
     }
@@ -119,8 +119,8 @@ public class AvailabilityOverride extends AbstractMutableEntity implements Tenan
      * somebody's behalf that they are free — see {@code OverrideService}.
      */
     public static AvailabilityOverride businessWideClosure(UUID businessId, LocalDate date,
-                                                           LocalTime startTime, LocalTime endTime,
-                                                           String reason) {
+            LocalTime startTime, LocalTime endTime,
+            String reason) {
         return new AvailabilityOverride(businessId, null, date,
                 requireNotNull(startTime, "startTime"), requireNotNull(endTime, "endTime"),
                 OverrideType.BLOCKED, reason);

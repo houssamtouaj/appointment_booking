@@ -112,11 +112,11 @@ public interface DashboardRepository extends Repository<Booking, UUID> {
                        OR k.staff_id = CAST(CAST(:staffId AS text) AS uuid))
             """)
     DashboardTotals totals(@Param("businessId") String businessId,
-                           @Param("staffId") String staffId,
-                           @Param("zone") String zone,
-                           @Param("from") String from,
-                           @Param("to") String to,
-                           @Param("now") String now);
+            @Param("staffId") String staffId,
+            @Param("zone") String zone,
+            @Param("from") String from,
+            @Param("to") String to,
+            @Param("now") String now);
 
     /**
      * The next few appointments, whatever range the figures above were asked for.
@@ -138,7 +138,6 @@ public interface DashboardRepository extends Repository<Booking, UUID> {
     List<Booking> findTop5ByBusinessIdAndStatusAndStartsAtGreaterThanEqualOrderByStartsAtAscIdAsc(
             UUID businessId, BookingStatus status, Instant from);
 
-    List<Booking>
-            findTop5ByBusinessIdAndStaffIdAndStatusAndStartsAtGreaterThanEqualOrderByStartsAtAscIdAsc(
+    List<Booking> findTop5ByBusinessIdAndStaffIdAndStatusAndStartsAtGreaterThanEqualOrderByStartsAtAscIdAsc(
             UUID businessId, UUID staffId, BookingStatus status, Instant from);
 }

@@ -28,21 +28,16 @@ import java.time.LocalTime;
 public record OverrideRequest(
 
         @NotNull
-        @Schema(example = "2026-12-25")
-        LocalDate date,
+        @Schema(example = "2026-12-25") LocalDate date,
 
-        @Schema(example = "09:00", type = "string", format = "partial-time")
-        LocalTime startTime,
+        @Schema(example = "09:00", type = "string", format = "partial-time") LocalTime startTime,
 
-        @Schema(example = "13:00", type = "string", format = "partial-time")
-        LocalTime endTime,
+        @Schema(example = "13:00", type = "string", format = "partial-time") LocalTime endTime,
 
-        @NotNull
-        OverrideType type,
+        @NotNull OverrideType type,
 
         @Size(max = 200)
-        @Schema(example = "Public holiday")
-        String reason) {
+        @Schema(example = "Public holiday") String reason) {
 
     boolean isWholeDay() {
         return startTime == null && endTime == null;

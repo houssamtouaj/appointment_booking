@@ -25,11 +25,9 @@ import java.util.UUID;
  */
 public record SlotResponse(
 
-        @Schema(example = "2026-03-02T08:00:00Z")
-        Instant start,
+        @Schema(example = "2026-03-02T08:00:00Z") Instant start,
 
-        @Schema(example = "2026-03-02T09:00:00Z")
-        Instant end,
+        @Schema(example = "2026-03-02T09:00:00Z") Instant end,
 
         List<UUID> staffIds) {
 }

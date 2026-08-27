@@ -29,8 +29,8 @@ import java.util.Set;
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD, ElementType.FIELD, ElementType.ANNOTATION_TYPE,
-        ElementType.CONSTRUCTOR, ElementType.PARAMETER, ElementType.TYPE_USE})
+@Target({ ElementType.METHOD, ElementType.FIELD, ElementType.ANNOTATION_TYPE,
+        ElementType.CONSTRUCTOR, ElementType.PARAMETER, ElementType.TYPE_USE })
 @Constraint(validatedBy = SlotGranularity.Validator.class)
 public @interface SlotGranularity {
 

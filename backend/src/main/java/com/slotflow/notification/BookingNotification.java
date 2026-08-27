@@ -63,12 +63,10 @@ public record BookingNotification(
      * default: the templates are English, and a French build server must not send half a sentence
      * in French.
      */
-    private static final DateTimeFormatter WHEN =
-            DateTimeFormatter.ofPattern("EEE d MMM, HH:mm zzz", Locale.ENGLISH);
+    private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm zzz", Locale.ENGLISH);
 
     /** Same day, so the end needs no date — "until 16:00". */
-    private static final DateTimeFormatter UNTIL =
-            DateTimeFormatter.ofPattern("HH:mm zzz", Locale.ENGLISH);
+    private static final DateTimeFormatter UNTIL = DateTimeFormatter.ofPattern("HH:mm zzz", Locale.ENGLISH);
 
     /** When the appointment starts, in the business's own timezone (D11). */
     public String whenText() {

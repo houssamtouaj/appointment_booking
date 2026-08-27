@@ -338,12 +338,12 @@ class BusinessSettingsIT extends ApiIntegrationTest {
     }
 
     private MockHttpServletRequestBuilder asOwner(MockHttpServletRequestBuilder request,
-                                                  Tenant tenant, String body) {
+            Tenant tenant, String body) {
         return as(request, tenant.owner(), body);
     }
 
     private MockHttpServletRequestBuilder as(MockHttpServletRequestBuilder request, User caller,
-                                             String body) {
+            String body) {
         request.header(HttpHeaders.AUTHORIZATION, bearer(caller));
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);

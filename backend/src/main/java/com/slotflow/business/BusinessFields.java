@@ -20,8 +20,7 @@ import java.util.Locale;
  */
 public final class BusinessFields {
 
-    private BusinessFields() {
-    }
+    private BusinessFields() {}
 
     /**
      * An IANA <em>region</em> id, and nothing else.

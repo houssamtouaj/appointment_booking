@@ -28,6 +28,5 @@ public final class DemoBusiness {
      */
     public static final String OWNER_PASSWORD = "demo1234";
 
-    private DemoBusiness() {
-    }
+    private DemoBusiness() {}
 }

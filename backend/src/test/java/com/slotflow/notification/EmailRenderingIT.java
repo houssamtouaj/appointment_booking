@@ -253,7 +253,7 @@ class EmailRenderingIT extends IntegrationTest {
      * on Spring's internals instead of on the mail.
      */
     private static void collect(Object content, List<String> bodies,
-                                List<MimeBodyPart> attachments) throws Exception {
+            List<MimeBodyPart> attachments) throws Exception {
         if (content instanceof String text) {
             if (bodies != null) {
                 bodies.add(text);

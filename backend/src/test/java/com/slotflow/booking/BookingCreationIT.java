@@ -123,10 +123,9 @@ class BookingCreationIT extends BookingScenario {
 
         // Never 403: an unauthenticated endpoint that distinguished "not yours" from "not there"
         // would be an existence oracle over every service id in the product.
-        ServiceOffering elsewhere =
-                services.save(aService().forBusiness(aTenant().business()).build());
+        ServiceOffering elsewhere = services.save(aService().forBusiness(aTenant().business()).build());
         mockMvc.perform(bookRequest(salon.slug(), elsewhere.getId(), NINE_AM, null,
-                        "alex@example.test"))
+                "alex@example.test"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
     }
@@ -146,7 +145,7 @@ class BookingCreationIT extends BookingScenario {
         ServiceOffering orphan = services.save(aService().forBusiness(salon.tenant().business())
                 .withName("Nobody does this").build());
         mockMvc.perform(bookRequest(salon.slug(), orphan.getId(), NINE_AM, null,
-                        "alex@example.test"))
+                "alex@example.test"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("STAFF_NOT_ASSIGNED"));
     }
@@ -219,7 +218,7 @@ class BookingCreationIT extends BookingScenario {
         Salon salon = aSalon();
 
         mockMvc.perform(bookRequest("no-such-shop", salon.serviceId(), NINE_AM, null,
-                        "alex@example.test"))
+                "alex@example.test"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
 
@@ -292,7 +291,7 @@ class BookingCreationIT extends BookingScenario {
         String body = mockMvc.perform(availabilityRequest(salon, WEDNESDAY))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        return json.readValue(body, new TypeReference<List<SlotResponse>>() {
-        }).stream().map(SlotResponse::start).toList();
+        return json.readValue(body, new TypeReference<List<SlotResponse>>() {}).stream().map(SlotResponse::start)
+                .toList();
     }
 }

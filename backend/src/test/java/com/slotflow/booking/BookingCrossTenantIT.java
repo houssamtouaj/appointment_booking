@@ -96,7 +96,7 @@ class BookingCrossTenantIT extends CrossTenantTestBase {
         Booking foreign = aBookingIn(theirs, TestTime.NOW.plus(Duration.ofDays(2)));
 
         mockMvc.perform(get("/api/bookings/{id}", foreign.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(mine.owner())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(mine.owner())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
                 // Not one field of the row, not even in the message: the point of the 404 is that
@@ -120,7 +120,7 @@ class BookingCrossTenantIT extends CrossTenantTestBase {
 
     private List<String> idsFrom(String query) throws Exception {
         String body = mockMvc.perform(get("/api/bookings" + query)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(mine.owner())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(mine.owner())))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return json.readTree(body).path("content").findValuesAsText("id");

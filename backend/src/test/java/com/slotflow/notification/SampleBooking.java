@@ -21,8 +21,7 @@ import java.util.UUID;
 final class SampleBooking {
 
     static final UUID BOOKING_ID = UUID.fromString("6f1c9b60-8f77-4a4a-9f0e-2b0f2f7a1c11");
-    static final UUID CANCELLATION_TOKEN =
-            UUID.fromString("11111111-2222-3333-4444-555555555555");
+    static final UUID CANCELLATION_TOKEN = UUID.fromString("11111111-2222-3333-4444-555555555555");
 
     /** 13:00 Paris on Wednesday 14 October 2026 — 11:00 UTC, and CEST is still in force. */
     static final Instant STARTS_AT = Instant.parse("2026-10-14T11:00:00Z");

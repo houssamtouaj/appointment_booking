@@ -53,9 +53,9 @@ class StaffAdminIT extends ApiIntegrationTest {
         User staff = aStaffMemberOf(tenant);
 
         mockMvc.perform(patch("/api/staff/" + staff.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(staff))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new UpdateStaffRequest("Sam F. Ferreira", null, null))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(staff))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new UpdateStaffRequest("Sam F. Ferreira", null, null))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.staff.fullName").value("Sam F. Ferreira"))
                 // No deactivation, so no warning member at all — absent rather than null.
@@ -70,9 +70,9 @@ class StaffAdminIT extends ApiIntegrationTest {
         User colleague = aStaffMemberOf(tenant);
 
         mockMvc.perform(patch("/api/staff/" + colleague.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(staff))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new UpdateStaffRequest("Renamed by a peer", null, null))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(staff))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new UpdateStaffRequest("Renamed by a peer", null, null))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
@@ -86,9 +86,9 @@ class StaffAdminIT extends ApiIntegrationTest {
         // Refused rather than silently ignored: dropping half a request is how a client comes to
         // believe something was saved. And this particular half is a privilege escalation.
         mockMvc.perform(patch("/api/staff/" + staff.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(staff))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new UpdateStaffRequest(null, Role.OWNER, null))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(staff))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new UpdateStaffRequest(null, Role.OWNER, null))))
                 .andExpect(status().isForbidden());
 
         assertThat(users.findById(staff.getId()).orElseThrow().getRole()).isEqualTo(Role.STAFF);
@@ -100,9 +100,9 @@ class StaffAdminIT extends ApiIntegrationTest {
         Tenant tenant = aTenant();
 
         mockMvc.perform(patch("/api/staff/" + tenant.owner().getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new UpdateStaffRequest(null, null, false))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new UpdateStaffRequest(null, null, false))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LAST_OWNER"));
 
@@ -117,9 +117,9 @@ class StaffAdminIT extends ApiIntegrationTest {
         // The same hole by another route. A business with no active owner has nobody who can invite
         // one, so this is a state the API must refuse to create rather than one to repair by hand.
         mockMvc.perform(patch("/api/staff/" + tenant.owner().getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new UpdateStaffRequest(null, Role.STAFF, null))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new UpdateStaffRequest(null, Role.STAFF, null))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LAST_OWNER"));
     }
@@ -131,9 +131,9 @@ class StaffAdminIT extends ApiIntegrationTest {
         anotherOwnerOf(tenant);
 
         mockMvc.perform(patch("/api/staff/" + tenant.owner().getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new UpdateStaffRequest(null, null, false))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new UpdateStaffRequest(null, null, false))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.staff.active").value(false));
     }
@@ -145,16 +145,16 @@ class StaffAdminIT extends ApiIntegrationTest {
         User staff = aStaffMemberOf(tenant);
 
         MvcResult session = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new LoginRequest(staff.getEmail(), PASSWORD))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new LoginRequest(staff.getEmail(), PASSWORD))))
                 .andExpect(status().isOk())
                 .andReturn();
         String refreshToken = refreshCookieFrom(session);
 
         mockMvc.perform(patch("/api/staff/" + staff.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new UpdateStaffRequest(null, null, false))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new UpdateStaffRequest(null, null, false))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.staff.active").value(false));
 
@@ -164,8 +164,8 @@ class StaffAdminIT extends ApiIntegrationTest {
                 .as("the week-long session ends now, not at its own expiry")
                 .isZero();
         mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new LoginRequest(staff.getEmail(), PASSWORD))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new LoginRequest(staff.getEmail(), PASSWORD))))
                 .andExpect(status().isUnauthorized());
 
         // The refresh endpoint is also where a deactivation lands for a client that still holds a
@@ -186,8 +186,8 @@ class StaffAdminIT extends ApiIntegrationTest {
                 .andExpect(jsonPath("$.staff.active").value(true));
 
         mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new LoginRequest(staff.getEmail(), PASSWORD))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new LoginRequest(staff.getEmail(), PASSWORD))))
                 .andExpect(status().isOk());
     }
 
@@ -216,13 +216,13 @@ class StaffAdminIT extends ApiIntegrationTest {
         UUID nobody = UUID.randomUUID();
 
         mockMvc.perform(get("/api/staff/" + nobody)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
         mockMvc.perform(patch("/api/staff/" + nobody)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new UpdateStaffRequest("Nobody", null, null))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new UpdateStaffRequest("Nobody", null, null))))
                 .andExpect(status().isNotFound());
     }
 

@@ -83,8 +83,8 @@ public class BookingReminderJob {
     private final Clock clock;
 
     public BookingReminderJob(BookingRepository bookings, BookingNotificationFactory notifications,
-                              NotificationService mail,
-                              PlatformTransactionManager transactionManager, Clock clock) {
+            NotificationService mail,
+            PlatformTransactionManager transactionManager, Clock clock) {
         this.bookings = bookings;
         this.notifications = notifications;
         this.mail = mail;

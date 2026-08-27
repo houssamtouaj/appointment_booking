@@ -38,7 +38,6 @@ import com.slotflow.support.TestTime;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Currency;
@@ -434,24 +433,24 @@ class SchemaMappingIT extends IntegrationTest {
      */
     private UUID insertBookingWithStatus(BookingStatus status) {
         Booking booking = switch (status) {
-            case PENDING -> Booking.awaitingDeposit(business.getId(), service, owner.getId(),
-                    uniqueStart(), guest(), null, NOW.plus(30, ChronoUnit.MINUTES));
-            case CONFIRMED -> newConfirmed();
-            case CANCELLED -> {
-                Booking cancelled = newConfirmed();
-                cancelled.cancel();
-                yield cancelled;
-            }
-            case COMPLETED -> {
-                Booking completed = newConfirmed();
-                completed.complete(completed.getEndsAt());
-                yield completed;
-            }
-            case NO_SHOW -> {
-                Booking noShow = newConfirmed();
-                noShow.markNoShow(noShow.getStartsAt());
-                yield noShow;
-            }
+        case PENDING -> Booking.awaitingDeposit(business.getId(), service, owner.getId(),
+                uniqueStart(), guest(), null, NOW.plus(30, ChronoUnit.MINUTES));
+        case CONFIRMED -> newConfirmed();
+        case CANCELLED -> {
+            Booking cancelled = newConfirmed();
+            cancelled.cancel();
+            yield cancelled;
+        }
+        case COMPLETED -> {
+            Booking completed = newConfirmed();
+            completed.complete(completed.getEndsAt());
+            yield completed;
+        }
+        case NO_SHOW -> {
+            Booking noShow = newConfirmed();
+            noShow.markNoShow(noShow.getStartsAt());
+            yield noShow;
+        }
         };
         return bookings.saveAndFlush(booking).getId();
     }

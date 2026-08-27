@@ -21,8 +21,7 @@ public final class ServiceOfferingBuilder {
     private int bufferAfterMinutes;
     private boolean active = true;
 
-    ServiceOfferingBuilder() {
-    }
+    ServiceOfferingBuilder() {}
 
     public ServiceOfferingBuilder forBusiness(Business business) {
         return forBusiness(business.getId());

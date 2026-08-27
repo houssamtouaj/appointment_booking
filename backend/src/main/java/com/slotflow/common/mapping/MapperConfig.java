@@ -32,5 +32,4 @@ import org.mapstruct.ReportingPolicy;
         unmappedSourcePolicy = ReportingPolicy.IGNORE,
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
         injectionStrategy = InjectionStrategy.CONSTRUCTOR)
-public interface MapperConfig {
-}
+public interface MapperConfig {}

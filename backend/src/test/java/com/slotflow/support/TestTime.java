@@ -24,8 +24,7 @@ public final class TestTime {
      */
     public static final Instant NOW = Instant.parse("2026-03-02T09:00:00Z");
 
-    private TestTime() {
-    }
+    private TestTime() {}
 
     /** For a pure unit test: a clock that does not move. */
     public static Clock fixed() {

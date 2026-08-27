@@ -57,7 +57,7 @@ public class User extends AbstractMutableEntity implements TenantOwned {
     private boolean active;
 
     private User(UUID businessId, String email, String fullName, Role role,
-                 String passwordHash, boolean active) {
+            String passwordHash, boolean active) {
         this.businessId = requireNotNull(businessId, "businessId");
         this.email = normaliseEmail(email);
         this.fullName = requireText(fullName, "fullName");

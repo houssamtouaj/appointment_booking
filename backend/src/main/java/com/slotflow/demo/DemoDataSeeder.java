@@ -118,11 +118,11 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final TransactionTemplate writes;
 
     public DemoDataSeeder(Clock clock, PasswordEncoder passwordEncoder,
-                          BusinessRepository businesses, BookingPolicyRepository policies,
-                          UserRepository users, ServiceOfferingRepository services,
-                          StaffServiceRepository assignments, WorkingHoursRepository workingHours,
-                          AvailabilityOverrideRepository overrides, BookingRepository bookings,
-                          PlatformTransactionManager transactionManager) {
+            BusinessRepository businesses, BookingPolicyRepository policies,
+            UserRepository users, ServiceOfferingRepository services,
+            StaffServiceRepository assignments, WorkingHoursRepository workingHours,
+            AvailabilityOverrideRepository overrides, BookingRepository bookings,
+            PlatformTransactionManager transactionManager) {
         this.clock = clock;
         this.passwordEncoder = passwordEncoder;
         this.businesses = businesses;
@@ -182,7 +182,7 @@ public class DemoDataSeeder implements ApplicationRunner {
      *              by hoping the arithmetic worked out
      */
     private record Staff(User user, List<Shift> shifts, List<LocalTime> slots,
-                         List<Integer> serviceIndexes) {
+            List<Integer> serviceIndexes) {
     }
 
     /** One range of the weekly template. Two rows on the same day is a split shift. */
@@ -245,7 +245,7 @@ public class DemoDataSeeder implements ApplicationRunner {
      * same endpoint scoped to one calendar.
      */
     private User staffMember(Business business, String email, String fullName,
-                             String passwordHash) {
+            String passwordHash) {
         User user = User.invited(business.getId(), email, fullName, Role.STAFF);
         user.acceptInvitation(fullName, passwordHash);
         return user;
@@ -261,7 +261,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     // ---------------------------------------------------------------------------------
 
     private record ServiceSpec(String name, String description, int minutes, long priceCents,
-                               int bufferBefore, int bufferAfter) {
+            int bufferBefore, int bufferAfter) {
     }
 
     /**
@@ -409,7 +409,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private int createBookings(Business business, List<Staff> staff,
-                               List<ServiceOffering> offerings, Closures closures) {
+            List<ServiceOffering> offerings, Closures closures) {
         List<Candidate> candidates = candidates(staff, offerings, closures);
         Instant now = clock.instant();
 
@@ -458,7 +458,7 @@ public class DemoDataSeeder implements ApplicationRunner {
      * because a holiday with appointments in it is the same contradiction wearing a different hat.
      */
     private List<Candidate> candidates(List<Staff> staff, List<ServiceOffering> offerings,
-                                       Closures closures) {
+            Closures closures) {
         LocalDate today = today();
         List<Candidate> candidates = new ArrayList<>();
         int considered = 0;
@@ -477,8 +477,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                         continue;
                     }
                     List<Integer> performs = member.serviceIndexes();
-                    ServiceOffering service =
-                            offerings.get(performs.get(index / ONE_IN % performs.size()));
+                    ServiceOffering service = offerings.get(performs.get(index / ONE_IN % performs.size()));
                     if (fitsInAShift(member, date, slot, service)) {
                         candidates.add(new Candidate(member, service, instantAt(date, slot)));
                     }
@@ -498,7 +497,7 @@ public class DemoDataSeeder implements ApplicationRunner {
      * the zone is applied.
      */
     private static boolean fitsInAShift(Staff staff, LocalDate date, LocalTime start,
-                                        ServiceOffering service) {
+            ServiceOffering service) {
         LocalTime blockedFrom = start.minusMinutes(service.getBufferBeforeMinutes());
         LocalTime blockedTo = start.plusMinutes(
                 service.getDurationMinutes() + service.getBufferAfterMinutes());
@@ -532,7 +531,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private void write(Business business, Candidate candidate, Guest guest, String notes,
-                       Outcome outcome, Instant now) {
+            Outcome outcome, Instant now) {
         Booking booking = Booking.confirmed(business.getId(), candidate.service(),
                 candidate.staff().user().getId(), candidate.startsAt(),
                 new GuestContact(guest.name(), guest.email(), guest.phone()), notes);
@@ -543,18 +542,18 @@ public class DemoDataSeeder implements ApplicationRunner {
         booking.recordDepositPaid(business.depositFor(booking.getPriceCents()));
 
         switch (outcome) {
-            case COMPLETED -> booking.complete(now);
-            case CANCELLED -> booking.cancel();
-            case NO_SHOW -> booking.markNoShow(now);
-            // Stamped as already reminded, which is the one line here that looks like it is doing
-            // the wrong thing. The reminder job runs on a schedule in the deployed demo and mails
-            // every CONFIRMED booking starting within the next day — and these guests do not
-            // exist, so that is a daily handful of bounces charged against the sender reputation
-            // the real confirmation emails depend on. reminder_sent_at is exactly the flag that
-            // makes the job skip a row, using the same idempotency it relies on to survive its own
-            // overlapping window. Reminders are demonstrated by booking with your own address,
-            // which is what the exit demo asks for.
-            case UPCOMING -> booking.markReminderSent(now);
+        case COMPLETED -> booking.complete(now);
+        case CANCELLED -> booking.cancel();
+        case NO_SHOW -> booking.markNoShow(now);
+        // Stamped as already reminded, which is the one line here that looks like it is doing
+        // the wrong thing. The reminder job runs on a schedule in the deployed demo and mails
+        // every CONFIRMED booking starting within the next day — and these guests do not
+        // exist, so that is a daily handful of bounces charged against the sender reputation
+        // the real confirmation emails depend on. reminder_sent_at is exactly the flag that
+        // makes the job skip a row, using the same idempotency it relies on to survive its own
+        // overlapping window. Reminders are demonstrated by booking with your own address,
+        // which is what the exit demo asks for.
+        case UPCOMING -> booking.markReminderSent(now);
         }
         bookings.save(booking);
     }

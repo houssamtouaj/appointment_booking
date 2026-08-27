@@ -42,9 +42,9 @@ import org.springframework.stereotype.Service;
 public class MailNotificationService implements NotificationService {
 
     /** "in 1 hour" / "in 7 days" — the same numbers the TTLs are configured with, spelled out. */
-    private static final DateTimeFormatter EXPIRY =
-            DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm 'UTC'", Locale.ENGLISH)
-                    .withZone(ZoneId.of("UTC"));
+    private static final DateTimeFormatter EXPIRY = DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm 'UTC'",
+            Locale.ENGLISH)
+            .withZone(ZoneId.of("UTC"));
 
     private final EmailSender mail;
     private final FrontendLinks links;
@@ -74,7 +74,7 @@ public class MailNotificationService implements NotificationService {
     @Override
     @Async
     public void sendStaffInvitation(Recipient recipient, String businessName, String rawToken,
-                                    Instant expiresAt) {
+            Instant expiresAt) {
         mail.send("staff-invitation", "You have been invited to join " + businessName, recipient,
                 model(recipient,
                         "businessName", businessName,

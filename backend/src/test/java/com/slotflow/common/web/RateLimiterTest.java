@@ -43,8 +43,7 @@ class RateLimiterTest {
         RateLimiter limiter = limiterAllowing(ONE_A_MINUTE);
         limiter.tryConsume(RateLimiter.Scope.GUEST_BOOKING, "alex@example.test");
 
-        RateLimiter.Decision refused =
-                limiter.tryConsume(RateLimiter.Scope.GUEST_BOOKING, "alex@example.test");
+        RateLimiter.Decision refused = limiter.tryConsume(RateLimiter.Scope.GUEST_BOOKING, "alex@example.test");
 
         assertThat(refused.allowed()).isFalse();
         assertThat(refused.retryAfterSeconds())

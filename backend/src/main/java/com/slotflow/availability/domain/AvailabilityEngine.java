@@ -60,8 +60,7 @@ import java.util.UUID;
  */
 public final class AvailabilityEngine {
 
-    private AvailabilityEngine() {
-    }
+    private AvailabilityEngine() {}
 
     /**
      * Every bookable start in the range, ascending, each carrying the staff who could serve it.
@@ -89,8 +88,7 @@ public final class AvailabilityEngine {
         }
 
         List<Slot> slots = new ArrayList<>(byStart.size());
-        byStart.forEach((start, staffIds) ->
-                slots.add(Slot.of(start, query.durationMinutes(), staffIds)));
+        byStart.forEach((start, staffIds) -> slots.add(Slot.of(start, query.durationMinutes(), staffIds)));
         return List.copyOf(slots);
     }
 
@@ -148,7 +146,7 @@ public final class AvailabilityEngine {
     // ---------------------------------------------------------------------------------
 
     private static List<Instant> startsFor(AvailabilityQuery.StaffSchedule schedule,
-                                           List<LocalDate> dates, AvailabilityQuery query) {
+            List<LocalDate> dates, AvailabilityQuery query) {
         ZoneId zone = query.businessZone();
 
         // Steps 1 and 2, over the whole scanned span at once rather than day by day. Coalescing
@@ -173,8 +171,7 @@ public final class AvailabilityEngine {
             addOverrideWindows(cuts, schedule.overrides(), date, zone, OverrideKind.BLOCKED);
         }
 
-        List<TimeWindow> bookable =
-                TimeWindow.subtractAll(TimeWindow.normalize(open), TimeWindow.normalize(cuts));
+        List<TimeWindow> bookable = TimeWindow.subtractAll(TimeWindow.normalize(open), TimeWindow.normalize(cuts));
 
         List<Instant> starts = new ArrayList<>();
         for (TimeWindow window : bookable) {
@@ -197,7 +194,7 @@ public final class AvailabilityEngine {
         long bufferBeforeSeconds = query.bufferBeforeMinutes() * 60L;
         long blockSeconds = query.totalBlockMinutes() * 60L;
 
-        for (Instant start = window.start(); ; start = start.plusSeconds(stepSeconds)) {
+        for (Instant start = window.start();; start = start.plusSeconds(stepSeconds)) {
             Instant blockedFrom = start.minusSeconds(bufferBeforeSeconds);
             Instant blockedTo = blockedFrom.plusSeconds(blockSeconds);
             if (blockedTo.isAfter(window.end())) {
@@ -226,7 +223,7 @@ public final class AvailabilityEngine {
     // ---------------------------------------------------------------------------------
 
     private static void addWorkingWindows(List<TimeWindow> into, List<WorkingHours> template,
-                                          LocalDate date, ZoneId zone) {
+            LocalDate date, ZoneId zone) {
         for (WorkingHours row : template) {
             if (row.getDayOfWeek() != date.getDayOfWeek()) {
                 continue;
@@ -242,8 +239,8 @@ public final class AvailabilityEngine {
     }
 
     private static void addOverrideWindows(List<TimeWindow> into,
-                                           List<AvailabilityOverride> overrides,
-                                           LocalDate date, ZoneId zone, OverrideKind kind) {
+            List<AvailabilityOverride> overrides,
+            LocalDate date, ZoneId zone, OverrideKind kind) {
         for (AvailabilityOverride override : overrides) {
             if (!date.equals(override.getDate())
                     || override.isBlocked() != (kind == OverrideKind.BLOCKED)) {
@@ -281,7 +278,7 @@ public final class AvailabilityEngine {
      * {@code IllegalArgumentException} thrown from inside a GET somebody typed a date into.
      */
     private static void addWindow(List<TimeWindow> into, LocalDate startDate, LocalTime startTime,
-                                  LocalDate endDate, LocalTime endTime, ZoneId zone) {
+            LocalDate endDate, LocalTime endTime, ZoneId zone) {
         Instant start = ZonedDateTime.of(startDate, startTime, zone).toInstant();
         Instant end = ZonedDateTime.of(endDate, endTime, zone).toInstant();
         if (start.isBefore(end)) {

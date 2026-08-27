@@ -44,12 +44,12 @@ class NotificationDispatcher {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void send(NotificationRequest request) {
         switch (request) {
-            case NotificationRequest.PasswordReset reset -> notifications.sendPasswordReset(
-                    reset.recipient(), reset.rawToken(), reset.expiresAt());
-            case NotificationRequest.StaffInvitation invitation ->
-                    notifications.sendStaffInvitation(invitation.recipient(),
-                            invitation.businessName(), invitation.rawToken(),
-                            invitation.expiresAt());
+        case NotificationRequest.PasswordReset reset -> notifications.sendPasswordReset(
+                reset.recipient(), reset.rawToken(), reset.expiresAt());
+        case NotificationRequest.StaffInvitation invitation ->
+                notifications.sendStaffInvitation(invitation.recipient(),
+                        invitation.businessName(), invitation.rawToken(),
+                        invitation.expiresAt());
         }
     }
 }

@@ -98,13 +98,13 @@ class DemoSeedIT extends DemoProfileTest {
         // Buffers are invisible in a screenshot unless something uses them, so a seed with none is
         // a seed that quietly stops demonstrating D4.
         assertThat(catalogue).filteredOn(service -> service.totalBlockMinutes()
-                        > service.getDurationMinutes())
+                > service.getDurationMinutes())
                 .as("services with a non-zero buffer")
                 .hasSizeGreaterThanOrEqualTo(2);
         // Every service is performable by somebody, or the booking flow dead-ends on step two.
         assertThat(catalogue).allSatisfy(service -> assertThat(
-                        assignments.findBookableStaffIdsForService(
-                                service.getId(), business.getId()))
+                assignments.findBookableStaffIdsForService(
+                        service.getId(), business.getId()))
                 .as("staff who can perform %s", service.getName())
                 .isNotEmpty());
     }
@@ -243,7 +243,7 @@ class DemoSeedIT extends DemoProfileTest {
                     .as("a booking on %s, which is closed", date)
                     .noneMatch(closure -> closure.getDate().equals(date)
                             && (closure.isBusinessWide()
-                                || closure.getStaffId().equals(booking.getStaffId())));
+                                    || closure.getStaffId().equals(booking.getStaffId())));
         });
     }
 
@@ -288,9 +288,9 @@ class DemoSeedIT extends DemoProfileTest {
         // three-week history — so the range is the whole seeded window, which is what the demo's
         // own date picker would be set to.
         mockMvc.perform(get("/api/dashboard/stats")
-                        .param("from", today().minusDays(21).toString())
-                        .param("to", today().plusDays(14).toString())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(owner)))
+                .param("from", today().minusDays(21).toString())
+                .param("to", today().plusDays(14).toString())
+                .header(HttpHeaders.AUTHORIZATION, bearer(owner)))
                 .andExpect(status().isOk())
                 // An empty dashboard is the single most common way a portfolio demo falls flat, so
                 // these are greater-than-zero assertions rather than exact ones: the figures move
@@ -315,8 +315,7 @@ class DemoSeedIT extends DemoProfileTest {
      */
     private List<Booking> seededBookings() {
         UUID businessId = demoBusiness().getId();
-        Specification<Booking> ofDemo =
-                (root, query, builder) -> builder.equal(root.get("businessId"), businessId);
+        Specification<Booking> ofDemo = (root, query, builder) -> builder.equal(root.get("businessId"), businessId);
         return bookings.findAll(ofDemo);
     }
 

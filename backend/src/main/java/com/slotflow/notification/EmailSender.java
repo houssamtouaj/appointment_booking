@@ -68,7 +68,7 @@ class EmailSender {
     }
 
     void send(String template, String subject, Recipient to, Map<String, Object> model,
-              String reference) {
+            String reference) {
         send(template, subject, to, model, reference, null);
     }
 
@@ -78,7 +78,7 @@ class EmailSender {
      *                  with no subject
      */
     void send(String template, String subject, Recipient to, Map<String, Object> model,
-              String reference, Attachment attachment) {
+            String reference, Attachment attachment) {
         MimeMessage message;
         try {
             message = compose(template, subject, to, model, attachment);
@@ -95,7 +95,7 @@ class EmailSender {
 
     /** @return whether it went out; a false has already been logged */
     private boolean deliver(MimeMessage message, String template, String reference,
-                            boolean lastAttempt) {
+            boolean lastAttempt) {
         try {
             transport.send(message);
             return true;
@@ -111,7 +111,7 @@ class EmailSender {
     }
 
     private MimeMessage compose(String template, String subject, Recipient to,
-                                Map<String, Object> model, Attachment attachment)
+            Map<String, Object> model, Attachment attachment)
             throws MessagingException {
         Context context = new Context();
         context.setVariables(model);

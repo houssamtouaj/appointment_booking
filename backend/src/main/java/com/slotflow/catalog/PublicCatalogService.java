@@ -29,7 +29,7 @@ public class PublicCatalogService {
     private final CatalogMapper mapper;
 
     public PublicCatalogService(BusinessRepository businesses,
-                               ServiceOfferingRepository services, CatalogMapper mapper) {
+            ServiceOfferingRepository services, CatalogMapper mapper) {
         this.businesses = businesses;
         this.services = services;
         this.mapper = mapper;

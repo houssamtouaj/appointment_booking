@@ -78,8 +78,8 @@ public class StripeWebhookService {
     private final Clock clock;
 
     public StripeWebhookService(StripeEventRepository events, BookingRepository bookings,
-                                StripeProperties properties, ApplicationEventPublisher publisher,
-                                ObjectMapper json, Clock clock) {
+            StripeProperties properties, ApplicationEventPublisher publisher,
+            ObjectMapper json, Clock clock) {
         this.events = events;
         this.bookings = bookings;
         this.properties = properties;
@@ -102,14 +102,14 @@ public class StripeWebhookService {
         record(event, bookingId);
 
         switch (event.getType()) {
-            case CHECKOUT_COMPLETED -> confirm(bookingId, session);
-            case CHECKOUT_EXPIRED -> release(bookingId);
-            // Recorded as seen and ignored. Stripe sends whatever the account is subscribed to, and
-            // the subscription is configured outside this repository — so an unfamiliar type is a
-            // routine event and not an error. Answering anything but 200 would have Stripe retry it
-            // for three days.
-            default -> log.debug("Ignoring Stripe event {} of type {}", event.getId(),
-                    event.getType());
+        case CHECKOUT_COMPLETED -> confirm(bookingId, session);
+        case CHECKOUT_EXPIRED -> release(bookingId);
+        // Recorded as seen and ignored. Stripe sends whatever the account is subscribed to, and
+        // the subscription is configured outside this repository — so an unfamiliar type is a
+        // routine event and not an error. Answering anything but 200 would have Stripe retry it
+        // for three days.
+        default -> log.debug("Ignoring Stripe event {} of type {}", event.getId(),
+                event.getType());
         }
     }
 

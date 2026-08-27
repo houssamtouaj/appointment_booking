@@ -51,8 +51,7 @@ public record DashboardStatsResponse(
          */
         @JsonInclude(JsonInclude.Include.ALWAYS)
         @Schema(example = "0.043", nullable = true,
-                description = "null when there are no completed or no-show appointments in range")
-        Double noShowRate,
+                description = "null when there are no completed or no-show appointments in range") Double noShowRate,
 
         List<BookingSummaryResponse> upcoming) {
 
@@ -67,7 +66,7 @@ public record DashboardStatsResponse(
     private static final int RATE_SCALE = 4;
 
     static DashboardStatsResponse of(DashboardTotals totals,
-                                     List<BookingSummaryResponse> upcoming) {
+            List<BookingSummaryResponse> upcoming) {
         return new DashboardStatsResponse(
                 totals.getTodayBookings(),
                 totals.getWeekBookings(),

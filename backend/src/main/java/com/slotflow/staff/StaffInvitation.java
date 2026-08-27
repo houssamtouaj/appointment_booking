@@ -49,7 +49,7 @@ public class StaffInvitation extends AbstractEntity {
     private Instant usedAt;
 
     public StaffInvitation(UUID businessId, UUID userId, String email,
-                           String tokenHash, Instant expiresAt) {
+            String tokenHash, Instant expiresAt) {
         this.businessId = businessId;
         this.userId = userId;
         this.email = User.normaliseEmail(email);

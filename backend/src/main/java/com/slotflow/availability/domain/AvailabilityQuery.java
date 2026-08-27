@@ -83,7 +83,7 @@ public record AvailabilityQuery(
      *                     bookings
      */
     public record StaffSchedule(UUID staffId, List<WorkingHours> workingHours,
-                                List<AvailabilityOverride> overrides, List<TimeWindow> busy) {
+            List<AvailabilityOverride> overrides, List<TimeWindow> busy) {
 
         public StaffSchedule {
             requireNotNull(staffId, "staffId");

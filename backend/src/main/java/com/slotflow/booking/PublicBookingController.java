@@ -61,7 +61,7 @@ public class PublicBookingController {
                     requests arrive in the same millisecond. A 422 means the start was never on \
                     offer, and refetching will not change that.""")
     public PublicBookingResponse book(@PathVariable String slug,
-                                      @Valid @RequestBody BookingRequest request) {
+            @Valid @RequestBody BookingRequest request) {
         return bookings.create(slug, request);
     }
 

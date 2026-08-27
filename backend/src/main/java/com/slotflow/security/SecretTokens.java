@@ -34,8 +34,7 @@ public final class SecretTokens {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
 
-    private SecretTokens() {
-    }
+    private SecretTokens() {}
 
     /** The value handed to the client — in a cookie or in an emailed link — and never stored. */
     public static String random() {

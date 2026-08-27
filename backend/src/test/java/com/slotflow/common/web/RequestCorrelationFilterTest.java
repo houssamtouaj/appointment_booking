@@ -75,8 +75,8 @@ class RequestCorrelationFilterTest {
     void bindsAndUnbindsTheMdc() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/services");
         request.addHeader(RequestCorrelation.HEADER, "inside-the-request");
-        FilterChain assertingChain = (req, res) ->
-                assertThat(RequestCorrelation.current()).isEqualTo("inside-the-request");
+        FilterChain assertingChain = (req, res) -> assertThat(RequestCorrelation.current()).isEqualTo(
+                "inside-the-request");
 
         filter.doFilter(request, new MockHttpServletResponse(), assertingChain);
 

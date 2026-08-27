@@ -80,15 +80,15 @@ class BookingLifecycleIT extends BookingScenario {
      */
     private static boolean isAllowed(BookingStatus from, BookingStatus to) {
         return switch (to) {
-            case CANCELLED -> from != BookingStatus.CANCELLED && from != BookingStatus.COMPLETED;
-            case COMPLETED -> from == BookingStatus.CONFIRMED || from == BookingStatus.NO_SHOW;
-            case NO_SHOW -> from == BookingStatus.CONFIRMED;
-            case CONFIRMED, PENDING -> false;
+        case CANCELLED -> from != BookingStatus.CANCELLED && from != BookingStatus.COMPLETED;
+        case COMPLETED -> from == BookingStatus.CONFIRMED || from == BookingStatus.NO_SHOW;
+        case NO_SHOW -> from == BookingStatus.CONFIRMED;
+        case CONFIRMED, PENDING -> false;
         };
     }
 
     private void assertTransition(Salon salon, BookingStatus from, BookingStatus to,
-                                  Instant startsAt, boolean allowed) throws Exception {
+            Instant startsAt, boolean allowed) throws Exception {
         Booking booking = bookingIn(salon, from, startsAt);
         ResultActions result = patchStatus(salon, booking, to);
 
@@ -189,14 +189,14 @@ class BookingLifecycleIT extends BookingScenario {
         Booking booking = bookingIn(salon, BookingStatus.CONFIRMED, pastSlot(40));
 
         mockMvc.perform(get("/api/bookings/{id}", booking.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(salon.sam())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(salon.sam())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.guest.email").value("alex@example.test"));
 
         mockMvc.perform(patch("/api/bookings/{id}/status", booking.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(salon.sam()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\": \"COMPLETED\"}"))
+                .header(HttpHeaders.AUTHORIZATION, bearer(salon.sam()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\": \"COMPLETED\"}"))
                 .andExpect(status().isOk());
     }
 
@@ -207,9 +207,9 @@ class BookingLifecycleIT extends BookingScenario {
         Booking booking = bookingIn(salon, BookingStatus.CONFIRMED, pastSlot(50));
 
         mockMvc.perform(patch("/api/bookings/{id}/status", booking.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(salon.dana()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\": \"RESCHEDULED\"}"))
+                .header(HttpHeaders.AUTHORIZATION, bearer(salon.dana()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\": \"RESCHEDULED\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
     }
@@ -231,10 +231,11 @@ class BookingLifecycleIT extends BookingScenario {
                         .build();
         Instant afterwards = startsAt.plus(Duration.ofHours(3));
         switch (status) {
-            case PENDING, CONFIRMED -> { }
-            case CANCELLED -> booking.cancel();
-            case COMPLETED -> booking.complete(afterwards);
-            case NO_SHOW -> booking.markNoShow(afterwards);
+        case PENDING, CONFIRMED -> {
+        }
+        case CANCELLED -> booking.cancel();
+        case COMPLETED -> booking.complete(afterwards);
+        case NO_SHOW -> booking.markNoShow(afterwards);
         }
         return bookings.save(booking);
     }

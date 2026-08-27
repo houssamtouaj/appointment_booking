@@ -165,8 +165,7 @@ public class AuthController {
     // ---------------------------------------------------------------------------------
 
     private ResponseEntity<AuthResponse> withRefreshCookie(HttpStatus status, AuthSession session) {
-        ResponseCookie cookie =
-                refreshCookie.set(session.refreshToken(), session.refreshTokenTtl());
+        ResponseCookie cookie = refreshCookie.set(session.refreshToken(), session.refreshTokenTtl());
         return ResponseEntity.status(status)
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .body(session.tokens());

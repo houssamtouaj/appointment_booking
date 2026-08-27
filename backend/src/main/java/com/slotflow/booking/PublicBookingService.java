@@ -91,10 +91,10 @@ public class PublicBookingService {
     private final Clock clock;
 
     public PublicBookingService(BusinessRepository businesses, ServiceOfferingRepository services,
-                                BookingPolicyRepository policies, BookingRepository bookings,
-                                AvailabilityService availability, RateLimiter rateLimiter,
-                                PaymentProperties payments, DepositService deposits,
-                                ApplicationEventPublisher events, Clock clock) {
+            BookingPolicyRepository policies, BookingRepository bookings,
+            AvailabilityService availability, RateLimiter rateLimiter,
+            PaymentProperties payments, DepositService deposits,
+            ApplicationEventPublisher events, Clock clock) {
         this.businesses = businesses;
         this.services = services;
         this.policies = policies;
@@ -288,7 +288,7 @@ public class PublicBookingService {
      * 11:00" rather than "no".
      */
     private static void rejectOutsidePolicyWindow(BookingPolicy policy, Instant startsAt,
-                                                  Instant now) {
+            Instant now) {
         Instant earliest = policy.earliestBookableAt(now);
         if (startsAt.isBefore(earliest)) {
             throw new ApiException(ErrorCode.POLICY_LEAD_TIME,
@@ -311,7 +311,7 @@ public class PublicBookingService {
      * order matters — taken first, because that is the only refusal a client can do something about.
      */
     private UUID chooseStaff(SlotVerdict verdict, Business business, ServiceOffering service,
-                             BookingPolicy policy, Instant startsAt, UUID requestedStaffId) {
+            BookingPolicy policy, Instant startsAt, UUID requestedStaffId) {
         if (verdict.isBookable()) {
             return verdict.preferredStaff().orElseThrow();
         }
@@ -364,8 +364,7 @@ public class PublicBookingService {
      * endpoint, versus one address hoarding slots across a botnet.
      */
     private void enforceGuestBudget(String email) {
-        RateLimiter.Decision decision =
-                rateLimiter.tryConsume(RateLimiter.Scope.GUEST_BOOKING, email);
+        RateLimiter.Decision decision = rateLimiter.tryConsume(RateLimiter.Scope.GUEST_BOOKING, email);
         if (!decision.allowed()) {
             throw new ApiException(ErrorCode.RATE_LIMITED,
                     "Too many bookings from this email address. Try again in %d second(s)."
@@ -409,7 +408,7 @@ public class PublicBookingService {
     @FunctionalInterface
     private interface Renderer {
         PublicBookingResponse render(Booking booking, Business business, BookingPolicy policy,
-                                     Instant now);
+                Instant now);
     }
 
     /** D2, gated by the feature flag: with payments off, nothing is ever created {@code PENDING}. */

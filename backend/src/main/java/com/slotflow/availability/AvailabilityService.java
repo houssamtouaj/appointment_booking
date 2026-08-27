@@ -96,10 +96,10 @@ public class AvailabilityService {
     private final Clock clock;
 
     public AvailabilityService(BusinessRepository businesses, ServiceOfferingRepository services,
-                               BookingPolicyRepository policies, StaffServiceRepository assignments,
-                               WorkingHoursRepository workingHours,
-                               AvailabilityOverrideRepository overrides,
-                               BookingRepository bookings, Clock clock) {
+            BookingPolicyRepository policies, StaffServiceRepository assignments,
+            WorkingHoursRepository workingHours,
+            AvailabilityOverrideRepository overrides,
+            BookingRepository bookings, Clock clock) {
         this.businesses = businesses;
         this.services = services;
         this.policies = policies;
@@ -124,7 +124,7 @@ public class AvailabilityService {
      */
     @Transactional(readOnly = true)
     public List<SlotResponse> slots(String slug, UUID serviceId, LocalDate from, LocalDate to,
-                                    String customerZone, UUID staffId) {
+            String customerZone, UUID staffId) {
         Business business = businesses.findByPublicSlug(slug)
                 .orElseThrow(() -> new EntityNotFoundException("no business with slug " + slug));
         ServiceOffering service = services.findByIdAndBusinessId(serviceId, business.getId())
@@ -189,7 +189,7 @@ public class AvailabilityService {
      */
     @Transactional(readOnly = true)
     public SlotVerdict verify(Business business, ServiceOffering service, BookingPolicy policy,
-                              Instant startsAt, UUID staffId) {
+            Instant startsAt, UUID staffId) {
         List<UUID> candidates = candidateStaff(business.getId(), service.getId(), staffId);
         if (candidates.isEmpty()) {
             return SlotVerdict.nobody();
@@ -271,7 +271,7 @@ public class AvailabilityService {
      * the scanner cannot come to disagree about it.
      */
     private LoadedCalendar load(Business business, ServiceOffering service, BookingPolicy policy,
-                                TimeWindow range, List<UUID> candidates) {
+            TimeWindow range, List<UUID> candidates) {
         ZoneId businessZone = business.getTimezone();
         List<LocalDate> scanned = AvailabilityEngine.datesToScan(range, businessZone);
         TimeWindow loadWindow = AvailabilityEngine.loadWindow(range, businessZone);

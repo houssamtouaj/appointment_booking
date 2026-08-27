@@ -51,7 +51,7 @@ public class BookingAdminService {
     private final Clock clock;
 
     public BookingAdminService(BookingRepository bookings, TenantContext tenant,
-                               ApplicationEventPublisher events, Clock clock) {
+            ApplicationEventPublisher events, Clock clock) {
         this.bookings = bookings;
         this.tenant = tenant;
         this.events = events;
@@ -76,7 +76,7 @@ public class BookingAdminService {
      */
     @Transactional(readOnly = true)
     public PageResponse<BookingSummaryResponse> list(Instant from, Instant to, BookingStatus status,
-                                                     UUID staffId, Pageable pageable) {
+            UUID staffId, Pageable pageable) {
         Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), BY_START);
         Page<Booking> page = bookings.findAll(
                 BookingSpecifications.ofBusiness(tenant.businessId(), from, to, status, staffId),
@@ -117,17 +117,17 @@ public class BookingAdminService {
         Instant now = clock.instant();
 
         switch (target) {
-            case CANCELLED -> booking.cancel();
-            case COMPLETED -> booking.complete(now);
-            case NO_SHOW -> booking.markNoShow(now);
-            // D2. PENDING means one thing — a deposit is in flight — and CONFIRMED is what the
-            // webhook or the absence of a deposit produces. Neither is a button, so both are
-            // refused here whatever the current status, in the same 409 shape as the rest of the
-            // matrix rather than as a 400 about an unknown value.
-            case CONFIRMED -> throw new IllegalBookingTransitionException(from, target,
-                    "a deposit confirms a booking, staff do not");
-            case PENDING -> throw new IllegalBookingTransitionException(from, target,
-                    "only a deposit going out puts a booking on hold");
+        case CANCELLED -> booking.cancel();
+        case COMPLETED -> booking.complete(now);
+        case NO_SHOW -> booking.markNoShow(now);
+        // D2. PENDING means one thing — a deposit is in flight — and CONFIRMED is what the
+        // webhook or the absence of a deposit produces. Neither is a button, so both are
+        // refused here whatever the current status, in the same 409 shape as the rest of the
+        // matrix rather than as a 400 about an unknown value.
+        case CONFIRMED -> throw new IllegalBookingTransitionException(from, target,
+                "a deposit confirms a booking, staff do not");
+        case PENDING -> throw new IllegalBookingTransitionException(from, target,
+                "only a deposit going out puts a booking on hold");
         }
 
         bookings.save(booking);

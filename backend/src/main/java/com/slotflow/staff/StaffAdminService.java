@@ -65,12 +65,12 @@ public class StaffAdminService {
     private final Clock clock;
 
     public StaffAdminService(UserRepository users, BusinessRepository businesses,
-                             StaffInvitationRepository invitations,
-                             StaffServiceRepository assignments, BookingRepository bookings,
-                             RefreshTokenService refreshTokens,
-                             ApplicationEventPublisher notifications,
-                             StaffMapper mapper, TenantContext tenant,
-                             AuthProperties properties, Clock clock) {
+            StaffInvitationRepository invitations,
+            StaffServiceRepository assignments, BookingRepository bookings,
+            RefreshTokenService refreshTokens,
+            ApplicationEventPublisher notifications,
+            StaffMapper mapper, TenantContext tenant,
+            AuthProperties properties, Clock clock) {
         this.users = users;
         this.businesses = businesses;
         this.invitations = invitations;

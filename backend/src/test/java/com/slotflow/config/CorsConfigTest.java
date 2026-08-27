@@ -39,7 +39,7 @@ class CorsConfigTest {
     }
 
     @ParameterizedTest(name = "\"{0}\" is refused")
-    @ValueSource(strings = {"*", "https://*.vercel.app", "http://localhost:5173,*"})
+    @ValueSource(strings = { "*", "https://*.vercel.app", "http://localhost:5173,*" })
     @DisplayName("a wildcard fails startup rather than every preflight")
     void wildcardsAreRefused(String origins) {
         // The message has to name the variable a deployer typed, not the Spring property it lands

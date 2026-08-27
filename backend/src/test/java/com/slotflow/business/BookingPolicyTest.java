@@ -136,7 +136,7 @@ class BookingPolicyTest {
     }
 
     private static BookingPolicy policy(int leadHours, int advanceDays, int cutoffHours,
-                                        int granularityMinutes) {
+            int granularityMinutes) {
         return new BookingPolicy(BUSINESS_ID, leadHours, advanceDays, cutoffHours,
                 granularityMinutes);
     }

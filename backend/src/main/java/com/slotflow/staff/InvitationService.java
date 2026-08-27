@@ -7,7 +7,6 @@ import com.slotflow.common.error.ErrorCode;
 import com.slotflow.security.SecretTokens;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.Clock;
-import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -56,8 +55,8 @@ public class InvitationService {
     private final TransactionTemplate writes;
 
     public InvitationService(StaffInvitationRepository invitations, UserRepository users,
-                             BusinessRepository businesses, PasswordEncoder passwordEncoder,
-                             Clock clock, PlatformTransactionManager transactionManager) {
+            BusinessRepository businesses, PasswordEncoder passwordEncoder,
+            Clock clock, PlatformTransactionManager transactionManager) {
         this.invitations = invitations;
         this.users = users;
         this.businesses = businesses;

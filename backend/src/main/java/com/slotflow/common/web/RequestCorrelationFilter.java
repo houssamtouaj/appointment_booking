@@ -32,7 +32,7 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain chain) throws ServletException, IOException {
+            FilterChain chain) throws ServletException, IOException {
         String requestId = RequestCorrelation.sanitiseOrGenerate(
                 request.getHeader(RequestCorrelation.HEADER));
         RequestCorrelation.bind(requestId);

@@ -40,28 +40,21 @@ import java.util.UUID;
 public record ServiceRequest(
 
         @NotBlank @Size(min = 2, max = 120)
-        @Schema(example = "Deep tissue massage")
-        String name,
+        @Schema(example = "Deep tissue massage") String name,
 
-        @Size(max = 2000)
-        String description,
+        @Size(max = 2000) String description,
 
         @NotNull @ServiceDuration
-        @Schema(example = "60")
-        Integer durationMinutes,
+        @Schema(example = "60") Integer durationMinutes,
 
         @NotNull @PositiveOrZero
-        @Schema(example = "5000", description = "Minor units of the business currency")
-        Long priceCents,
+        @Schema(example = "5000", description = "Minor units of the business currency") Long priceCents,
 
         @Min(0) @Max(120)
-        @Schema(example = "10")
-        Integer bufferBeforeMinutes,
+        @Schema(example = "10") Integer bufferBeforeMinutes,
 
         @Min(0) @Max(120)
-        @Schema(example = "10")
-        Integer bufferAfterMinutes,
+        @Schema(example = "10") Integer bufferAfterMinutes,
 
-        @Size(max = 100)
-        List<@NotNull UUID> staffIds) {
+        @Size(max = 100) List<@NotNull UUID> staffIds) {
 }

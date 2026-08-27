@@ -49,7 +49,7 @@ public class WorkingHoursController {
                     + "(split shifts); an end before the start is a night shift and is accepted; "
                     + "ranges that overlap once laid out on the week are 422 HOURS_OVERLAP.")
     public WorkingHoursResponse replace(@PathVariable UUID staffId,
-                                        @Valid @RequestBody WorkingHoursRequest request) {
+            @Valid @RequestBody WorkingHoursRequest request) {
         return workingHours.replace(staffId, request);
     }
 }

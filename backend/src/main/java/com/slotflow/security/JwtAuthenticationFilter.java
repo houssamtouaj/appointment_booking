@@ -44,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain chain) throws ServletException, IOException {
+            FilterChain chain) throws ServletException, IOException {
         String token = bearerToken(request);
         // Never overwrite an existing authentication: in a test that used @WithMockUser, or behind
         // any earlier authentication mechanism, silently replacing it would be baffling.

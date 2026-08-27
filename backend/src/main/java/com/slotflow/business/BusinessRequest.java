@@ -31,27 +31,21 @@ import jakarta.validation.constraints.Size;
 public record BusinessRequest(
 
         @NotBlank @Size(max = 120)
-        @Schema(example = "Dana Clinic")
-        String name,
+        @Schema(example = "Dana Clinic") String name,
 
         @NotBlank @Size(max = 64)
-        @Schema(example = "Europe/Paris")
-        String timezone,
+        @Schema(example = "Europe/Paris") String timezone,
 
         @NotBlank
         @Pattern(regexp = "^[A-Za-z]{3}$", message = "must be a three-letter ISO 4217 code")
-        @Schema(example = "EUR")
-        String currency,
+        @Schema(example = "EUR") String currency,
 
-        @NotNull
-        Boolean depositRequired,
+        @NotNull Boolean depositRequired,
 
         @NotNull @Min(0) @Max(100)
-        @Schema(example = "30")
-        Integer depositPercent,
+        @Schema(example = "30") Integer depositPercent,
 
-        @Schema(description = "Required only when the timezone changes")
-        Boolean confirmShift) {
+        @Schema(description = "Required only when the timezone changes") Boolean confirmShift) {
 
     boolean isShiftConfirmed() {
         return Boolean.TRUE.equals(confirmShift);

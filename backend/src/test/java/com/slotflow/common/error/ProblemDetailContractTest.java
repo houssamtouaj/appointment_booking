@@ -51,7 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 // @RestController on the classpath, so from plan 05 onwards this test would need AuthService and a
 // database to assert the shape of a 422 — and the slice would stop being a slice.
 @WebMvcTest(controllers = ProblemDetailContractTest.ProbeController.class)
-@Import({ProblemDetailContractTest.ProbeController.class, JacksonConfig.class, WebSliceConfig.class})
+@Import({ ProblemDetailContractTest.ProbeController.class, JacksonConfig.class, WebSliceConfig.class })
 class ProblemDetailContractTest {
 
     @Autowired
@@ -67,8 +67,8 @@ class ProblemDetailContractTest {
                 """;
 
         mockMvc.perform(post("/test/problems/services")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(content().json("""
@@ -91,8 +91,8 @@ class ProblemDetailContractTest {
     @DisplayName("errors[] is sorted by field, so the contract test cannot flake on validator order")
     void validationErrorsAreSorted() throws Exception {
         mockMvc.perform(post("/test/problems/services")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors.length()").value(2))
                 .andExpect(jsonPath("$.errors[0].field").value("durationMinutes"))
@@ -135,7 +135,7 @@ class ProblemDetailContractTest {
     @DisplayName("a 500 leaks no internals and quotes back the request id from the log lines")
     void unexpectedFailureIs500WithoutInternals() throws Exception {
         mockMvc.perform(get("/test/problems/boom")
-                        .header("X-Request-Id", "trace-me-42"))
+                .header("X-Request-Id", "trace-me-42"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
@@ -163,8 +163,8 @@ class ProblemDetailContractTest {
     @DisplayName("an unparseable body is a 400, not a 422: nothing got as far as validation")
     void unreadableBodyIs400() throws Exception {
         mockMvc.perform(post("/test/problems/services")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{ not json"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ not json"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
@@ -174,8 +174,8 @@ class ProblemDetailContractTest {
     @DisplayName("an unknown property is rejected rather than silently dropped")
     void unknownPropertyIsRejected() throws Exception {
         mockMvc.perform(post("/test/problems/services")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
                                 { "name": "Consultation", "durationMinutes": 60, "prcie": 5000 }
                                 """))
                 .andExpect(status().isBadRequest())

@@ -40,8 +40,8 @@ public interface CheckoutSessions {
      *                     the webhook and by nothing a browser says
      */
     record Request(UUID bookingId, UUID businessId, String description, long amountCents,
-                   Currency currency, String customerEmail, Instant expiresAt,
-                   String successUrl, String cancelUrl) {
+            Currency currency, String customerEmail, Instant expiresAt,
+            String successUrl, String cancelUrl) {
     }
 
     /**

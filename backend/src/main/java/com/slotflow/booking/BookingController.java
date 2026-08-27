@@ -98,7 +98,7 @@ public class BookingController {
                     Staff cancelling ignores the customer cancellation cutoff — a business can \
                     always cancel — and frees the slot immediately.""")
     public BookingResponse transition(@PathVariable UUID id,
-                                      @Valid @RequestBody BookingStatusRequest request) {
+            @Valid @RequestBody BookingStatusRequest request) {
         return bookings.transition(id, request.status());
     }
 }

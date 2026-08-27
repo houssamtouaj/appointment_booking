@@ -66,8 +66,7 @@ public class StripeWebhookController {
                     themselves one-way (PENDING to CONFIRMED, PENDING to CANCELLED). A replay \
                     answers 200 and changes nothing.""")
     public void receive(@RequestBody String payload,
-                        @RequestHeader(name = "Stripe-Signature", required = false)
-                        String signature) {
+            @RequestHeader(name = "Stripe-Signature", required = false) String signature) {
         webhooks.handle(payload, signature);
     }
 

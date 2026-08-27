@@ -53,8 +53,8 @@ public class CatalogAdminService {
     private final TenantContext tenant;
 
     public CatalogAdminService(ServiceOfferingRepository services,
-                              StaffServiceRepository assignments, UserRepository users,
-                              CatalogMapper mapper, TenantContext tenant) {
+            StaffServiceRepository assignments, UserRepository users,
+            CatalogMapper mapper, TenantContext tenant) {
         this.services = services;
         this.assignments = assignments;
         this.users = users;
@@ -261,8 +261,8 @@ public class CatalogAdminService {
     }
 
     private ServiceResponse toResponse(ServiceOffering service,
-                                       Map<UUID, List<UUID>> performers,
-                                       Set<UUID> activeStaff) {
+            Map<UUID, List<UUID>> performers,
+            Set<UUID> activeStaff) {
         List<UUID> staffIds = performers.getOrDefault(service.getId(), List.of());
         boolean bookable = service.isActive() && staffIds.stream().anyMatch(activeStaff::contains);
         return mapper.toResponse(service, bookable, staffIds);

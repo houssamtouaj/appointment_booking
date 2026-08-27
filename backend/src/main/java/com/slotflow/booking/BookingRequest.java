@@ -34,13 +34,11 @@ public record BookingRequest(
 
         @NotNull UUID serviceId,
 
-        @Schema(description = "Omit for \"anybody who can do this\"")
-        UUID staffId,
+        @Schema(description = "Omit for \"anybody who can do this\"") UUID staffId,
 
         @NotNull
         @Schema(example = "2026-03-04T08:00:00Z",
-                description = "Copied from a slot's start in the availability response")
-        Instant startsAt,
+                description = "Copied from a slot's start in the availability response") Instant startsAt,
 
         @NotBlank @Size(max = 120) String guestName,
 

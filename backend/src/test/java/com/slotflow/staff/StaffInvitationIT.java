@@ -73,9 +73,9 @@ class StaffInvitationIT extends ApiIntegrationTest {
         String email = "sam-" + UUID.randomUUID().toString().substring(0, 8) + "@example.test";
 
         mockMvc.perform(post("/api/staff/invite")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email").value(email))
                 .andExpect(jsonPath("$.role").value("STAFF"))
@@ -99,8 +99,8 @@ class StaffInvitationIT extends ApiIntegrationTest {
         login(email, PASSWORD).andExpect(status().isUnauthorized());
 
         mockMvc.perform(post("/api/public/invitations/" + token + "/accept")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new AcceptInvitationRequest("Samir Ferreira", PASSWORD))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new AcceptInvitationRequest("Samir Ferreira", PASSWORD))))
                 .andExpect(status().isNoContent());
 
         login(email, PASSWORD)
@@ -180,7 +180,7 @@ class StaffInvitationIT extends ApiIntegrationTest {
                 .as("no live link left, which is what tells the owner to resend")
                 .isFalse();
         mockMvc.perform(get("/api/staff/" + invitedId)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.invitationPending").value(false))
                 .andExpect(jsonPath("$.accepted").value(false));
@@ -226,7 +226,7 @@ class StaffInvitationIT extends ApiIntegrationTest {
         UUID invitedId = users.findByEmailIgnoreCase(email).orElseThrow().getId();
 
         mockMvc.perform(post("/api/staff/" + invitedId + "/invite/resend")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.invitationPending").value(true));
 
@@ -248,7 +248,7 @@ class StaffInvitationIT extends ApiIntegrationTest {
         User accepted = aStaffMemberOf(tenant);
 
         mockMvc.perform(post("/api/staff/" + accepted.getId() + "/invite/resend")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
                 .andExpect(status().isConflict());
     }
 
@@ -263,7 +263,7 @@ class StaffInvitationIT extends ApiIntegrationTest {
         // taken it. Resending would mail a live seven-day link to somebody whose access was
         // deliberately withdrawn, and accepting it would set a password of their choosing.
         mockMvc.perform(post("/api/staff/" + leaver.getId() + "/invite/resend")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DATA_CONFLICT"));
 
@@ -325,10 +325,10 @@ class StaffInvitationIT extends ApiIntegrationTest {
         Tenant elsewhere = aTenant();
 
         mockMvc.perform(post("/api/staff/invite")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(mine.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new InviteStaffRequest(
-                                elsewhere.owner().getEmail(), "Someone", Role.STAFF))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(mine.owner()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new InviteStaffRequest(
+                        elsewhere.owner().getEmail(), "Someone", Role.STAFF))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("EMAIL_TAKEN"));
     }
@@ -340,10 +340,10 @@ class StaffInvitationIT extends ApiIntegrationTest {
         User staff = aStaffMemberOf(tenant);
 
         mockMvc.perform(post("/api/staff/invite")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(staff))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new InviteStaffRequest(
-                                "nobody@example.test", "Nobody", Role.STAFF))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(staff))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new InviteStaffRequest(
+                        "nobody@example.test", "Nobody", Role.STAFF))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
@@ -414,16 +414,16 @@ class StaffInvitationIT extends ApiIntegrationTest {
     private String invite(Tenant tenant) throws Exception {
         String email = "sam-" + UUID.randomUUID().toString().substring(0, 8) + "@example.test";
         mockMvc.perform(post("/api/staff/invite")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new InviteStaffRequest(email, "Sam Ferreira", Role.STAFF))))
                 .andExpect(status().isCreated());
         return email;
     }
 
     private String staffList(Tenant tenant) throws Exception {
         return mockMvc.perform(get("/api/staff")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner())))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -453,9 +453,9 @@ class StaffInvitationIT extends ApiIntegrationTest {
 
     private void deactivate(Tenant tenant, User member) throws Exception {
         mockMvc.perform(patch("/api/staff/" + member.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new UpdateStaffRequest(null, null, false))))
+                .header(HttpHeaders.AUTHORIZATION, bearer(tenant.owner()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new UpdateStaffRequest(null, null, false))))
                 .andExpect(status().isOk());
         notifications.clear();
     }

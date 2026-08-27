@@ -76,8 +76,7 @@ class BookingConflictExceptionTest {
         Instant startsAt = Instant.parse("2026-03-04T08:00:00Z");
         Instant endsAt = Instant.parse("2026-03-04T09:00:00Z");
 
-        BookingConflictException conflict =
-                new BookingConflictException(staffId, startsAt, endsAt);
+        BookingConflictException conflict = new BookingConflictException(staffId, startsAt, endsAt);
 
         assertThat(conflict.code()).isEqualTo(ErrorCode.BOOKING_SLOT_TAKEN);
         assertThat(conflict.status().value()).isEqualTo(409);

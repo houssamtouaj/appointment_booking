@@ -62,12 +62,12 @@ class BookingNotifier {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void on(BookingEvent event) {
         switch (event) {
-            case BookingEvent.Created created -> send(created.bookingId(),
-                    created.awaitingDeposit() ? mail::sendBookingReceived : mail::sendBookingConfirmed);
-            case BookingEvent.Confirmed confirmed ->
-                    send(confirmed.bookingId(), mail::sendBookingConfirmed);
-            case BookingEvent.Cancelled cancelled -> send(cancelled.bookingId(),
-                    booking -> mail.sendBookingCancelled(booking, who(cancelled.source())));
+        case BookingEvent.Created created -> send(created.bookingId(),
+                created.awaitingDeposit() ? mail::sendBookingReceived : mail::sendBookingConfirmed);
+        case BookingEvent.Confirmed confirmed ->
+                send(confirmed.bookingId(), mail::sendBookingConfirmed);
+        case BookingEvent.Cancelled cancelled -> send(cancelled.bookingId(),
+                booking -> mail.sendBookingCancelled(booking, who(cancelled.source())));
         }
     }
 
@@ -92,9 +92,9 @@ class BookingNotifier {
      */
     private static CancelledBy who(BookingEvent.Cancelled.Source source) {
         return switch (source) {
-            case GUEST -> CancelledBy.GUEST;
-            case STAFF -> CancelledBy.BUSINESS;
-            case EXPIRY -> CancelledBy.EXPIRY;
+        case GUEST -> CancelledBy.GUEST;
+        case STAFF -> CancelledBy.BUSINESS;
+        case EXPIRY -> CancelledBy.EXPIRY;
         };
     }
 }

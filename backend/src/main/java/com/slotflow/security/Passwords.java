@@ -40,20 +40,18 @@ public final class Passwords {
     /** UTF-8 bytes, which is BCrypt's own unit — see the class note on why not characters. */
     public static final int MAX_BYTES = 72;
 
-    public static final String TOO_SHORT_MESSAGE =
-            "must be at least " + MIN_LENGTH + " characters";
+    public static final String TOO_SHORT_MESSAGE = "must be at least " + MIN_LENGTH + " characters";
 
-    public static final String TOO_LONG_MESSAGE =
-            "must be at most " + MAX_BYTES + " bytes long; characters outside the Latin alphabet "
-                    + "count as more than one";
+    public static final String TOO_LONG_MESSAGE = "must be at most " + MAX_BYTES
+            + " bytes long; characters outside the Latin alphabet "
+            + "count as more than one";
 
     /** For the OpenAPI document, which loses bean validation's own hints for a custom constraint. */
-    public static final String SCHEMA_DESCRIPTION =
-            "At least " + MIN_LENGTH + " characters and at most " + MAX_BYTES + " UTF-8 bytes. "
-                    + "No composition rules: a long passphrase is the point.";
+    public static final String SCHEMA_DESCRIPTION = "At least " + MIN_LENGTH + " characters and at most " + MAX_BYTES
+            + " UTF-8 bytes. "
+            + "No composition rules: a long passphrase is the point.";
 
-    private Passwords() {
-    }
+    private Passwords() {}
 
     public static boolean isTooShort(String password) {
         return password.length() < MIN_LENGTH;

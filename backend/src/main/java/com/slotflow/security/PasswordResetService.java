@@ -33,7 +33,7 @@ public class PasswordResetService {
     private final Clock clock;
 
     public PasswordResetService(PasswordResetTokenRepository resetTokens,
-                                AuthProperties properties, Clock clock) {
+            AuthProperties properties, Clock clock) {
         this.resetTokens = resetTokens;
         this.ttl = properties.passwordResetTtl();
         this.clock = clock;

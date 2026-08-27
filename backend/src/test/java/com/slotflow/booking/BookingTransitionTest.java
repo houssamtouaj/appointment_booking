@@ -34,8 +34,7 @@ class BookingTransitionTest {
     private static final Instant BOOKED_AT = NINE_AM.minus(2, ChronoUnit.DAYS);
 
     /** Well after the appointment has ended, so the time guards are out of the way. */
-    private static final Clock AFTERWARDS =
-            Clock.fixed(NINE_AM.plus(3, ChronoUnit.HOURS), ZoneOffset.UTC);
+    private static final Clock AFTERWARDS = Clock.fixed(NINE_AM.plus(3, ChronoUnit.HOURS), ZoneOffset.UTC);
 
     private static final UUID BUSINESS_ID = UUID.randomUUID();
     private static final UUID STAFF_ID = UUID.randomUUID();
@@ -371,10 +370,10 @@ class BookingTransitionTest {
 
         void applyTo(Booking booking, Instant now) {
             switch (this) {
-                case CONFIRM -> booking.confirm();
-                case CANCEL -> booking.cancel();
-                case COMPLETE -> booking.complete(now);
-                case NO_SHOW -> booking.markNoShow(now);
+            case CONFIRM -> booking.confirm();
+            case CANCEL -> booking.cancel();
+            case COMPLETE -> booking.complete(now);
+            case NO_SHOW -> booking.markNoShow(now);
             }
         }
     }
@@ -385,23 +384,23 @@ class BookingTransitionTest {
      */
     private static Booking bookingIn(BookingStatus status) {
         return switch (status) {
-            case PENDING -> pendingBooking();
-            case CONFIRMED -> confirmedBooking();
-            case CANCELLED -> {
-                Booking booking = confirmedBooking();
-                booking.cancel();
-                yield booking;
-            }
-            case COMPLETED -> {
-                Booking booking = confirmedBooking();
-                booking.complete(AFTERWARDS.instant());
-                yield booking;
-            }
-            case NO_SHOW -> {
-                Booking booking = confirmedBooking();
-                booking.markNoShow(AFTERWARDS.instant());
-                yield booking;
-            }
+        case PENDING -> pendingBooking();
+        case CONFIRMED -> confirmedBooking();
+        case CANCELLED -> {
+            Booking booking = confirmedBooking();
+            booking.cancel();
+            yield booking;
+        }
+        case COMPLETED -> {
+            Booking booking = confirmedBooking();
+            booking.complete(AFTERWARDS.instant());
+            yield booking;
+        }
+        case NO_SHOW -> {
+            Booking booking = confirmedBooking();
+            booking.markNoShow(AFTERWARDS.instant());
+            yield booking;
+        }
         };
     }
 

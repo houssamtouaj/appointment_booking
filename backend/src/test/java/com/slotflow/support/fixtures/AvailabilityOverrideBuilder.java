@@ -24,8 +24,7 @@ public final class AvailabilityOverrideBuilder {
     private boolean blocked = true;
     private String reason = "Fixture";
 
-    AvailabilityOverrideBuilder() {
-    }
+    AvailabilityOverrideBuilder() {}
 
     public AvailabilityOverrideBuilder forBusiness(Business business) {
         return forBusiness(business.getId());

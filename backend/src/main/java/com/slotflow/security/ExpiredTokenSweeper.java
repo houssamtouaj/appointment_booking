@@ -51,7 +51,7 @@ public class ExpiredTokenSweeper {
     private final Clock clock;
 
     public ExpiredTokenSweeper(RefreshTokenRepository refreshTokens,
-                               PasswordResetTokenRepository resetTokens, Clock clock) {
+            PasswordResetTokenRepository resetTokens, Clock clock) {
         this.refreshTokens = refreshTokens;
         this.resetTokens = resetTokens;
         this.clock = clock;

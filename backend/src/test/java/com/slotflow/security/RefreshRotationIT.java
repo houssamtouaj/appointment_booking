@@ -184,8 +184,8 @@ class RefreshRotationIT extends ApiIntegrationTest {
         aTenant();
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new RefreshRequest(SecretTokens.random()))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new RefreshRequest(SecretTokens.random()))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
@@ -196,8 +196,8 @@ class RefreshRotationIT extends ApiIntegrationTest {
 
     private String login(Tenant tenant) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new LoginRequest(tenant.owner().getEmail(), PASSWORD))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new LoginRequest(tenant.owner().getEmail(), PASSWORD))))
                 .andExpect(status().isOk())
                 .andReturn();
         return refreshCookieFrom(result);

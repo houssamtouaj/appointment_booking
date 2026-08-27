@@ -19,8 +19,7 @@ public final class WorkingHoursBuilder {
     private LocalTime startTime = LocalTime.of(9, 0);
     private LocalTime endTime = LocalTime.of(17, 0);
 
-    WorkingHoursBuilder() {
-    }
+    WorkingHoursBuilder() {}
 
     public WorkingHoursBuilder forStaff(User staff) {
         return forStaff(staff.getId());

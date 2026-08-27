@@ -43,12 +43,11 @@ class PasswordResetIT extends ApiIntegrationTest {
         Tenant tenant = aTenant();
 
         mockMvc.perform(post("/api/auth/forgot-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ForgotPasswordRequest(tenant.owner().getEmail()))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ForgotPasswordRequest(tenant.owner().getEmail()))))
                 .andExpect(status().isAccepted());
 
-        RecordingNotificationService.Sent sent =
-                notifications.passwordResetTo(tenant.owner().getEmail());
+        RecordingNotificationService.Sent sent = notifications.passwordResetTo(tenant.owner().getEmail());
         assertThat(sent.rawToken()).isNotBlank();
         assertThat(sent.expiresAt()).isEqualTo(TestTime.NOW.plus(Duration.ofHours(1)));
     }
@@ -59,8 +58,8 @@ class PasswordResetIT extends ApiIntegrationTest {
         String unknown = "nobody-" + UUID.randomUUID() + "@example.test";
 
         mockMvc.perform(post("/api/auth/forgot-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ForgotPasswordRequest(unknown))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ForgotPasswordRequest(unknown))))
                 // Not a 404. An endpoint that distinguishes the two is a bulk account-enumeration
                 // tool, and it is unauthenticated by necessity.
                 .andExpect(status().isAccepted());
@@ -78,8 +77,8 @@ class PasswordResetIT extends ApiIntegrationTest {
         String newPassword = "a-brand-new-password";
 
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(token, newPassword))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(token, newPassword))))
                 .andExpect(status().isNoContent());
 
         // Asserted before signing in again, deliberately: a successful login issues a refresh token
@@ -91,8 +90,8 @@ class PasswordResetIT extends ApiIntegrationTest {
         // The session that existed before the reset is dead, which is the entire point: if the
         // account was taken over, that session is the takeover.
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new RefreshRequest(liveSession))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new RefreshRequest(liveSession))))
                 .andExpect(status().isUnauthorized());
 
         // And the old password is gone, while the new one works.
@@ -107,13 +106,13 @@ class PasswordResetIT extends ApiIntegrationTest {
         String token = requestReset(tenant);
 
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(token, "first-new-password"))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(token, "first-new-password"))))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(token, "second-new-password"))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(token, "second-new-password"))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
 
@@ -132,8 +131,8 @@ class PasswordResetIT extends ApiIntegrationTest {
         clock.advanceBy(Duration.ofMinutes(61));
 
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(token, "too-late-password"))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(token, "too-late-password"))))
                 .andExpect(status().isUnauthorized());
 
         // Nothing changed, so the original password still works.
@@ -151,8 +150,8 @@ class PasswordResetIT extends ApiIntegrationTest {
         clock.advanceBy(Duration.ofMinutes(59));
 
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(token, "just-in-time-password"))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(token, "just-in-time-password"))))
                 .andExpect(status().isNoContent());
     }
 
@@ -166,13 +165,13 @@ class PasswordResetIT extends ApiIntegrationTest {
         assertThat(second).isNotEqualTo(first);
 
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(first, "using-the-old-link"))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(first, "using-the-old-link"))))
                 .andExpect(status().isUnauthorized());
 
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(second, "using-the-new-link"))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(second, "using-the-new-link"))))
                 .andExpect(status().isNoContent());
     }
 
@@ -198,8 +197,8 @@ class PasswordResetIT extends ApiIntegrationTest {
         String token = requestReset(tenant);
 
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(token, "short"))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(token, "short"))))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors[0].field").value("password"));
     }
@@ -213,15 +212,15 @@ class PasswordResetIT extends ApiIntegrationTest {
         // 72 characters, 144 bytes. BCrypt would hash the first 72 bytes and ignore the rest, so
         // accepting it sets a password whose second half means nothing.
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(token, "пароль".repeat(12)))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(token, "пароль".repeat(12)))))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors[0].field").value("password"));
 
         // And the token is still there to be used properly: a rejected body must not spend it.
         mockMvc.perform(post("/api/auth/reset-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ResetPasswordRequest(token, "пароль".repeat(6)))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ResetPasswordRequest(token, "пароль".repeat(6)))))
                 .andExpect(status().isNoContent());
     }
 
@@ -253,8 +252,8 @@ class PasswordResetIT extends ApiIntegrationTest {
     /** Goes through the endpoint and reads the token the way its recipient would: from the mail. */
     private String requestReset(Tenant tenant) throws Exception {
         mockMvc.perform(post("/api/auth/forgot-password")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new ForgotPasswordRequest(tenant.owner().getEmail()))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new ForgotPasswordRequest(tenant.owner().getEmail()))))
                 .andExpect(status().isAccepted());
         return notifications.passwordResetTo(tenant.owner().getEmail()).rawToken();
     }

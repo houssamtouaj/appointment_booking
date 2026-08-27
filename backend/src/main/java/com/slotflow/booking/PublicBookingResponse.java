@@ -52,8 +52,7 @@ public record PublicBookingResponse(
         UUID cancellationToken,
         Instant expiresAt,
 
-        @Schema(description = "Always false (D7). The booking page must say so in words.")
-        boolean depositRefundable,
+        @Schema(description = "Always false (D7). The booking page must say so in words.") boolean depositRefundable,
 
         boolean cancellable,
         Instant cancellationDeadline,
@@ -66,19 +65,19 @@ public record PublicBookingResponse(
 
     /** The {@code 201}. No contact details: see the class note. */
     static PublicBookingResponse created(Booking booking, Business business, BookingPolicy policy,
-                                         Instant now) {
+            Instant now) {
         return build(booking, business, policy, now, null);
     }
 
     /** The manage page, and the body of a successful cancel. */
     static PublicBookingResponse forToken(Booking booking, Business business, BookingPolicy policy,
-                                          Instant now) {
+            Instant now) {
         return build(booking, business, policy, now, GuestContactResponse.of(booking));
     }
 
     private static PublicBookingResponse build(Booking booking, Business business,
-                                               BookingPolicy policy, Instant now,
-                                               GuestContactResponse guest) {
+            BookingPolicy policy, Instant now,
+            GuestContactResponse guest) {
         return new PublicBookingResponse(
                 booking.getId(), booking.getServiceId(), booking.getStaffId(),
                 booking.getStartsAt(), booking.getEndsAt(),

@@ -161,7 +161,7 @@ class BookingConcurrencyIT extends BookingScenario {
     }
 
     private static Callable<MvcResult> gatedBy(CountDownLatch ready, CountDownLatch go,
-                                               Callable<MvcResult> task) {
+            Callable<MvcResult> task) {
         return () -> {
             ready.countDown();
             if (!go.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
@@ -172,7 +172,7 @@ class BookingConcurrencyIT extends BookingScenario {
     }
 
     private Callable<MvcResult> bookRequestTask(Salon salon, Instant startsAt, UUID staffId,
-                                                String email) {
+            String email) {
         return () -> mockMvc.perform(bookRequest(salon, startsAt, staffId, email)).andReturn();
     }
 }

@@ -59,8 +59,8 @@ public interface BookingRepository
             order by b.blockedFrom
             """)
     List<Booking> findOverlappingForStaff(Collection<UUID> staffIds,
-                                          Collection<BookingStatus> statuses,
-                                          Instant from, Instant to);
+            Collection<BookingStatus> statuses,
+            Instant from, Instant to);
 
     // ---------------------------------------------------------------------------------
     //  the customer's own booking

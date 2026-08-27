@@ -24,14 +24,11 @@ import java.time.LocalTime;
 public record WorkingHoursRange(
 
         @NotNull
-        @Schema(example = "MONDAY")
-        DayOfWeek dayOfWeek,
+        @Schema(example = "MONDAY") DayOfWeek dayOfWeek,
 
         @NotNull
-        @Schema(example = "09:00", type = "string", format = "partial-time")
-        LocalTime startTime,
+        @Schema(example = "09:00", type = "string", format = "partial-time") LocalTime startTime,
 
         @NotNull
-        @Schema(example = "17:00", type = "string", format = "partial-time")
-        LocalTime endTime) {
+        @Schema(example = "17:00", type = "string", format = "partial-time") LocalTime endTime) {
 }

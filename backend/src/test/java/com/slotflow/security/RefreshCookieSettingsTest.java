@@ -42,7 +42,7 @@ class RefreshCookieSettingsTest {
     }
 
     @ParameterizedTest(name = "\"{0}\" is refused")
-    @ValueSource(strings = {"Laxx", "no-restriction", "None; Secure", "true"})
+    @ValueSource(strings = { "Laxx", "no-restriction", "None; Secure", "true" })
     @DisplayName("an attribute no browser understands fails startup rather than degrading silently")
     void unknownAttributesAreRefused(String sameSite) {
         // The message names the environment variable a deployer set, not the Spring property it

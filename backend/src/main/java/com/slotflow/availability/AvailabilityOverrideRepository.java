@@ -70,7 +70,7 @@ public interface AvailabilityOverrideRepository extends JpaRepository<Availabili
               and o.date between :from and :to
             """)
     List<AvailabilityOverride> findForEngine(UUID businessId, Collection<UUID> staffIds,
-                                             LocalDate from, LocalDate to);
+            LocalDate from, LocalDate to);
 
     /** The merged admin view: business-wide plus every staff member's (plan 08). */
     List<AvailabilityOverride> findByBusinessIdAndDateBetween(

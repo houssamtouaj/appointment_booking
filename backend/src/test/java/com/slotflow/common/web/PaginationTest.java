@@ -27,8 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
  */
 // See ProblemDetailContractTest: scoped to the probe controller so the real ones stay out.
 @WebMvcTest(controllers = PaginationTest.ProbeController.class)
-@Import({PaginationTest.ProbeController.class, PaginationConfig.class, JacksonConfig.class,
-        WebSliceConfig.class})
+@Import({ PaginationTest.ProbeController.class, PaginationConfig.class, JacksonConfig.class,
+        WebSliceConfig.class })
 class PaginationTest {
 
     @Autowired

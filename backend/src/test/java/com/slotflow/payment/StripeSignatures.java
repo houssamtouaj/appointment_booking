@@ -28,8 +28,7 @@ final class StripeSignatures {
 
     private static final String ALGORITHM = "HmacSHA256";
 
-    private StripeSignatures() {
-    }
+    private StripeSignatures() {}
 
     /** A header Stripe would have sent right now. */
     static String sign(String payload, String secret) {

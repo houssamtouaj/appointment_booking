@@ -120,17 +120,17 @@ public enum ErrorCode {
      */
     public static ErrorCode forStatus(HttpStatusCode status) {
         return switch (status.value()) {
-            case 400 -> MALFORMED_REQUEST;
-            case 401 -> UNAUTHENTICATED;
-            case 403 -> ACCESS_DENIED;
-            case 404 -> NOT_FOUND;
-            case 405 -> METHOD_NOT_ALLOWED;
-            case 406 -> NOT_ACCEPTABLE;
-            case 409 -> DATA_CONFLICT;
-            case 415 -> UNSUPPORTED_MEDIA_TYPE;
-            case 422 -> VALIDATION_FAILED;
-            case 429 -> RATE_LIMITED;
-            default -> status.is4xxClientError() ? MALFORMED_REQUEST : INTERNAL_ERROR;
+        case 400 -> MALFORMED_REQUEST;
+        case 401 -> UNAUTHENTICATED;
+        case 403 -> ACCESS_DENIED;
+        case 404 -> NOT_FOUND;
+        case 405 -> METHOD_NOT_ALLOWED;
+        case 406 -> NOT_ACCEPTABLE;
+        case 409 -> DATA_CONFLICT;
+        case 415 -> UNSUPPORTED_MEDIA_TYPE;
+        case 422 -> VALIDATION_FAILED;
+        case 429 -> RATE_LIMITED;
+        default -> status.is4xxClientError() ? MALFORMED_REQUEST : INTERNAL_ERROR;
         };
     }
 }

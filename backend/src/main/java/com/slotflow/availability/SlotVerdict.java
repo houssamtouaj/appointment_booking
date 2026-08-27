@@ -40,9 +40,9 @@ import java.util.UUID;
  *                                  the work spreads instead of always landing on one person
  */
 public record SlotVerdict(boolean anyCandidateStaff,
-                          List<UUID> availableStaff,
-                          List<UUID> staffFreeOnAnEmptyCalendar,
-                          Map<UUID, Long> activeBookingsThatDay) {
+        List<UUID> availableStaff,
+        List<UUID> staffFreeOnAnEmptyCalendar,
+        Map<UUID, Long> activeBookingsThatDay) {
 
     public SlotVerdict {
         availableStaff = List.copyOf(availableStaff);

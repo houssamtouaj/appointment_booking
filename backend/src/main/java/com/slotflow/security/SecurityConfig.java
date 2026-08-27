@@ -108,11 +108,10 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService,
-                                           ProblemAuthenticationEntryPoint entryPoint,
-                                           ProblemAccessDeniedHandler accessDeniedHandler,
-                                           Environment environment,
-                                           @Qualifier("corsConfigurationSource")
-                                           CorsConfigurationSource corsConfigurationSource)
+            ProblemAuthenticationEntryPoint entryPoint,
+            ProblemAccessDeniedHandler accessDeniedHandler,
+            Environment environment,
+            @Qualifier("corsConfigurationSource") CorsConfigurationSource corsConfigurationSource)
             throws Exception {
         String[] publicPaths = publicPaths(environment);
         return http
@@ -127,8 +126,7 @@ public class SecurityConfig {
                 // failure instead.
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // No browser login dialog and no login page: this API answers with problem details
                 // and the SPA owns the form. Left enabled, either one turns a 401 on an XHR into a
                 // redirect or a popup.

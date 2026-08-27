@@ -61,8 +61,7 @@ class EnvironmentDocumentationTest {
     private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{([A-Z][A-Z0-9_]*)");
 
     /** A key in {@code .env.example}, whether or not the line is commented out. */
-    private static final Pattern DOCUMENTED_KEY =
-            Pattern.compile("(?m)^\\s*#?\\s*([A-Z][A-Z0-9_]*)\\s*=");
+    private static final Pattern DOCUMENTED_KEY = Pattern.compile("(?m)^\\s*#?\\s*([A-Z][A-Z0-9_]*)\\s*=");
 
     @Test
     @DisplayName("no variable the app reads is missing from .env.example")

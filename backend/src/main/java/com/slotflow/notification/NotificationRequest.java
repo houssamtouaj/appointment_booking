@@ -37,6 +37,6 @@ public sealed interface NotificationRequest {
 
     /** Plan 06. The link is where the invitee sets a name and a password and becomes active. */
     record StaffInvitation(Recipient recipient, String businessName, String rawToken,
-                           Instant expiresAt) implements NotificationRequest {
+            Instant expiresAt) implements NotificationRequest {
     }
 }

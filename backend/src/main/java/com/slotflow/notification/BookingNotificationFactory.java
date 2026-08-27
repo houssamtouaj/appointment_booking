@@ -50,8 +50,8 @@ class BookingNotificationFactory {
     private final FrontendLinks links;
 
     BookingNotificationFactory(BookingRepository bookings, BusinessRepository businesses,
-                               ServiceOfferingRepository services, UserRepository users,
-                               FrontendLinks links) {
+            ServiceOfferingRepository services, UserRepository users,
+            FrontendLinks links) {
         this.bookings = bookings;
         this.businesses = businesses;
         this.services = services;

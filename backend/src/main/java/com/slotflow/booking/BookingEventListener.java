@@ -35,16 +35,16 @@ class BookingEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void on(BookingEvent event) {
         switch (event) {
-            case BookingEvent.Created created -> log.info(
-                    "Booking {} created in business {}{}",
-                    created.bookingId(), created.businessId(),
-                    created.awaitingDeposit() ? " awaiting a deposit" : "");
-            case BookingEvent.Confirmed confirmed -> log.info(
-                    "Booking {} confirmed by a deposit of {} minor units",
-                    confirmed.bookingId(), confirmed.depositPaidCents());
-            case BookingEvent.Cancelled cancelled -> log.info(
-                    "Booking {} cancelled by {} at {}",
-                    cancelled.bookingId(), cancelled.source(), cancelled.at());
+        case BookingEvent.Created created -> log.info(
+                "Booking {} created in business {}{}",
+                created.bookingId(), created.businessId(),
+                created.awaitingDeposit() ? " awaiting a deposit" : "");
+        case BookingEvent.Confirmed confirmed -> log.info(
+                "Booking {} confirmed by a deposit of {} minor units",
+                confirmed.bookingId(), confirmed.depositPaidCents());
+        case BookingEvent.Cancelled cancelled -> log.info(
+                "Booking {} cancelled by {} at {}",
+                cancelled.bookingId(), cancelled.source(), cancelled.at());
         }
     }
 }

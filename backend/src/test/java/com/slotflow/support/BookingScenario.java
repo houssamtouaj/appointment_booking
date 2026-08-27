@@ -136,7 +136,7 @@ public abstract class BookingScenario extends ApiIntegrationTest {
 
     /** The whole request body, with only the parts a test varies exposed as parameters. */
     protected static String bookingBody(UUID serviceId, Instant startsAt, UUID staffId,
-                                        String email) {
+            String email) {
         return """
                 {"serviceId": "%s", %s "startsAt": "%s",
                  "guestName": "Alex Guest", "guestEmail": "%s", "guestPhone": "+33 1 23 45 67 89",
@@ -156,13 +156,13 @@ public abstract class BookingScenario extends ApiIntegrationTest {
     }
 
     protected MockHttpServletRequestBuilder bookRequest(Salon salon, Instant startsAt, UUID staffId,
-                                                        String email) {
+            String email) {
         return bookRequest(salon.slug(), salon.serviceId(), startsAt, staffId, email);
     }
 
     protected static MockHttpServletRequestBuilder bookRequest(String slug, UUID serviceId,
-                                                               Instant startsAt, UUID staffId,
-                                                               String email) {
+            Instant startsAt, UUID staffId,
+            String email) {
         return post(bookingsPath(slug))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(bookingBody(serviceId, startsAt, staffId, email));
@@ -178,7 +178,7 @@ public abstract class BookingScenario extends ApiIntegrationTest {
     }
 
     protected PublicBookingResponse bookOk(Salon salon, Instant startsAt, UUID staffId,
-                                           String email) throws Exception {
+            String email) throws Exception {
         String body = book(salon, startsAt, staffId, email)
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();

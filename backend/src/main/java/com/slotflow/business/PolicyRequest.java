@@ -30,18 +30,15 @@ import jakarta.validation.constraints.NotNull;
 public record PolicyRequest(
 
         @NotNull @Min(0) @Max(168)
-        @Schema(example = "2")
-        Integer minLeadTimeHours,
+        @Schema(example = "2") Integer minLeadTimeHours,
 
         @NotNull @Min(1) @Max(365)
-        @Schema(example = "60")
-        Integer maxAdvanceDays,
+        @Schema(example = "60") Integer maxAdvanceDays,
 
         @NotNull @Min(0) @Max(168)
-        @Schema(example = "24")
-        Integer cancellationCutoffHours,
+        @Schema(example = "24") Integer cancellationCutoffHours,
 
         @NotNull @SlotGranularity
-        @Schema(example = "15", allowableValues = {"5", "10", "15", "20", "30", "60"})
-        Integer slotGranularityMinutes) {
+        @Schema(example = "15", allowableValues = {
+                "5", "10", "15", "20", "30", "60" }) Integer slotGranularityMinutes) {
 }

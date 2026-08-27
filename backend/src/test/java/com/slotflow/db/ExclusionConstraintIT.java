@@ -222,7 +222,7 @@ class ExclusionConstraintIT extends IntegrationTest {
      * {@code timestamptz - interval} is not IMMUTABLE and so cannot be a generated column.
      */
     private UUID insertBooking(UUID staff, String status, Instant startsAt,
-                               int durationMinutes, int bufferBefore, int bufferAfter) {
+            int durationMinutes, int bufferBefore, int bufferAfter) {
         Instant endsAt = startsAt.plus(durationMinutes, ChronoUnit.MINUTES);
         // A PENDING row has to carry an expiry (booking_pending_expiry_chk): the hold is a
         // deposit in flight, and a hold with no deadline is a slot lost for good.
@@ -248,9 +248,9 @@ class ExclusionConstraintIT extends IntegrationTest {
      * {@link #insertBooking} guarantees.
      */
     private UUID insertBookingWithBlockedRange(UUID staff, String status, Instant startsAt,
-                                               int durationMinutes, int bufferBefore,
-                                               int bufferAfter, Instant blockedFrom,
-                                               Instant blockedTo, Instant expiresAt) {
+            int durationMinutes, int bufferBefore,
+            int bufferAfter, Instant blockedFrom,
+            Instant blockedTo, Instant expiresAt) {
         UUID id = UUID.randomUUID();
         Instant endsAt = startsAt.plus(durationMinutes, ChronoUnit.MINUTES);
 

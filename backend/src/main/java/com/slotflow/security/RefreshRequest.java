@@ -14,6 +14,5 @@ public record RefreshRequest(
 
         @Size(max = 200)
         @Schema(description = "Only for non-browser clients; browsers send the httpOnly cookie",
-                nullable = true)
-        String refreshToken) {
+                nullable = true) String refreshToken) {
 }

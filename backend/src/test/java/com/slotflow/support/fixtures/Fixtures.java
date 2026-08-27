@@ -23,8 +23,7 @@ import java.util.UUID;
  */
 public final class Fixtures {
 
-    private Fixtures() {
-    }
+    private Fixtures() {}
 
     public static BusinessBuilder aBusiness() {
         return new BusinessBuilder();

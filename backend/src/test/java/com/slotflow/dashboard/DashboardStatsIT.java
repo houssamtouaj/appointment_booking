@@ -323,7 +323,7 @@ class DashboardStatsIT extends BookingScenario {
      * number as the right one.
      */
     private Booking forStaff(Salon salon, User staff, String parisLocalTime, long priceCents,
-                             BookingStatus status) {
+            BookingStatus status) {
         ServiceOffering service = services.save(aService()
                 .forBusiness(salon.tenant().business())
                 .withName("Service " + priceCents + " " + parisLocalTime)
@@ -339,12 +339,13 @@ class DashboardStatsIT extends BookingScenario {
         // The instant is the entity's parameter, not the application clock, so a booking can be
         // completed without the whole suite having to time-travel past it.
         switch (status) {
-            case CONFIRMED -> { }
-            case COMPLETED -> booking.complete(booking.getEndsAt().plusSeconds(1));
-            case NO_SHOW -> booking.markNoShow(booking.getStartsAt().plusSeconds(1));
-            case CANCELLED -> booking.cancel();
-            case PENDING -> throw new IllegalArgumentException(
-                    "a hold is created by the deposit path, not by a status");
+        case CONFIRMED -> {
+        }
+        case COMPLETED -> booking.complete(booking.getEndsAt().plusSeconds(1));
+        case NO_SHOW -> booking.markNoShow(booking.getStartsAt().plusSeconds(1));
+        case CANCELLED -> booking.cancel();
+        case PENDING -> throw new IllegalArgumentException(
+                "a hold is created by the deposit path, not by a status");
         }
         return bookings.save(booking);
     }

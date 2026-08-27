@@ -13,5 +13,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * persistence context until commit, outside every {@code catch}, and the race would surface as a
  * 500 to Stripe — which would then retry it.
  */
-public interface StripeEventRepository extends JpaRepository<StripeEvent, String> {
-}
+public interface StripeEventRepository extends JpaRepository<StripeEvent, String> {}

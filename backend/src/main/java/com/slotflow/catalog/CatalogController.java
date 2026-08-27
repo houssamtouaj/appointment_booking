@@ -81,7 +81,7 @@ public class CatalogController {
                     + "an empty array unassigns everyone. Editing a price or a buffer never "
                     + "changes a booking that already exists (D14).")
     public ServiceResponse update(@PathVariable UUID id,
-                                  @Valid @RequestBody ServiceUpdateRequest request) {
+            @Valid @RequestBody ServiceUpdateRequest request) {
         return catalog.update(id, request);
     }
 

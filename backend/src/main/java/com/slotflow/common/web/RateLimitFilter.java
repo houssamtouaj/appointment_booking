@@ -60,7 +60,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain chain) throws ServletException, IOException {
+            FilterChain chain) throws ServletException, IOException {
         RateLimiter.Scope scope = scopeFor(request);
         if (scope == null) {
             chain.doFilter(request, response);

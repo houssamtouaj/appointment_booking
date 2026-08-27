@@ -38,16 +38,16 @@ public class WorkingHoursService {
 
     private static final Logger log = LoggerFactory.getLogger(WorkingHoursService.class);
 
-    private static final Comparator<WorkingHoursRange> BY_DAY_THEN_START =
-            Comparator.comparing(WorkingHoursRange::dayOfWeek)
-                    .thenComparing(WorkingHoursRange::startTime);
+    private static final Comparator<WorkingHoursRange> BY_DAY_THEN_START = Comparator.comparing(
+            WorkingHoursRange::dayOfWeek)
+            .thenComparing(WorkingHoursRange::startTime);
 
     private final WorkingHoursRepository workingHours;
     private final UserRepository users;
     private final TenantContext tenant;
 
     public WorkingHoursService(WorkingHoursRepository workingHours, UserRepository users,
-                              TenantContext tenant) {
+            TenantContext tenant) {
         this.workingHours = workingHours;
         this.users = users;
         this.tenant = tenant;

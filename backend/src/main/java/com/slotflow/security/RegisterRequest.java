@@ -24,33 +24,26 @@ import jakarta.validation.constraints.Size;
 public record RegisterRequest(
 
         @NotBlank @Size(max = 120)
-        @Schema(example = "Dana Clinic")
-        String businessName,
+        @Schema(example = "Dana Clinic") String businessName,
 
         @NotBlank
         @Pattern(regexp = "^[A-Za-z0-9-]{3,40}$",
                 message = "must be 3-40 letters, digits or hyphens")
-        @Schema(example = "dana-clinic")
-        String slug,
+        @Schema(example = "dana-clinic") String slug,
 
         @NotBlank @Size(max = 64)
-        @Schema(example = "Europe/Paris")
-        String timezone,
+        @Schema(example = "Europe/Paris") String timezone,
 
         @NotBlank
         @Pattern(regexp = "^[A-Za-z]{3}$", message = "must be a three-letter ISO 4217 code")
-        @Schema(example = "EUR")
-        String currency,
+        @Schema(example = "EUR") String currency,
 
         @NotBlank @Size(max = 120)
-        @Schema(example = "Dana Okoye")
-        String fullName,
+        @Schema(example = "Dana Okoye") String fullName,
 
         @NotBlank @Email @Size(max = 320)
-        @Schema(example = "dana@example.com")
-        String email,
+        @Schema(example = "dana@example.com") String email,
 
         @NotBlank @Password
-        @Schema(description = Passwords.SCHEMA_DESCRIPTION, example = "correct-horse-battery")
-        String password) {
+        @Schema(description = Passwords.SCHEMA_DESCRIPTION, example = "correct-horse-battery") String password) {
 }

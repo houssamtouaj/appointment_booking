@@ -16,8 +16,7 @@ public final class BookingPolicyBuilder {
     private int cancellationCutoffHours = 24;
     private int slotGranularityMinutes = 15;
 
-    BookingPolicyBuilder() {
-    }
+    BookingPolicyBuilder() {}
 
     public BookingPolicyBuilder forBusiness(Business business) {
         return forBusiness(business.getId());

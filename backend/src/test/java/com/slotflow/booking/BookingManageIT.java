@@ -164,7 +164,7 @@ class BookingManageIT extends BookingScenario {
         PublicBookingResponse created = bookOk(salon, NINE_AM);
 
         String list = mockMvc.perform(get("/api/bookings")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(salon.dana())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(salon.dana())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].guestName").value("Alex Guest"))
                 .andReturn().getResponse().getContentAsString();
@@ -174,7 +174,7 @@ class BookingManageIT extends BookingScenario {
                 .doesNotContain("+33 1 23 45 67 89");
 
         mockMvc.perform(get("/api/bookings/{id}", created.id())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(salon.dana())))
+                .header(HttpHeaders.AUTHORIZATION, bearer(salon.dana())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.guest.email").value("alex@example.test"))
                 .andExpect(jsonPath("$.guest.phone").value("+33 1 23 45 67 89"))

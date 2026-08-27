@@ -35,7 +35,7 @@ public class ProblemAuthenticationEntryPoint implements AuthenticationEntryPoint
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
-                         AuthenticationException authException) throws IOException {
+            AuthenticationException authException) throws IOException {
         ProblemDetail problem = Problems.of(ErrorCode.UNAUTHENTICATED,
                 "Authentication is required to access this resource.");
         Problems.setInstance(problem, request.getRequestURI());

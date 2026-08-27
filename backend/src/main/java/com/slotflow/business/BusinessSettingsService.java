@@ -32,7 +32,7 @@ public class BusinessSettingsService {
     private final Clock clock;
 
     public BusinessSettingsService(BusinessRepository businesses, BookingRepository bookings,
-                                  TenantContext tenant, Clock clock) {
+            TenantContext tenant, Clock clock) {
         this.businesses = businesses;
         this.bookings = bookings;
         this.tenant = tenant;

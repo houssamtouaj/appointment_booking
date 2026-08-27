@@ -72,7 +72,7 @@ public class OverrideController {
                     + "whole-day EXTRA has no meaning and is 422. Owners write anyone's, staff "
                     + "their own.")
     public OverrideResponse create(@PathVariable UUID staffId,
-                                   @Valid @RequestBody OverrideRequest request) {
+            @Valid @RequestBody OverrideRequest request) {
         return overrides.createFor(staffId, request);
     }
 

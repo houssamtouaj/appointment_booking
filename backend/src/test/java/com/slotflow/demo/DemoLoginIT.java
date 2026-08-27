@@ -47,7 +47,7 @@ class DemoLoginIT extends DemoProfileTest {
         // user back out of the database: a token carrying a business id that no longer exists would
         // pass a signature check and fail here.
         mockMvc.perform(get("/api/auth/me")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value(DemoBusiness.OWNER_EMAIL));
     }
@@ -65,8 +65,8 @@ class DemoLoginIT extends DemoProfileTest {
         // And it rotates, which is the property that proves this went through the real issuing path
         // rather than a shortcut that minted an access token and stopped.
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType("application/json")
-                        .content("{\"refreshToken\": \"" + refreshToken + "\"}"))
+                .contentType("application/json")
+                .content("{\"refreshToken\": \"" + refreshToken + "\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.email").value(DemoBusiness.OWNER_EMAIL));
     }
@@ -79,11 +79,11 @@ class DemoLoginIT extends DemoProfileTest {
         // constant — and this fails, which is the right way round: the README quotes these two
         // strings, and a visitor who types them is doing exactly this request.
         mockMvc.perform(post("/api/auth/login")
-                        .contentType("application/json")
-                        .content("""
+                .contentType("application/json")
+                .content("""
                                 {"email": "%s", "password": "%s"}
                                 """.formatted(DemoBusiness.OWNER_EMAIL,
-                                DemoBusiness.OWNER_PASSWORD)))
+                        DemoBusiness.OWNER_PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.business.slug").value(DemoBusiness.SLUG));
     }

@@ -27,8 +27,7 @@ import org.springframework.data.jpa.domain.Specification;
  */
 final class BookingSpecifications {
 
-    private BookingSpecifications() {
-    }
+    private BookingSpecifications() {}
 
     /**
      * @param from    inclusive lower bound on {@code startsAt}, or null
@@ -39,7 +38,7 @@ final class BookingSpecifications {
      * @param staffId one staff member, or null for the whole team
      */
     static Specification<Booking> ofBusiness(UUID businessId, Instant from, Instant to,
-                                             BookingStatus status, UUID staffId) {
+            BookingStatus status, UUID staffId) {
         return (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>(5);
             predicates.add(builder.equal(root.get("businessId"), businessId));

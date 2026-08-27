@@ -119,9 +119,9 @@ class AvailabilityQueryCountIT extends ApiIntegrationTest {
                 .withName("Nobody does this").build());
 
         long statements = queries.statementsDuring(() -> mockMvc.perform(get(path(salon))
-                        .param("serviceId", orphan.getId().toString())
-                        .param("from", MONDAY.toString())
-                        .param("to", MONDAY.plusDays(29).toString()))
+                .param("serviceId", orphan.getId().toString())
+                .param("from", MONDAY.toString())
+                .param("to", MONDAY.plusDays(29).toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0)));
 

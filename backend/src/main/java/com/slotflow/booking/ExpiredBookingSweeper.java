@@ -62,7 +62,7 @@ public class ExpiredBookingSweeper {
     private final Clock clock;
 
     public ExpiredBookingSweeper(BookingRepository bookings, ApplicationEventPublisher events,
-                                 PlatformTransactionManager transactionManager, Clock clock) {
+            PlatformTransactionManager transactionManager, Clock clock) {
         this.bookings = bookings;
         this.events = events;
         this.transactions = new TransactionTemplate(transactionManager);

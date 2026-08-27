@@ -71,7 +71,7 @@ public interface NotificationService {
 
     /** Plan 06. The link is where the invitee sets a name and a password and becomes active. */
     void sendStaffInvitation(Recipient recipient, String businessName,
-                             String rawToken, Instant expiresAt);
+            String rawToken, Instant expiresAt);
 
     // ---------------------------------------------------------------------------------
     //  bookings (plan 12)

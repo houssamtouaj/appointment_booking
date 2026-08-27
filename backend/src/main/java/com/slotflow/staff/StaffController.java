@@ -92,7 +92,7 @@ public class StaffController {
             description = "Owner: name, role, active. Staff: their own name only. The last active "
                     + "owner cannot be deactivated or demoted (409 LAST_OWNER).")
     public StaffUpdateResponse update(@PathVariable UUID id,
-                                      @Valid @RequestBody UpdateStaffRequest request) {
+            @Valid @RequestBody UpdateStaffRequest request) {
         return staff.update(id, request);
     }
 }

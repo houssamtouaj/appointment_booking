@@ -145,8 +145,8 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
     private long version;
 
     private Booking(UUID businessId, ServiceOffering service, UUID staffId, Instant startsAt,
-                    GuestContact guest, String notes, BookingStatus initialStatus,
-                    Instant expiresAt) {
+            GuestContact guest, String notes, BookingStatus initialStatus,
+            Instant expiresAt) {
         requireNotNull(businessId, "businessId");
         requireNotNull(service, "service");
         requireNotNull(guest, "guest");
@@ -186,7 +186,7 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
      * expiry: there is nothing in flight to time out.
      */
     public static Booking confirmed(UUID businessId, ServiceOffering service, UUID staffId,
-                                    Instant startsAt, GuestContact guest, String notes) {
+            Instant startsAt, GuestContact guest, String notes) {
         return new Booking(businessId, service, staffId, startsAt, guest, notes,
                 BookingStatus.CONFIRMED, null);
     }
@@ -197,8 +197,8 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
      * constraint covers {@code PENDING}.
      */
     public static Booking awaitingDeposit(UUID businessId, ServiceOffering service, UUID staffId,
-                                          Instant startsAt, GuestContact guest, String notes,
-                                          Instant expiresAt) {
+            Instant startsAt, GuestContact guest, String notes,
+            Instant expiresAt) {
         return new Booking(businessId, service, staffId, startsAt, guest, notes,
                 BookingStatus.PENDING, requireNotNull(expiresAt, "expiresAt"));
     }

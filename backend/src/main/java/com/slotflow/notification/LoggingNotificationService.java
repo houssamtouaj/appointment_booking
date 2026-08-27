@@ -54,7 +54,7 @@ public class LoggingNotificationService implements NotificationService {
 
     @Override
     public void sendStaffInvitation(Recipient recipient, String businessName,
-                                    String rawToken, Instant expiresAt) {
+            String rawToken, Instant expiresAt) {
         log.info("""
 
                         --- staff invitation (mail disabled) ------------------------------------

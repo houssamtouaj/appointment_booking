@@ -69,8 +69,7 @@ class StripeCheckoutSessions implements CheckoutSessions {
     @Override
     public Session open(Request request) {
         try {
-            com.stripe.model.checkout.Session session =
-                    client().checkout().sessions().create(paramsFor(request));
+            com.stripe.model.checkout.Session session = client().checkout().sessions().create(paramsFor(request));
             log.info("Opened Checkout session {} for booking {} ({} {})", session.getId(),
                     request.bookingId(), request.amountCents(), request.currency());
             return new Session(session.getId(), session.getUrl());

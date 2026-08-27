@@ -15,14 +15,11 @@ import jakarta.validation.constraints.Size;
 public record InviteStaffRequest(
 
         @NotBlank @Email @Size(max = 320)
-        @Schema(example = "sam@example.com")
-        String email,
+        @Schema(example = "sam@example.com") String email,
 
         @NotBlank @Size(max = 120)
-        @Schema(example = "Sam Ferreira")
-        String fullName,
+        @Schema(example = "Sam Ferreira") String fullName,
 
         @NotNull
-        @Schema(example = "STAFF")
-        Role role) {
+        @Schema(example = "STAFF") Role role) {
 }

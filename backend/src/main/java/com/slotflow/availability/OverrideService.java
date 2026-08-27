@@ -40,13 +40,13 @@ public class OverrideService {
      * The order the admin calendar draws: by date, closures affecting everybody first, then by time
      * of day. Stable, so a refresh does not shuffle a list somebody is clicking in.
      */
-    private static final Comparator<AvailabilityOverride> CALENDAR_ORDER =
-            Comparator.comparing(AvailabilityOverride::getDate)
-                    .thenComparing(AvailabilityOverride::isBusinessWide,
-                            Comparator.reverseOrder())
-                    .thenComparing(AvailabilityOverride::getStartTime,
-                            Comparator.nullsFirst(Comparator.naturalOrder()))
-                    .thenComparing(AvailabilityOverride::getId);
+    private static final Comparator<AvailabilityOverride> CALENDAR_ORDER = Comparator.comparing(
+            AvailabilityOverride::getDate)
+            .thenComparing(AvailabilityOverride::isBusinessWide,
+                    Comparator.reverseOrder())
+            .thenComparing(AvailabilityOverride::getStartTime,
+                    Comparator.nullsFirst(Comparator.naturalOrder()))
+            .thenComparing(AvailabilityOverride::getId);
 
     private final AvailabilityOverrideRepository overrides;
     private final UserRepository users;
@@ -54,7 +54,7 @@ public class OverrideService {
     private final TenantContext tenant;
 
     public OverrideService(AvailabilityOverrideRepository overrides, UserRepository users,
-                          AvailabilityMapper mapper, TenantContext tenant) {
+            AvailabilityMapper mapper, TenantContext tenant) {
         this.overrides = overrides;
         this.users = users;
         this.mapper = mapper;
@@ -103,15 +103,15 @@ public class OverrideService {
         requireCoherentTimes(request);
 
         AvailabilityOverride override = switch (request.type()) {
-            case BLOCKED -> request.isWholeDay()
-                    ? AvailabilityOverride.blockedDay(
-                            staff.getBusinessId(), staffId, request.date(), request.reason())
-                    : AvailabilityOverride.blockedRange(
-                            staff.getBusinessId(), staffId, request.date(),
-                            request.startTime(), request.endTime(), request.reason());
-            case EXTRA -> AvailabilityOverride.extraHours(
-                    staff.getBusinessId(), staffId, request.date(),
-                    request.startTime(), request.endTime(), request.reason());
+        case BLOCKED -> request.isWholeDay()
+                ? AvailabilityOverride.blockedDay(
+                        staff.getBusinessId(), staffId, request.date(), request.reason())
+                : AvailabilityOverride.blockedRange(
+                        staff.getBusinessId(), staffId, request.date(),
+                        request.startTime(), request.endTime(), request.reason());
+        case EXTRA -> AvailabilityOverride.extraHours(
+                staff.getBusinessId(), staffId, request.date(),
+                request.startTime(), request.endTime(), request.reason());
         };
         return mapper.toResponse(overrides.save(override));
     }

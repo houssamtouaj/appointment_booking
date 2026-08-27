@@ -100,8 +100,7 @@ public abstract class IntegrationTest {
     private static final String POSTGRES_IMAGE = "postgres:16-alpine";
 
     @ServiceConnection
-    protected static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>(POSTGRES_IMAGE).withReuse(true);
+    protected static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGRES_IMAGE).withReuse(true);
 
     static {
         POSTGRES.start();

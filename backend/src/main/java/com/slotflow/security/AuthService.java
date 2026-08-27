@@ -91,11 +91,11 @@ public class AuthService {
     private final TransactionTemplate writes;
 
     public AuthService(UserRepository users, BusinessRepository businesses,
-                       BookingPolicyRepository policies, RefreshTokenService refreshTokens,
-                       PasswordResetService passwordResets,
-                       ApplicationEventPublisher notifications,
-                       PasswordEncoder passwordEncoder, JwtService jwtService, AuthMapper mapper,
-                       PlatformTransactionManager transactionManager) {
+            BookingPolicyRepository policies, RefreshTokenService refreshTokens,
+            PasswordResetService passwordResets,
+            ApplicationEventPublisher notifications,
+            PasswordEncoder passwordEncoder, JwtService jwtService, AuthMapper mapper,
+            PlatformTransactionManager transactionManager) {
         this.users = users;
         this.businesses = businesses;
         this.policies = policies;

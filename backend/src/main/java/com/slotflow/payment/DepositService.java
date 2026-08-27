@@ -64,7 +64,7 @@ public class DepositService {
      *         kinder outcome
      */
     public void openCheckout(Booking booking, Business business, ServiceOffering service,
-                             Instant now) {
+            Instant now) {
         long amountCents = business.depositFor(booking.getPriceCents());
         if (amountCents <= 0) {
             // Unreachable through PublicBookingService, which only creates a PENDING booking when

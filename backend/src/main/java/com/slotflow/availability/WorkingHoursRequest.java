@@ -35,6 +35,5 @@ public record WorkingHoursRequest(
         // Ten shifts a day is already absurd, and the cap is what stops one request inserting an
         // unbounded number of rows. Everything else in this API that accepts a collection is
         // bounded too, whether by a page size or by a check like this one.
-        @Size(max = 70)
-        List<@Valid @NotNull WorkingHoursRange> ranges) {
+        @Size(max = 70) List<@Valid @NotNull WorkingHoursRange> ranges) {
 }

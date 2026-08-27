@@ -22,6 +22,5 @@ public record BookingStatusRequest(
         @NotNull
         @Schema(description = "CANCELLED, COMPLETED or NO_SHOW. CONFIRMED is refused: a deposit "
                 + "confirms a booking, staff do not.",
-                example = "COMPLETED")
-        BookingStatus status) {
+                example = "COMPLETED") BookingStatus status) {
 }

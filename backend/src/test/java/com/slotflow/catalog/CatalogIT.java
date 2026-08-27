@@ -163,7 +163,7 @@ class CatalogIT extends ApiIntegrationTest {
         mockMvc.perform(get("/api/services").header(HttpHeaders.AUTHORIZATION, bearer(colleague)))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/services/" + id)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(colleague)))
+                .header(HttpHeaders.AUTHORIZATION, bearer(colleague)))
                 .andExpect(status().isOk());
 
         // Every write, not only the interesting one: a role rule that holds for two of three verbs
@@ -456,12 +456,12 @@ class CatalogIT extends ApiIntegrationTest {
     // ---------------------------------------------------------------------------------
 
     private MockHttpServletRequestBuilder asOwner(MockHttpServletRequestBuilder request,
-                                                  Tenant tenant, String body) {
+            Tenant tenant, String body) {
         return as(request, tenant.owner(), body);
     }
 
     private MockHttpServletRequestBuilder as(MockHttpServletRequestBuilder request, User caller,
-                                             String body) {
+            String body) {
         request.header(HttpHeaders.AUTHORIZATION, bearer(caller));
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);

@@ -39,8 +39,8 @@ public class PublicBusinessService {
     private final PublicCatalogService publicCatalog;
 
     public PublicBusinessService(BusinessRepository businesses, UserRepository users,
-                                WorkingHoursRepository workingHours,
-                                PublicCatalogService publicCatalog) {
+            WorkingHoursRepository workingHours,
+            PublicCatalogService publicCatalog) {
         this.businesses = businesses;
         this.users = users;
         this.workingHours = workingHours;

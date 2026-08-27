@@ -34,7 +34,7 @@ public class ProblemAccessDeniedHandler implements AccessDeniedHandler {
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
-                       AccessDeniedException deniedException) throws IOException {
+            AccessDeniedException deniedException) throws IOException {
         ProblemDetail problem = Problems.of(ErrorCode.ACCESS_DENIED,
                 "You do not have permission to perform this action.");
         Problems.setInstance(problem, request.getRequestURI());

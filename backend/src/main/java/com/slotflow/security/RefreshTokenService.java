@@ -87,7 +87,7 @@ public class RefreshTokenService {
     private final TransactionTemplate ownTransaction;
 
     public RefreshTokenService(RefreshTokenRepository refreshTokens, AuthProperties properties,
-                              Clock clock, PlatformTransactionManager transactionManager) {
+            Clock clock, PlatformTransactionManager transactionManager) {
         this.refreshTokens = refreshTokens;
         this.ttl = properties.jwt().refreshTokenTtl();
         this.clock = clock;

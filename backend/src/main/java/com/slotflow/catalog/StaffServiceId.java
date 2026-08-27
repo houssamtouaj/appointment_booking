@@ -16,8 +16,7 @@ public class StaffServiceId implements Serializable {
     private UUID serviceId;
 
     /** Required by JPA. */
-    public StaffServiceId() {
-    }
+    public StaffServiceId() {}
 
     public StaffServiceId(UUID staffId, UUID serviceId) {
         this.staffId = staffId;

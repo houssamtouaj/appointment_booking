@@ -69,7 +69,7 @@ public class BookingPolicy extends AbstractAuditedEntity implements TenantOwned 
     private Instant updatedAt;
 
     public BookingPolicy(UUID businessId, int minLeadTimeHours, int maxAdvanceDays,
-                         int cancellationCutoffHours, int slotGranularityMinutes) {
+            int cancellationCutoffHours, int slotGranularityMinutes) {
         this.businessId = businessId;
         setMinLeadTimeHours(minLeadTimeHours);
         setMaxAdvanceDays(maxAdvanceDays);

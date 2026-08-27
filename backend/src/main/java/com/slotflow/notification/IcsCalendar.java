@@ -44,17 +44,15 @@ import java.util.Locale;
 final class IcsCalendar {
 
     /** {@code 20261014T130000Z}. Basic format, UTC, no separators — see the class note. */
-    private static final DateTimeFormatter STAMP =
-            DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'", Locale.ROOT)
-                    .withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'", Locale.ROOT)
+            .withZone(ZoneOffset.UTC);
 
     private static final String CRLF = "\r\n";
 
     /** RFC 5545 §3.1, counted in octets of the encoded form and excluding the break. */
     private static final int LIMIT = 75;
 
-    private IcsCalendar() {
-    }
+    private IcsCalendar() {}
 
     /**
      * @param generatedAt what goes in {@code DTSTAMP} — when this file was produced, which is

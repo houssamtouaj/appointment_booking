@@ -55,7 +55,7 @@ public class PublicInvitationController {
             description = "Sets the name and password, activates the account and consumes the "
                     + "token. Accepting twice is 410 INVITATION_CONSUMED, never a 500.")
     public void accept(@PathVariable String token,
-                       @Valid @RequestBody AcceptInvitationRequest request) {
+            @Valid @RequestBody AcceptInvitationRequest request) {
         invitations.accept(token, request);
     }
 }

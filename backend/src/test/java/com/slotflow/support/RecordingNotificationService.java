@@ -91,7 +91,7 @@ public class RecordingNotificationService implements NotificationService {
 
     @Override
     public void sendStaffInvitation(Recipient recipient, String businessName,
-                                    String rawToken, Instant expiresAt) {
+            String rawToken, Instant expiresAt) {
         failIfAsked();
         invitations.put(key(recipient), new Sent(recipient, rawToken, expiresAt, businessName));
     }
@@ -175,7 +175,7 @@ public class RecordingNotificationService implements NotificationService {
     }
 
     private void record(SentAboutBooking.Kind kind, BookingNotification booking,
-                        CancelledBy cancelledBy) {
+            CancelledBy cancelledBy) {
         failIfAsked();
         RuntimeException poisoned = failuresByBooking.get(booking.bookingId());
         if (poisoned != null) {

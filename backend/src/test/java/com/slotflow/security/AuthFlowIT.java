@@ -42,8 +42,8 @@ class AuthFlowIT extends ApiIntegrationTest {
         RegisterRequest request = registration();
 
         MvcResult result = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
@@ -75,8 +75,8 @@ class AuthFlowIT extends ApiIntegrationTest {
     @DisplayName("the refresh cookie is httpOnly, SameSite=Lax and scoped to /api/auth")
     void refreshCookieCarriesItsSecurityAttributes() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(registration())))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(registration())))
                 .andExpect(status().isCreated())
                 .andReturn();
 
@@ -96,15 +96,15 @@ class AuthFlowIT extends ApiIntegrationTest {
     void takenSlugIsAConflict() throws Exception {
         RegisterRequest first = registration();
         mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(first)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(first)))
                 .andExpect(status().isCreated());
 
         RegisterRequest sameSlug = registration(first.slug(), uniqueEmail());
 
         mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(sameSlug)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(sameSlug)))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("SLUG_TAKEN"))
@@ -117,8 +117,8 @@ class AuthFlowIT extends ApiIntegrationTest {
         Tenant existing = aTenant();
 
         mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(registration(uniqueSlug(), existing.owner().getEmail()))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(registration(uniqueSlug(), existing.owner().getEmail()))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("EMAIL_TAKEN"));
     }
@@ -127,8 +127,8 @@ class AuthFlowIT extends ApiIntegrationTest {
     @DisplayName("a malformed slug is 422 with the field named, not a 409")
     void malformedSlugIsAValidationFailure() throws Exception {
         mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(registration("no spaces allowed", uniqueEmail()))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(registration("no spaces allowed", uniqueEmail()))))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors[0].field").value("slug"));
@@ -141,8 +141,8 @@ class AuthFlowIT extends ApiIntegrationTest {
                 "Mars/Olympus_Mons", "EUR", "Dana Okoye", uniqueEmail(), PASSWORD);
 
         mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(request)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors[0].field").value("timezone"))
@@ -161,8 +161,8 @@ class AuthFlowIT extends ApiIntegrationTest {
                 "EUR", "Dana Okoye", uniqueEmail(), "пароль".repeat(12));
 
         mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(request)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors[0].field").value("password"));
@@ -176,10 +176,10 @@ class AuthFlowIT extends ApiIntegrationTest {
         // The limit is bytes, so the same 72 bytes are 72 Latin characters or 36 Cyrillic ones, and
         // both are fine. Rejecting the shorter-looking one would be the mirror mistake.
         mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJson(new RegisterRequest("Dana Clinic", uniqueSlug(),
-                                "Europe/Paris", "EUR", "Dana Okoye", uniqueEmail(),
-                                "пароль".repeat(6)))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJson(new RegisterRequest("Dana Clinic", uniqueSlug(),
+                        "Europe/Paris", "EUR", "Dana Okoye", uniqueEmail(),
+                        "пароль".repeat(6)))))
                 .andExpect(status().isCreated());
     }
 
@@ -217,8 +217,8 @@ class AuthFlowIT extends ApiIntegrationTest {
         Tenant tenant = aTenant();
 
         MvcResult login = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody(tenant.owner().getEmail(), PASSWORD)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody(tenant.owner().getEmail(), PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.id").value(tenant.owner().getId().toString()))
                 .andReturn();
@@ -232,7 +232,7 @@ class AuthFlowIT extends ApiIntegrationTest {
                 .andExpect(jsonPath("$.business.id").value(tenant.id().toString()));
 
         MvcResult refreshed = mockMvc.perform(post("/api/auth/refresh")
-                        .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
+                .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -241,7 +241,7 @@ class AuthFlowIT extends ApiIntegrationTest {
                 .isNotEqualTo(refreshToken);
 
         mockMvc.perform(get("/api/auth/me")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessTokenFrom(refreshed)))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessTokenFrom(refreshed)))
                 .andExpect(status().isOk());
     }
 
@@ -330,8 +330,8 @@ class AuthFlowIT extends ApiIntegrationTest {
         users.save(staff);
 
         mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody(staff.getEmail(), PASSWORD)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody(staff.getEmail(), PASSWORD)))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -344,16 +344,16 @@ class AuthFlowIT extends ApiIntegrationTest {
     void logoutRevokesTheRefreshTokenOnly() throws Exception {
         Tenant tenant = aTenant();
         MvcResult login = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody(tenant.owner().getEmail(), PASSWORD)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody(tenant.owner().getEmail(), PASSWORD)))
                 .andExpect(status().isOk())
                 .andReturn();
         String accessToken = accessTokenFrom(login);
         String refreshToken = refreshCookieFrom(login);
 
         MvcResult loggedOut = mockMvc.perform(post("/api/auth/logout")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                        .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
                 .andExpect(status().isNoContent())
                 .andReturn();
 
@@ -369,7 +369,7 @@ class AuthFlowIT extends ApiIntegrationTest {
 
         // The refresh token, though, is gone — and presenting it again is treated as reuse.
         mockMvc.perform(post("/api/auth/refresh")
-                        .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
+                .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("REFRESH_REUSED"));
     }
@@ -379,8 +379,8 @@ class AuthFlowIT extends ApiIntegrationTest {
     void logoutNeedsOnlyTheRefreshToken() throws Exception {
         Tenant tenant = aTenant();
         MvcResult login = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody(tenant.owner().getEmail(), PASSWORD)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody(tenant.owner().getEmail(), PASSWORD)))
                 .andExpect(status().isOk())
                 .andReturn();
         String refreshToken = refreshCookieFrom(login);
@@ -391,14 +391,14 @@ class AuthFlowIT extends ApiIntegrationTest {
         // the client holding it. The cookie is itself proof of possession: 256 bits, single use,
         // looked up by hash.
         MvcResult loggedOut = mockMvc.perform(post("/api/auth/logout")
-                        .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
+                .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
                 .andExpect(status().isNoContent())
                 .andReturn();
         assertThat(loggedOut.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains("Max-Age=0");
 
         // And it really is revoked, not merely forgotten by the browser.
         mockMvc.perform(post("/api/auth/refresh")
-                        .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
+                .cookie(new jakarta.servlet.http.Cookie(REFRESH_COOKIE_NAME, refreshToken)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("REFRESH_REUSED"));
     }
@@ -438,8 +438,8 @@ class AuthFlowIT extends ApiIntegrationTest {
 
     private String loginResponseBody(String email, String password) throws Exception {
         return mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody(email, password)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody(email, password)))
                 .andExpect(status().isUnauthorized())
                 .andReturn()
                 .getResponse()

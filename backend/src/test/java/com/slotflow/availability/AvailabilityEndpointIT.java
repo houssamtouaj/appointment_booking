@@ -246,9 +246,9 @@ class AvailabilityEndpointIT extends ApiIntegrationTest {
                 .withName("Nobody does this").build());
 
         mockMvc.perform(get(path(salon))
-                        .param("serviceId", orphan.getId().toString())
-                        .param("from", WEDNESDAY.toString())
-                        .param("to", WEDNESDAY.toString()))
+                .param("serviceId", orphan.getId().toString())
+                .param("from", WEDNESDAY.toString())
+                .param("to", WEDNESDAY.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
@@ -263,16 +263,16 @@ class AvailabilityEndpointIT extends ApiIntegrationTest {
         Salon salon = aSalon();
 
         mockMvc.perform(get("/api/public/businesses/{slug}/availability", "no-such-shop")
-                        .param("serviceId", salon.serviceId().toString())
-                        .param("from", WEDNESDAY.toString())
-                        .param("to", WEDNESDAY.toString()))
+                .param("serviceId", salon.serviceId().toString())
+                .param("from", WEDNESDAY.toString())
+                .param("to", WEDNESDAY.toString()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
 
         mockMvc.perform(get(path(salon))
-                        .param("serviceId", UUID.randomUUID().toString())
-                        .param("from", WEDNESDAY.toString())
-                        .param("to", WEDNESDAY.toString()))
+                .param("serviceId", UUID.randomUUID().toString())
+                .param("from", WEDNESDAY.toString())
+                .param("to", WEDNESDAY.toString()))
                 .andExpect(status().isNotFound());
     }
 
@@ -296,10 +296,10 @@ class AvailabilityEndpointIT extends ApiIntegrationTest {
         User stranger = aStaffMemberOf(salon.tenant());
 
         mockMvc.perform(get(path(salon))
-                        .param("serviceId", salon.serviceId().toString())
-                        .param("from", WEDNESDAY.toString())
-                        .param("to", WEDNESDAY.toString())
-                        .param("staffId", stranger.getId().toString()))
+                .param("serviceId", salon.serviceId().toString())
+                .param("from", WEDNESDAY.toString())
+                .param("to", WEDNESDAY.toString())
+                .param("staffId", stranger.getId().toString()))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("STAFF_NOT_ASSIGNED"));
     }
@@ -341,16 +341,16 @@ class AvailabilityEndpointIT extends ApiIntegrationTest {
         Salon salon = aSalon();
 
         mockMvc.perform(get(path(salon))
-                        .param("serviceId", salon.serviceId().toString())
-                        .param("from", WEDNESDAY.toString())
-                        .param("to", WEDNESDAY.toString())
-                        .param("tz", "Europe/Atlantis"))
+                .param("serviceId", salon.serviceId().toString())
+                .param("from", WEDNESDAY.toString())
+                .param("to", WEDNESDAY.toString())
+                .param("tz", "Europe/Atlantis"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors[0].field").value("tz"));
 
         mockMvc.perform(get(path(salon))
-                        .param("from", WEDNESDAY.toString())
-                        .param("to", WEDNESDAY.toString()))
+                .param("from", WEDNESDAY.toString())
+                .param("to", WEDNESDAY.toString()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MISSING_PARAMETER"));
     }
@@ -458,8 +458,8 @@ class AvailabilityEndpointIT extends ApiIntegrationTest {
         String body = mockMvc.perform(request)
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        return json.readValue(body, new TypeReference<List<SlotResponse>>() {
-        }).stream().map(SlotResponse::start).toList();
+        return json.readValue(body, new TypeReference<List<SlotResponse>>() {}).stream().map(SlotResponse::start)
+                .toList();
     }
 
     private static Instant parisTime(String localDateTime) {

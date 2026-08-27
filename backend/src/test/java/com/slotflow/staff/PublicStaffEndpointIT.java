@@ -97,7 +97,7 @@ class PublicStaffEndpointIT extends ApiIntegrationTest {
                 tenant.business().getId(), colleague.getId(), massage.getId()));
 
         mockMvc.perform(get("/api/public/businesses/" + tenant.business().getSlug() + "/staff")
-                        .param("serviceId", massage.getId().toString()))
+                .param("serviceId", massage.getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(colleague.getId().toString()));
@@ -117,7 +117,7 @@ class PublicStaffEndpointIT extends ApiIntegrationTest {
         // The intersection with my own team is the isolation: there is no ownership check to forget,
         // because a foreign service simply has no performers inside this business.
         mockMvc.perform(get("/api/public/businesses/" + mine.business().getSlug() + "/staff")
-                        .param("serviceId", theirService.getId().toString()))
+                .param("serviceId", theirService.getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
