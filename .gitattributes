@@ -5,3 +5,11 @@ mvnw text eol=lf
 
 # Its Windows counterpart is only ever run by cmd.exe.
 mvnw.cmd text eol=crlf
+
+# Spotless is configured with <lineEndings>GIT_ATTRIBUTES</lineEndings>, so the ending it
+# enforces for a .java file is whatever git says that file should have. With no rule here it
+# falls back to core.autocrlf, which comes from the Git for Windows installer rather than from
+# the repository -- a contributor who sets it to input or false gets all 290 files reported as
+# needing changes at validate, on a pristine checkout. Pin it so the gate is a property of the
+# repository. The blobs are already LF, so this normalises the working tree, not the history.
+*.java text eol=lf
