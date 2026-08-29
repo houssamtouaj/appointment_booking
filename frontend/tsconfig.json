@@ -3,7 +3,8 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.test.json" }
+    { "path": "./tsconfig.test.json" },
+    { "path": "./tsconfig.e2e.json" }
   ],
   // A solution-style tsconfig compiles nothing, so these options are inert for tsc.
   // They are here because the shadcn CLI reads the ROOT tsconfig to resolve "@/..."

@@ -1,0 +1,126 @@
+name: E2E
+
+# The one suite that needs the whole product running: Postgres, the API with its
+# demo seed, and the built SPA in a real browser (F11).
+#
+# **On pushes to dev and main only**, which is the wave plan's instruction and
+# also the honest trade. It builds the backend image, waits for a database and
+# drives Chromium — six or seven minutes against ninety seconds for web.yml — and
+# it proves something no fixture can: that the availability engine, the exclusion
+# constraint and four screens agree over real rows.
+#
+# Like web.yml this is NOT a required check, so the `paths:` filter here is free.
+# ci.yml explains at length why a filtered workflow must never be made required:
+# a commit outside the filter produces no check run on that SHA, which GitHub
+# reads as "not passed" rather than "not applicable", and the release push is
+# then rejected outright. If this is ever promoted, delete the filter in the same
+# commit.
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/e2e.yml'
+  # Manually, for a wave branch that wants the signal before it merges.
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  booking-flow:
+    name: the booking flow, end to end
+    runs-on: ubuntu-latest
+    # The backend image is built from source here, which is most of the wall
+    # clock. Generous, and far below the six-hour default a hung build would burn.
+    timeout-minutes: 30
+
+    env:
+      # Compose requires both of these and refuses to start without them. They are
+      # throwaway values for a container that lives for one job and is never
+      # reachable from outside the runner — the real ones are repository secrets
+      # and belong nowhere near a workflow file.
+      POSTGRES_PASSWORD: e2e-local-only
+      JWT_SECRET: e2e-local-only-secret-that-is-long-enough-for-hs256-signing
+      # 8081, matching the frontend's documented default. 8080 is free on a runner,
+      # but keeping the two the same means `VITE_API_BASE_URL` needs no override and
+      # a developer reproducing a CI failure runs the same command locally.
+      API_PORT: '8081'
+      # The port `vite preview` is pinned to in playwright.config.ts. It has to be
+      # here as well, because CORS is enforced by the API and this run is
+      # deliberately cross-origin.
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+      FRONTEND_BASE_URL: http://localhost:5173
+      # The deployed configuration. The deposit path is behind the 201's own
+      # branch, so with payments off this exercises exactly what production runs.
+      PAYMENTS_ENABLED: 'false'
+      # Seeds demo-salon, which is the tenant the spec books against.
+      SPRING_PROFILES_ACTIVE: demo
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          # From the repository root, NOT from a working-directory default: that
+          # applies to `run:` steps only, and a wrong path here silently never
+          # caches rather than failing.
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: Wait for the API to report healthy
+        # The api service has no healthcheck of its own in compose, so this polls
+        # actuator directly. Sixty tries at two seconds is two minutes, which is
+        # comfortably past a cold Flyway migration and a demo seed.
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl -fsS "http://localhost:${API_PORT}/actuator/health" | grep -q '"status":"UP"'; then
+              echo "API up after $attempt attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::the API never reported healthy"
+          docker compose logs api --tail 200
+          exit 1
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: frontend
+        # `--with-deps` pulls the shared libraries a headless Chromium needs on a
+        # bare runner image. Chromium only: this suite is about the flow, not
+        # about browser differences, and three engines would triple the wall clock
+        # to re-prove the same server behaviour.
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the booking flow
+        working-directory: frontend
+        run: npm run e2e
+
+      # Only on failure, and only the artefacts that explain one: the trace has
+      # the DOM at every step, which is the difference between a red run somebody
+      # can diagnose and a red run somebody reruns.
+      - name: Keep the trace
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-trace
+          path: frontend/test-results/
+          retention-days: 7
+
+      - name: API logs
+        if: failure()
+        run: docker compose logs api --tail 500

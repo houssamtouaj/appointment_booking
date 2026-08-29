@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier/flat'
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules'] },
+  { ignores: ['dist', 'coverage', 'node_modules', 'playwright-report', 'test-results'] },
 
   // Application source. Type-aware linting is deliberately not enabled: `npm run typecheck`
   // already runs the full compiler, and the type-aware rule set costs several seconds per run
@@ -63,5 +63,13 @@ export default tseslint.config(
     files: ['*.config.{ts,js}', 'vitest.setup.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended, prettier],
     languageOptions: { globals: globals.node },
+  },
+
+  // Playwright specs. Node globals for `process.env`, and none of the React
+  // rules -- there is no component here, and `jsx-a11y` has no JSX to read.
+  {
+    files: ['e2e/**/*.ts'],
+    extends: [js.configs.recommended, tseslint.configs.recommended, prettier],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 )

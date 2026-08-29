@@ -46,7 +46,11 @@ export default defineConfig(({ mode }) => {
       css: true,
       // Vite treats every file under the root as a candidate; without this, a `dist/` left over
       // from a previous build gets collected and the suite fails on minified output.
-      exclude: ['node_modules/**', 'dist/**'],
+      //
+      // `e2e/**` is excluded for a different reason: those specs are Playwright's, and
+      // Vitest's default `include` matches `*.spec.ts` as happily as `*.test.ts`. Collected
+      // here they fail on the import of @playwright/test rather than on anything true.
+      exclude: ['node_modules/**', 'dist/**', 'e2e/**'],
     },
   }
 })

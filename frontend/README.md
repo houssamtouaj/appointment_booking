@@ -27,11 +27,23 @@ root, with `SPRING_PROFILES_ACTIVE=demo` so that `POST /api/auth/demo-login` exi
 | `npm run format`         | Prettier, write                                                                                                       |
 | `npm run format:check`   | Prettier, check only — what CI runs                                                                                   |
 | `npm run contract:check` | Diff the Zod schemas against the running API's `/v3/api-docs`. Local only — it needs the stack up, so it is not in CI |
+| `npm run e2e`            | Playwright: the booking flow end to end against `docker compose up`                                                   |
+| `npm run e2e:install`    | Fetch the Chromium build `npm run e2e` drives. Once per machine                                                       |
 
 `.github/workflows/web.yml` runs typecheck, lint, format, test and build on every push
 that touches `frontend/`, plus a grep asserting that every `VITE_*` the code reads is
 documented in `.env.example`. It is deliberately **not** a required check on `main`; the
 header comment in that file explains what has to change before it can be.
+
+`.github/workflows/e2e.yml` runs the Playwright spec, and **only on pushes to `dev` and
+`main`** — it builds the backend image, waits for a database and drives a browser, which is
+six or seven minutes against web.yml's ninety seconds. Locally it wants the stack up:
+
+```sh
+docker compose up            # from the repository root
+npm run e2e:install          # once per machine
+npm run e2e
+```
 
 ## Source layout
 
@@ -208,9 +220,76 @@ ANDs it with `payments.enabled()` — so the demo reports `true` and then confir
 booking with no deposit taken. The landing page may say a deposit _may_ be requested; only
 the booking response says one _is_. Asserting otherwise is a gate failure.
 
+## Booking, the deposit and the manage page
+
+Step 4 is `?slot=<the slot's start, verbatim>`. Adding it to the URL rather than to a
+context is what makes the `409` recovery free: the flow page survives a query-string
+change, so **the details form is declared there and simply outlives the step**. Returning
+someone to the picker is one parameter being cleared, with nothing to serialise and
+nothing to restore.
+
+**Six refusals, six screens.** The booking endpoint fails in ways that mean different
+things and lead to three different places, so every one is keyed on `ApiError.code` and
+has copy of its own (`booking-errors.ts`). The two that carry a boundary —
+`POLICY_LEAD_TIME` and `POLICY_MAX_ADVANCE` — read `earliestStart` / `latestStart` out of
+the problem body and reopen the picker on that week, which is why `problemDetailSchema` is
+a **loose** object: Zod's default strips unknown keys, and a strict one parses those
+bodies happily and throws the useful half away.
+
+**`409 BOOKING_SLOT_TAKEN` is the expected outcome, not a crash.** It is what the whole
+double-booking guarantee produces when two people want the same 10:00, and the second
+person's entire experience of that guarantee working is one sentence. It reads as an
+ordinary thing that happened, and the contact details survive it.
+
+**The response decides whether a deposit is taken, and nothing else does** (F5). A
+`CONFIRMED` with no `checkoutUrl` is a finished booking; a `PENDING` with one is a hold.
+`depositRequired` on the landing payload is the raw business setting — only
+`PublicBookingService` ANDs it with `payments.enabled()` — so the demo reports `true` and
+then confirms every booking with nothing to pay. No screen before the `201` may promise
+otherwise.
+
+The deposit path shows the hold from `expiresAt` and the words "not refunded" before
+handing off with `window.location.assign` — a full navigation, because Checkout is
+Stripe's domain. `expiresAt` is **absent on a confirmed booking** (nulls are omitted), so
+`HoldNotice` renders nothing without one rather than counting down to `NaN`.
+
+The cancellation token goes to `sessionStorage` immediately before that navigation and
+nowhere else. Not `localStorage`: `sessionStorage` dies with the tab, which is exactly the
+lifetime of a redirect round trip, and a token that outlives the tab is somebody else's
+appointment on a shared machine. It is the one credential in this app that reaches storage
+at all — unlike the access token it is not a key to an account, it _is_ the customer's own
+booking, and it is already in their inbox.
+
+### `/booking/:cancellationToken`
+
+**A redirect is not a payment.** `?checkout=success` and `?checkout=cancelled` choose the
+tone of one sentence and nothing else; the page reads the booking either way, because the
+redirect is something a browser did and the payment is something a webhook confirmed.
+Anyone can type that URL. While the booking says `PENDING` the page asks again — every two
+seconds, backing off to five, for at most ninety, then a manual "Check again" — and the
+interval belongs to the query observer, so unmounting the route tears it down.
+
+Cancelling states that deposits are not refunded (backend D7) **before** the button.
+`409 CANCELLATION_CUTOFF` is a designed state rendered inside the dialog with the deadline
+that passed, not a toast: it is an answer to the question the dialog just asked.
+`cancellable: false` disables the button and says why, using `cancellationDeadline` — a
+missing control leaves "can I cancel this?" unanswered. A cancelled booking still resolves
+at its token forever and renders as cancelled, never as a 404.
+
+### Known gap: the manage page cannot know the business
+
+`PublicBookingResponse` carries the two instants, the price, the currency, the token and
+the guest — and no business at all: no slug, no name, no `timezone`. So this is the one
+screen in the app that renders times in the **viewer's** zone rather than the business's,
+and it names the zone in a line underneath. Guessing UTC would put a 01:40 Paris
+appointment on the wrong day for its own customer; the honest degradation is the reader's
+own clock, labelled. It is also why the cancelled state offers no prefilled "book again"
+link — there is no slug to build one from. Adding `businessSlug` and `timezone` to that
+response is a backend change and deliberately not made here.
+
 ## Not built yet
 
-No booking is created yet: the slot picker ends with a selected slot and a `Continue`
-button that is deliberately disabled. The details form, the deposit and the manage page
-are wave 4. `/dashboard` and the other admin routes are still wave-1 placeholders. The
-screen list is tracked in the local project brief (see `docs/`, not committed).
+`/dashboard` and the other admin routes are still wave-1 placeholders — the business
+cannot see these bookings yet, and there is no `POST /api/bookings` for it to create one
+either way. The screen list is tracked in the local project brief (see `docs/`, not
+committed).
