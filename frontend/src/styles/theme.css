@@ -141,6 +141,17 @@
   --elevation-1: 0 1px 2px 0 rgb(34 30 27 / 0.05), 0 1px 3px 0 rgb(34 30 27 / 0.06);
   --elevation-2: 0 4px 8px -2px rgb(34 30 27 / 0.08), 0 2px 4px -2px rgb(34 30 27 / 0.06);
   --elevation-3: 0 16px 32px -8px rgb(34 30 27 / 0.16), 0 4px 8px -4px rgb(34 30 27 / 0.08);
+
+  /* --- Scrim -------------------------------------------------------------
+     Behind a modal, and nowhere else. Warm-tinted ink rather than neutral
+     black, for the same reason the shadows are: a cold grey veil over warm
+     paper is the tell that a theme was assembled from defaults.
+
+     A token rather than a `bg-black/40` at the call site because it has to
+     change with the mode. 45% of warm ink separates a dialog from paper; the
+     same value over charcoal leaves the dialog and the page behind it close
+     enough in value to read as one surface. */
+  --scrim: rgb(34 30 27 / 0.45);
 }
 
 /* =============================================================================
@@ -193,6 +204,8 @@
   --elevation-1: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --elevation-2: 0 4px 8px -2px rgb(0 0 0 / 0.5);
   --elevation-3: 0 16px 32px -8px rgb(0 0 0 / 0.6);
+
+  --scrim: rgb(0 0 0 / 0.7);
 }
 
 /* The system preference, honoured unless the user has said otherwise. The
@@ -232,6 +245,8 @@
     --elevation-1: 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --elevation-2: 0 4px 8px -2px rgb(0 0 0 / 0.5);
     --elevation-3: 0 16px 32px -8px rgb(0 0 0 / 0.6);
+
+    --scrim: rgb(0 0 0 / 0.7);
   }
 }
 
@@ -367,6 +382,7 @@
   --color-ring: var(--ring);
 
   --color-rule: var(--rule);
+  --color-scrim: var(--scrim);
 
   --color-success: var(--success);
   --color-success-wash: var(--success-wash);

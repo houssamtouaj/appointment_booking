@@ -3,6 +3,7 @@ import { Navigate, type RouteObject } from 'react-router-dom'
 import { RootLayout } from '@/components/root-layout'
 import { BookingFlowPage } from '@/features/booking/booking-flow-page'
 import { BusinessLandingPage } from '@/features/booking/business-landing-page'
+import { ManageBookingPage } from '@/features/booking/manage-booking-page'
 import { AcceptInvitationPage } from '@/features/auth/accept-invitation-page'
 import { ForgotPasswordPage } from '@/features/auth/forgot-password-page'
 import { LoginPage } from '@/features/auth/login-page'
@@ -44,16 +45,11 @@ export const routes: RouteObject[] = [
       { path: 'b/:slug', element: <BusinessLandingPage /> },
       { path: 'b/:slug/book', element: <BookingFlowPage /> },
       {
-        // Named by the backend (F12). Not ours to rename.
+        // Named by the backend (F12). Not ours to rename: `FrontendLinks` builds
+        // this path into every customer email, and it is also the URL Stripe
+        // returns to with `?checkout=success|cancelled`.
         path: 'booking/:cancellationToken',
-        element: (
-          <Placeholder
-            eyebrow="Public"
-            title="Manage your booking"
-            wave="Wave 4"
-            description="Reached from the confirmation email, and the page Stripe returns to."
-          />
-        ),
+        element: <ManageBookingPage />,
       },
 
       // --- Account ------------------------------------------------------
