@@ -7,5 +7,11 @@
        that the setup file's side-effect import brings in. */
     "types": ["node", "vite/client"]
   },
-  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "vitest.setup.ts"]
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "vitest.setup.ts"],
+  /* Reset, not decoration. `exclude` is inherited from tsconfig.app.json, where it
+     names these exact patterns -- and `exclude` filters `include`, so without this
+     line the include list above resolves to `vitest.setup.ts` alone and not one
+     test file is ever type-checked by anything. Vitest does not type-check either,
+     so the error ships. */
+  "exclude": []
 }
