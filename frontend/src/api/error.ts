@@ -1,0 +1,228 @@
+import axios from 'axios'
+import type { FieldValues, Path, UseFormReturn } from 'react-hook-form'
+
+import {
+  errorCodeForStatus,
+  problemDetailSchema,
+  REQUEST_ID_HEADER,
+  type ErrorCode,
+  type ProblemDetail,
+  type ValidationError,
+} from '@/api/schemas/problem'
+
+/**
+ * One error type for the whole app (F13).
+ *
+ * Every screen in every later wave decides what to say by switching on `code`,
+ * never by matching on `detail` — `detail` is prose, the backend reserves the
+ * right to reword it, and a client keying off it breaks on a copy edit. That
+ * contract only holds if there is a single place that turns an Axios rejection
+ * into this shape, which is `toApiError` below.
+ */
+export class ApiError extends Error {
+  /** The enum member, never a bare string. `errorCodeForStatus` fills it in when the body cannot. */
+  readonly code: ErrorCode
+  /** 0 for a request that never reached the server — see `isNetworkFailure`. */
+  readonly status: number
+  /** Human prose. Safe to show; never safe to branch on. */
+  readonly detail: string
+  /** Populated on a 422, empty otherwise. `applyFieldErrors` is what consumes it. */
+  readonly errors: ValidationError[]
+  /**
+   * The one string a person can quote that finds their exact request in the
+   * server log — when there is one. See `readRequestId`: cross-origin, there
+   * usually is not, and that is the API's CORS policy rather than an omission
+   * here.
+   */
+  readonly requestId?: string
+  /** The parsed body, for the rare screen that needs a member the fields above drop. */
+  readonly problem?: ProblemDetail
+
+  constructor(init: {
+    code: ErrorCode
+    status: number
+    detail: string
+    errors?: ValidationError[]
+    requestId?: string
+    problem?: ProblemDetail
+    cause?: unknown
+  }) {
+    super(init.detail, { cause: init.cause })
+    // Set explicitly rather than through constructor parameter properties:
+    // `erasableSyntaxOnly` is on, and parameter properties need emit.
+    this.name = 'ApiError'
+    this.code = init.code
+    this.status = init.status
+    this.detail = init.detail
+    this.errors = init.errors ?? []
+    this.requestId = init.requestId
+    this.problem = init.problem
+  }
+
+  /** True when the request never got an answer: offline, DNS, a CORS preflight the API refused. */
+  get isNetworkFailure(): boolean {
+    return this.status === 0
+  }
+}
+
+/**
+ * `isApiError(e)` narrows; `isApiError(e, 'SLUG_TAKEN', 'EMAIL_TAKEN')` also
+ * asks which one, which is the form nearly every call site wants:
+ *
+ * ```ts
+ * if (isApiError(error, 'SLUG_TAKEN')) form.setError('slug', { message: '…' })
+ * ```
+ */
+export function isApiError(error: unknown, ...codes: ErrorCode[]): error is ApiError {
+  if (!(error instanceof ApiError)) return false
+  return codes.length === 0 || codes.includes(error.code)
+}
+
+/** The detail shown when the request never reached the API and there is no body to quote. */
+const NETWORK_DETAIL = 'Could not reach the server. Check your connection and try again.'
+
+/**
+ * The single conversion point. Anything already an `ApiError` passes through, so
+ * this is safe to call twice on the same rejection.
+ *
+ * Three cases, and the third is the one that gets forgotten: a response with a
+ * status but no `application/problem+json` body at all. A load balancer's 502
+ * and a 401 from a security filter that ran before the dispatcher both look like
+ * that, and a mapper that assumed a body would throw a `TypeError` on top of the
+ * failure it was meant to describe.
+ */
+export function toApiError(error: unknown): ApiError {
+  if (error instanceof ApiError) return error
+
+  if (!axios.isAxiosError(error)) {
+    const detail = error instanceof Error ? error.message : String(error)
+    return new ApiError({ code: 'INTERNAL_ERROR', status: 0, detail, cause: error })
+  }
+
+  const response = error.response
+  if (!response) {
+    // No response object at all: offline, aborted, DNS, or a CORS preflight the
+    // API declined. The browser deliberately tells JavaScript nothing more than
+    // "it failed", so there is no more specific message to be had here.
+    return new ApiError({
+      code: 'INTERNAL_ERROR',
+      status: 0,
+      detail: NETWORK_DETAIL,
+      cause: error,
+    })
+  }
+
+  const status = response.status
+  // `safeParse`, not `parse`. This body describes a failure; a schema mismatch
+  // here must not replace a 409 the screen can explain with a Zod error it
+  // cannot.
+  const parsed = problemDetailSchema.safeParse(response.data)
+  const problem = parsed.success ? parsed.data : undefined
+
+  return new ApiError({
+    code: problem?.code ?? errorCodeForStatus(status),
+    status,
+    detail: problem?.detail?.trim() || problem?.title || error.message,
+    errors: problem?.errors,
+    requestId: readRequestId(response.headers) ?? problem?.requestId,
+    problem,
+    cause: error,
+  })
+}
+
+/**
+ * The header first, the body second — and often neither, which is worth knowing
+ * before somebody spends an afternoon on it.
+ *
+ * The API sends `X-Request-Id` on every response, and `Problems.of` additionally
+ * puts `requestId` in the body **on 5xx only**, deliberately: it keeps 4xx
+ * bodies byte-for-byte assertable in the backend's tests. So the header is the
+ * better source, and this reads it first.
+ *
+ * What stops it working in the default dev mode and in production: `CorsConfig`
+ * sets `exposedHeaders` to `Location, Retry-After` — *not* `X-Request-Id`. A
+ * cross-origin response's other headers are invisible to JavaScript by
+ * specification, so in `direct` and `crosssite` mode, and on the deployed
+ * Vercel + Render pair, this returns `undefined` and the body fallback is all
+ * there is. Which means: **a request id on a 4xx, cross-origin, is not
+ * available at all.** The header is readable in `proxy` mode, where the request
+ * is same-origin.
+ *
+ * That is the API's policy and wave 2 does not change it — the frontend does not
+ * get to edit a backend with a 90% branch-coverage gate on a drive-by. The one
+ * line that would fix it is `CorsConfig`'s `setExposedHeaders`, and it is raised
+ * in the wave notes rather than done here. Nothing breaks meanwhile: `ErrorState`
+ * and `FormAlert` both omit the reference line when there is no id, and a 4xx is
+ * the class of failure a screen can explain without one.
+ */
+function readRequestId(headers: unknown): string | undefined {
+  if (!headers || typeof headers !== 'object') return undefined
+  const value = (headers as Record<string, unknown>)[REQUEST_ID_HEADER]
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+/**
+ * Walks a 422's `errors[]` onto the form, and **returns the ones that landed
+ * nowhere** (F13).
+ *
+ * The return value is the point. A naive version calls `setError` for every
+ * entry and finishes; React Hook Form quietly accepts a path no input is
+ * registered at, so an error on a field the form does not have becomes a
+ * submission that appears to fail for no reason. Handing those back lets the
+ * form put them somewhere a person can see — `useFormErrorSummary` in the
+ * account screens does exactly that.
+ *
+ * Matching is by path, so `guest.email` finds the nested input. It relies on
+ * the form declaring `defaultValues` for everything it registers, which every
+ * form in this app does: `getValues()` is the only public way to ask React Hook
+ * Form what it knows about, and a field with no default is absent from it.
+ */
+export function applyFieldErrors<TFieldValues extends FieldValues>(
+  error: unknown,
+  form: UseFormReturn<TFieldValues>,
+  options?: {
+    /**
+     * Server field name to form field name, for the handful of places the two
+     * legitimately differ — a request that nests what the form flattens.
+     */
+    rename?: Record<string, string>
+  },
+): ValidationError[] {
+  if (!isApiError(error) || error.errors.length === 0) return []
+
+  const values = form.getValues()
+  const unmatched: ValidationError[] = []
+  let focused = false
+
+  for (const item of error.errors) {
+    const path = options?.rename?.[item.field] ?? item.field
+    if (!hasPath(values, path)) {
+      unmatched.push(item)
+      continue
+    }
+    form.setError(
+      path as Path<TFieldValues>,
+      { type: 'server', message: item.message },
+      // Focus the first one only. Focusing each in turn ends on the last field
+      // the server happened to mention, which is rarely the one to fix first
+      // and scrolls the page away from the others.
+      { shouldFocus: !focused },
+    )
+    focused = true
+  }
+
+  return unmatched
+}
+
+/** `guest.email` and `slots[0].start` both resolve; a path no input registered does not. */
+function hasPath(values: unknown, path: string): boolean {
+  const segments = path.replace(/\[(\w+)\]/g, '.$1').split('.')
+  let current: unknown = values
+
+  for (const segment of segments) {
+    if (current === null || typeof current !== 'object') return false
+    if (!(segment in (current as Record<string, unknown>))) return false
+    current = (current as Record<string, unknown>)[segment]
+  }
+  return true
+}
