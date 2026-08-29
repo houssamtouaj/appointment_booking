@@ -49,6 +49,12 @@ services:
     # /actuator/health and nothing wider: /actuator/** would publish whatever a future
     # dependency decides to register there.
     healthCheckPath: /actuator/health
+    # Explicit rather than inherited: with no branch here Render deploys the repository's
+    # default branch, which is a GitHub setting this file cannot see. Renaming the default --
+    # or applying the blueprint from an account that resolves it differently -- would silently
+    # move production onto another branch, and the first symptom is a deploy nobody asked for.
+    # dev carries integration commits; main is what is live.
+    branch: main
     autoDeployTrigger: commit
     envVars:
       # Seeds the demo salon and registers POST /api/auth/demo-login. Without it the deployed
