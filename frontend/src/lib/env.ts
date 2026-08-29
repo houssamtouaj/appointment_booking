@@ -18,8 +18,8 @@ const DEFAULT_DEMO_SLUG = 'demo-salon'
 export const DEMO_SLUG = import.meta.env.VITE_DEMO_SLUG || DEFAULT_DEMO_SLUG
 
 /**
- * Wave 2 owns the API client; these are read here only so that .env.example and
- * `ImportMetaEnv` describe the same set from wave 1 onward.
+ * Origin of the API, no trailing slash. Baked at build time (F18), which is what
+ * makes deployment a three-step handshake rather than a single deploy.
  */
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081'
 
@@ -36,3 +36,19 @@ function readApiMode(): ApiMode {
 }
 
 export const API_MODE = readApiMode()
+
+/**
+ * The Axios `baseURL`, which is **not** the same thing as `API_BASE_URL`.
+ *
+ * In `proxy` mode it is the empty string: the dev server forwards `/api` itself,
+ * so the browser must issue a same-origin request and prefixing the absolute
+ * origin would bypass the proxy entirely and quietly put you back in `direct`.
+ *
+ * Note what is absent in every mode — a path. The refresh cookie is scoped
+ * `Path=/api/auth` (`RefreshTokenCookie`), so a `baseURL` ending in `/api` or
+ * `/api/v1`, or a normaliser that adds or strips a trailing slash, detaches the
+ * cookie from the two endpoints that read it. The symptom is "sessions randomly
+ * die", which is a long way from "path bug". Every call in this app passes the
+ * full `/api/...` path.
+ */
+export const API_ORIGIN = API_MODE === 'proxy' ? '' : API_BASE_URL
