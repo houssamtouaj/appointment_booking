@@ -4,9 +4,10 @@ import userEvent from '@testing-library/user-event'
 import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { logout } from '@/api/auth'
 import { client, refreshSession, resetInFlightRefresh } from '@/api/client'
 import { createQueryClient } from '@/api/query-client'
-import { endSessionQuietly } from '@/api/session'
+import { beginSession, endSessionQuietly, getAccessToken, hasSession } from '@/api/session'
 import { resetBootstrap } from '@/api/bootstrap'
 import { AuthProvider } from '@/features/auth/auth-provider'
 import { useAuth } from '@/features/auth/use-auth'
@@ -154,6 +155,21 @@ describe('teardown', () => {
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
     expect(queryClient.getQueryCache().getAll()).toEqual([])
+  })
+
+  it('signs out on a device that cannot reach the API', async () => {
+    // `logout` documents itself as tolerant of failure, and the button takes it
+    // at its word: `SessionMenu` awaits `signOut()` and then toasts and
+    // navigates, with no catch anywhere on the path. A rejection here is an
+    // unhandled one — no "Signed out", no redirect, and on a public route an
+    // offline user left on a page that has already forgotten who they are.
+    beginSession('token-1')
+    handler = () => Promise.reject(new Error('Network Error'))
+
+    await expect(logout()).resolves.toBeUndefined()
+
+    expect(hasSession()).toBe(false)
+    expect(getAccessToken()).toBeNull()
   })
 
   it('says REFRESH_REUSED in its own words and empties the cache', async () => {

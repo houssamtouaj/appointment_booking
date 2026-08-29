@@ -10,14 +10,26 @@ import { API_ORIGIN } from '@/lib/env'
  * that "attach the token", "rotate on 401" and "turn a problem body into an
  * `ApiError`" are each written once.
  *
- * The refresh interceptor below is about thirty lines and four of them are
- * subtle. Each of the four has a test in `client.test.ts`, named after the
+ * The refresh interceptor below is about thirty lines and five of them are
+ * subtle. Each of the five has a test in `client.test.ts`, named after the
  * failure it prevents rather than after the code it covers.
  */
 
 /** The cookie's scope, and therefore the path that must never be rewritten. */
 export const AUTH_PATH = '/api/auth'
 export const REFRESH_PATH = `${AUTH_PATH}/refresh`
+
+/**
+ * The paths that present a credential instead of the access token, and whose
+ * 401 therefore means "refused", not "expired" (rule 3 below).
+ *
+ * `/demo-login` belongs here for a reason worth writing down: `SecurityConfig`
+ * deliberately keeps it out of the public allowlist, so a deployment running
+ * without the `demo` profile refuses it from the filter chain with a 401 rather
+ * than a 404 from the absent controller. `DemoLoginDisabledIT` pins exactly
+ * that, and it is why the path cannot be left to rule 5.
+ */
+const CREDENTIAL_PATHS = [`${AUTH_PATH}/login`, `${AUTH_PATH}/demo-login`]
 
 /**
  * Marks a config that has already been replayed once. A plain property rather
@@ -132,7 +144,20 @@ client.interceptors.response.use(
       throw apiError
     }
 
-    // 3. Already replayed once with a token that had just been minted, and the
+    // 3. The 401 came from a request carrying a credential rather than the
+    //    access token, so it means "wrong password", not "expired token" — and
+    //    rotating here is the wrong reflex twice over. Every mistyped password
+    //    would spend a refresh, charged to the shared `PUBLIC_WRITE` rate-limit
+    //    bucket that `RateLimitFilter` puts `/refresh` in (login has its own
+    //    `LOGIN` scope, so the budget the typo drains is somebody else's public
+    //    booking write), and would then replay the credentials. Worse: a
+    //    visitor who still holds a live refresh cookie while this tab thinks it
+    //    is anonymous would have that session rotated, consumed, and finally
+    //    ended by rule 4 — a failed sign-in signing out the session it failed
+    //    next to. Nothing is ended here on purpose.
+    if (isCredentialRequest(config)) throw apiError
+
+    // 4. Already replayed once with a token that had just been minted, and the
     //    answer is still 401. A second rotation cannot help — whatever is wrong
     //    is not the token's age — and retrying forever is how a dead session
     //    becomes an infinite request loop.
@@ -141,7 +166,7 @@ client.interceptors.response.use(
       throw apiError
     }
 
-    // 4. Join the rotation already in progress, or start the only one.
+    // 5. Join the rotation already in progress, or start the only one.
     config.slotflowRetried = true
     let auth: AuthResponse
     try {
@@ -162,10 +187,18 @@ client.interceptors.response.use(
 )
 
 function isRefreshRequest(config: InternalAxiosRequestConfig): boolean {
+  return matchesPath(config, REFRESH_PATH)
+}
+
+function isCredentialRequest(config: InternalAxiosRequestConfig): boolean {
+  return CREDENTIAL_PATHS.some((path) => matchesPath(config, path))
+}
+
+function matchesPath(config: InternalAxiosRequestConfig, path: string): boolean {
   const url = config.url ?? ''
   // `endsWith` rather than equality: the URL is whatever the call site passed,
   // and an absolute one is legal.
-  return url === REFRESH_PATH || url.endsWith(REFRESH_PATH)
+  return url === path || url.endsWith(path)
 }
 
 /**

@@ -45,17 +45,22 @@ export function LoginPage() {
       // below is the single place that decides where a signed-in visitor to
       // this route goes.
     },
-    onError: (error) => {
-      setAlert(
-        describeError(error, {
-          // Deliberately one message for three causes. The API returns the same
-          // 401 for an unknown address, a wrong password and a deactivated
-          // account, and saying which would undo that on the client.
-          UNAUTHENTICATED: 'Email or password is incorrect.',
-          NOT_FOUND:
-            'The demo account is not available — the API is running without its demo profile.',
-        }),
-      )
+    onError: (error, variables) => {
+      // Which button failed is the only thing separating these two, because the
+      // API cannot: `SecurityConfig` keeps `/api/auth/demo-login` out of the
+      // public allowlist, so a deployment without the `demo` profile refuses it
+      // from the filter chain with the same 401 UNAUTHENTICATED a wrong password
+      // gets. The absent `@Profile` controller never gets a say, and the 404
+      // this screen used to look for never arrives — which left a reviewer who
+      // typed no password being told their password was wrong.
+      const unauthenticated =
+        variables === 'demo'
+          ? 'The demo account is not available — the API is running without its demo profile.'
+          : // Deliberately one message for three causes: the API answers the
+            // same 401 for an unknown address, a wrong password and a
+            // deactivated account, and saying which would undo that here.
+            'Email or password is incorrect.'
+      setAlert(describeError(error, { UNAUTHENTICATED: unauthenticated }))
       setRequestId(requestIdOf(error))
     },
   })

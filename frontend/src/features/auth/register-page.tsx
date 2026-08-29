@@ -131,11 +131,19 @@ export function RegisterPage() {
               {...control}
               {...form.register('businessName', {
                 // Fill the slug from the name until somebody edits the slug
-                // themselves. `dirtyFields` is the check that makes it stop
-                // fighting them, rather than a flag this component would have to
-                // keep in sync by hand.
+                // themselves — the form already knows, so a flag kept in sync by
+                // hand would only be one more thing to get wrong.
+                //
+                // `getFieldState` and not `form.formState.dirtyFields`: that
+                // one is a proxy over the last *rendered* snapshot, and nothing
+                // in this component reads `dirtyFields` during render, so it is
+                // never subscribed. With the default `onSubmit` mode a keystroke
+                // in the slug field re-renders nothing, the snapshot is still
+                // empty when this handler runs, and typing the slug BEFORE the
+                // business name got it overwritten. `getFieldState` reads the
+                // live store instead.
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
-                  if (form.formState.dirtyFields.slug) return
+                  if (form.getFieldState('slug').isDirty) return
                   form.setValue('slug', slugify(event.target.value))
                 },
               })}

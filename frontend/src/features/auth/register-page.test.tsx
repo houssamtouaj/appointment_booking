@@ -118,6 +118,29 @@ describe('the register screen', () => {
     expect(screen.getByLabelText('Booking page address')).toHaveValue('demo-salon')
   })
 
+  it('leaves a slug alone when it was typed BEFORE the business name', async () => {
+    // The order is the whole test. Typing the slug second is what the guard was
+    // written for and what it always handled; typing it first is the case that
+    // silently overwrote it, because nothing here subscribes to `dirtyFields`
+    // during render and the proxy's snapshot was still empty when the name's
+    // onChange asked.
+    reply = (config) =>
+      problem({ status: 401, code: 'UNAUTHENTICATED' } as { status: number }, config)
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <AuthProvider>
+          <RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/register'] })} />
+        </AuthProvider>
+      </QueryClientProvider>,
+    )
+
+    const slug = await screen.findByLabelText('Booking page address')
+    fireEvent.change(slug, { target: { value: 'my-own-address' } })
+    fireEvent.change(screen.getByLabelText('Business name'), { target: { value: 'Demo Salon' } })
+
+    expect(slug).toHaveValue('my-own-address')
+  })
+
   it('lands 409 SLUG_TAKEN on the slug field, not in a banner', async () => {
     // The endpoint distinguishes the two 409s precisely so the form can say
     // which word to change. Putting either in a banner throws that away.

@@ -88,6 +88,13 @@ export async function fetchMe(): Promise<MeResponse> {
 export async function logout(): Promise<void> {
   try {
     await client.post(`${AUTH_PATH}/logout`)
+  } catch {
+    // This `catch` is the tolerance the paragraph above promises. A bare
+    // `finally` runs the cleanup and then re-throws, which is not the same
+    // thing: the rejection travels through `AuthProvider.signOut` into the
+    // sign-out button's `onClick`, where nothing awaits it — an unhandled
+    // rejection, no "Signed out" toast and no redirect, leaving an offline user
+    // on a page that has already forgotten who they are.
   } finally {
     endSessionQuietly()
   }

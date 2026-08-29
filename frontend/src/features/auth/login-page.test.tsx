@@ -123,6 +123,25 @@ describe('the login screen', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.')
   })
 
+  it('blames the missing demo profile, not the password nobody typed', async () => {
+    // `SecurityConfig` keeps /api/auth/demo-login out of the public allowlist,
+    // so a deployment without the profile refuses it from the filter chain with
+    // the same 401 UNAUTHENTICATED a wrong password gets — never the 404 the
+    // absent controller suggests (DemoLoginDisabledIT pins this). One click, no
+    // credential, and the reviewer used to be told their password was wrong.
+    handler = (config) => fail(401, 'UNAUTHENTICATED', config)
+
+    renderLogin()
+    await userEvent.click(await screen.findByRole('button', { name: 'Log in as demo admin' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The demo account is not available — the API is running without its demo profile.',
+    )
+    // One refresh in the whole run, and it is the provider's bootstrap on
+    // mount. The refused demo credential added none of its own.
+    expect(requests.filter((url) => url === '/api/auth/refresh')).toHaveLength(1)
+  })
+
   it('finishes the journey the guard interrupted', async () => {
     handler = (config) =>
       config.url === '/api/auth/refresh'

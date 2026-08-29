@@ -189,6 +189,39 @@ describe('the response interceptor', () => {
     expect(hasSession()).toBe(false)
   })
 
+  it('a 401 on /api/auth/login is a refused password, not an expired token', async () => {
+    // The interceptor cannot tell the two apart from the status alone, and
+    // guessing "expired" costs twice: a refresh on every mistyped password —
+    // charged to the rate-limit bucket `/refresh` shares with public booking
+    // writes, since login has its own scope — and then a replay of the
+    // credentials. The session below is the one that would be rotated, consumed
+    // and ended to answer a sign-in it had nothing to do with.
+    beginSession('token-1')
+    handler = (config) => problem(401, 'UNAUTHENTICATED', config)
+
+    await expect(
+      client.post('/api/auth/login', { email: 'a@b.c', password: 'no' }),
+    ).rejects.toBeInstanceOf(ApiError)
+
+    expect(countOf('/api/auth/login')).toBe(1)
+    expect(countOf(REFRESH_PATH)).toBe(0)
+    expect(hasSession()).toBe(true)
+  })
+
+  it('a 401 on /api/auth/demo-login is the demo profile being off, and rotates nothing', async () => {
+    // `SecurityConfig` keeps the path out of the public allowlist, so a
+    // deployment without the profile refuses it from the filter chain with a
+    // 401 — not the 404 the missing controller would give. Same treatment as
+    // login: the button carries a credential, it just does not type it.
+    beginSession('token-1')
+    handler = (config) => problem(401, 'UNAUTHENTICATED', config)
+
+    await expect(client.post('/api/auth/demo-login')).rejects.toBeInstanceOf(ApiError)
+
+    expect(countOf(REFRESH_PATH)).toBe(0)
+    expect(hasSession()).toBe(true)
+  })
+
   it('retries once, not twice, on a 401 that survives a fresh token', async () => {
     beginSession('expired')
 

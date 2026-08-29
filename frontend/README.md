@@ -113,6 +113,17 @@ revoke the chain — signing the user out at the exact moment the code was tryin
 them in. `src/api/client.test.ts` asserts one refresh for three concurrent 401s, no
 recursion when `/refresh` itself 401s, and one replay rather than two.
 
+The two sign-in paths are the exception. `/api/auth/login` and `/api/auth/demo-login`
+carry a credential rather than the access token, so their 401 means _refused_, not
+_expired_, and the interceptor hands it straight back. Rotating there would spend a refresh
+on every mistyped password — out of the `PUBLIC_WRITE` bucket `RateLimitFilter` shares with
+public booking writes, since login has its own scope — and, for a visitor who still held a
+live refresh cookie, would consume and then end the session the failed sign-in had nothing
+to do with. `demo-login` needs the same treatment for a non-obvious reason: without the
+`demo` profile the path is refused by the filter chain with a 401, not a 404 from the absent
+controller, so the screen reads the sign-in button that failed rather than the status code
+to decide whether to say "wrong password" or "this deployment has no demo profile".
+
 `REFRESH_REUSED` gets its own sentence — "You were signed out because your session was
 used from somewhere else" — because it means something different from an expiry, and a
 generic "session expired" would hide a security event behind routine copy.
