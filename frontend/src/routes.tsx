@@ -1,6 +1,12 @@
 import { Navigate, type RouteObject } from 'react-router-dom'
 
 import { RootLayout } from '@/components/root-layout'
+import { AcceptInvitationPage } from '@/features/auth/accept-invitation-page'
+import { ForgotPasswordPage } from '@/features/auth/forgot-password-page'
+import { LoginPage } from '@/features/auth/login-page'
+import { RegisterPage } from '@/features/auth/register-page'
+import { ResetPasswordPage } from '@/features/auth/reset-password-page'
+import { RequireAuth, RequireOwner } from '@/features/auth/route-guards'
 import { DEMO_SLUG } from '@/lib/env'
 import { NotFoundPage } from '@/pages/not-found'
 import { Placeholder } from '@/pages/placeholder'
@@ -69,90 +75,96 @@ export const routes: RouteObject[] = [
       },
 
       // --- Account ------------------------------------------------------
-      {
-        path: 'login',
-        element: <Placeholder eyebrow="Account" title="Log in" wave="Wave 2" />,
-      },
-      {
-        path: 'register',
-        element: (
-          <Placeholder
-            eyebrow="Account"
-            title="Create a business"
-            wave="Wave 2"
-            description="Self-registration ships (F17), so a reviewer gets their own empty tenant."
-          />
-        ),
-      },
-      {
-        path: 'forgot-password',
-        element: <Placeholder eyebrow="Account" title="Reset your password" wave="Wave 2" />,
-      },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'register', element: <RegisterPage /> },
+      { path: 'forgot-password', element: <ForgotPasswordPage /> },
       {
         // Named by the backend (F12).
         path: 'reset-password/:token',
-        element: <Placeholder eyebrow="Account" title="Choose a new password" wave="Wave 2" />,
+        element: <ResetPasswordPage />,
       },
       {
         // Named by the backend (F12).
         path: 'accept-invitation/:token',
-        element: <Placeholder eyebrow="Account" title="Join the team" wave="Wave 2" />,
+        element: <AcceptInvitationPage />,
       },
 
       // --- Admin --------------------------------------------------------
       // Bare paths, not /admin/*, so they read well in the portfolio
       // screenshots the brief asks for (§10).
+      //
+      // Wave 2 adds the layout route around them. Nothing under here renders
+      // until the bootstrap refresh has answered, which is what keeps a cold
+      // load from opening with a burst of 401s.
       {
-        path: 'dashboard',
-        element: (
-          <Placeholder
-            eyebrow="Admin"
-            title="Dashboard"
-            wave="Wave 5"
-            description="Today's bookings, the week's count, revenue and no-show rate."
-          />
-        ),
-      },
-      {
-        path: 'calendar',
-        element: (
-          <Placeholder
-            eyebrow="Admin"
-            title="Calendar"
-            wave="Wave 6"
-            description="Week and day views. The brief's nominated cover image."
-          />
-        ),
-      },
-      {
-        path: 'services',
-        element: <Placeholder eyebrow="Admin" title="Services" wave="Wave 7" />,
-      },
-      {
-        path: 'team',
-        element: <Placeholder eyebrow="Admin" title="Team" wave="Wave 7" />,
-      },
-      {
-        path: 'team/:id/hours',
-        element: (
-          <Placeholder
-            eyebrow="Admin"
-            title="Working hours"
-            wave="Wave 8"
-            description="A seven-row weekly grid, plus the exceptions calendar."
-          />
-        ),
-      },
-      {
-        path: 'settings',
-        element: (
-          <Placeholder
-            eyebrow="Admin"
-            title="Settings"
-            wave="Wave 8"
-            description="Timezone, deposit rules and booking policy."
-          />
-        ),
+        element: <RequireAuth />,
+        children: [
+          {
+            path: 'dashboard',
+            element: (
+              <Placeholder
+                eyebrow="Admin"
+                title="Dashboard"
+                wave="Wave 5"
+                description="Today's bookings, the week's count, revenue and no-show rate."
+              />
+            ),
+          },
+          {
+            path: 'calendar',
+            element: (
+              <Placeholder
+                eyebrow="Admin"
+                title="Calendar"
+                wave="Wave 6"
+                description="Week and day views. The brief's nominated cover image."
+              />
+            ),
+          },
+          // Services and Team are *shared* routes, not owner-only. F19 is about
+          // actions: a staff member may read the catalogue and the roster and
+          // may not create, edit or invite. Gating the whole route would hide
+          // information they are allowed to see, so the check belongs on the
+          // buttons, in the waves that add them.
+          {
+            path: 'services',
+            element: <Placeholder eyebrow="Admin" title="Services" wave="Wave 7" />,
+          },
+          {
+            path: 'team',
+            element: <Placeholder eyebrow="Admin" title="Team" wave="Wave 7" />,
+          },
+          {
+            path: 'team/:id/hours',
+            element: (
+              <Placeholder
+                eyebrow="Admin"
+                title="Working hours"
+                wave="Wave 8"
+                description="A seven-row weekly grid, plus the exceptions calendar."
+              />
+            ),
+          },
+          {
+            // The one route in the table that is owner-only end to end (F19):
+            // business settings and the booking policy have no staff-readable
+            // half.
+            element: <RequireOwner />,
+            children: [
+              {
+                path: 'settings',
+                element: (
+                  <Placeholder
+                    eyebrow="Admin"
+                    title="Settings"
+                    wave="Wave 8"
+                    description="Timezone, deposit rules and booking policy."
+                  />
+                ),
+              },
+            ],
+          },
+        ],
       },
 
       // --- 404 ----------------------------------------------------------

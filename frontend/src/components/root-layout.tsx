@@ -3,6 +3,8 @@ import { Link, Outlet } from 'react-router-dom'
 import { Container } from '@/components/container'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Toaster } from '@/components/toaster'
+import { SessionDebugPanel } from '@/features/auth/session-debug-panel'
+import { SessionMenu } from '@/features/auth/session-menu'
 
 /**
  * The shell every route renders inside. Wave 5 adds the authenticated admin nav
@@ -35,7 +37,10 @@ export function RootLayout() {
           >
             Slotflow
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <SessionMenu />
+            <ThemeToggle />
+          </div>
         </Container>
       </header>
 
@@ -50,6 +55,7 @@ export function RootLayout() {
       </footer>
 
       <Toaster />
+      <SessionDebugPanel />
     </div>
   )
 }
