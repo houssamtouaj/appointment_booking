@@ -14,10 +14,15 @@ export function RootLayout() {
     <div className="flex min-h-dvh flex-col">
       {/* Skip link: the first tab stop on every page. It is the difference between
           a keyboard user reaching the booking form in one key press and in
-          fifteen, and it is why it is placed before the header rather than in it. */}
+          fifteen, and it is why it is placed before the header rather than in it.
+
+          `fixed`, not `absolute`. Nothing in the ancestor chain is positioned, so
+          `absolute` resolves against the initial containing block — 12px from the
+          top of the DOCUMENT. Shift-tab back to the first stop after scrolling and
+          the link takes focus, gets announced, and is nowhere on screen. */}
       <a
         href="#main"
-        className="bg-primary text-primary-foreground sr-only rounded-sm px-4 py-2 text-sm font-medium focus-visible:not-sr-only focus-visible:absolute focus-visible:top-3 focus-visible:left-3 focus-visible:z-50"
+        className="bg-primary text-primary-foreground sr-only rounded-sm px-4 py-2 text-sm font-medium focus-visible:not-sr-only focus-visible:fixed focus-visible:top-3 focus-visible:left-3 focus-visible:z-50"
       >
         Skip to content
       </a>
