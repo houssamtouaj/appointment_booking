@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="SlotFlow">
+  <!--
+    The mark is the design language in 32 pixels: a ruled page, with the slot
+    that has been taken written across it in green ink. Same idea as the rule
+    under every PageHeader, and the same two colours.
+
+    Colours are literal here on purpose — an SVG served from /public is fetched
+    by the browser outside the app's stylesheet and cannot see a CSS custom
+    property. The values are --paper-0, --rule and --ink-green from theme.css;
+    if the palette moves, move them.
+  -->
+  <rect width="32" height="32" rx="7" fill="#ffffff" />
+  <g stroke="#e6e0da" stroke-width="1.5" stroke-linecap="round">
+    <path d="M8 11h16" />
+    <path d="M8 16h16" />
+    <path d="M8 21h16" />
+  </g>
+  <!-- The booked slot. -->
+  <rect x="7" y="14" width="13" height="4.5" rx="1.5" fill="#0f6b54" />
+</svg>

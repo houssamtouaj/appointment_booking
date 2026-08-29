@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "allowArbitraryExtensions": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* The alias is declared twice on purpose: tsc resolves it from here, Vite resolves it
+       from vite.config.ts, and neither reads the other's copy. Changing one alone produces
+       a build that type-checks and does not bundle, or the reverse. */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    /* Linting */
+    "strict": true,
+    /* Wave 1 is the only cheap moment for this. It turns `slots[i]` into `Slot | undefined`,
+       which is what an array index actually is; adopting it in wave 6, once the calendar
+       indexes a grid in twenty places, is a day of work instead of zero. */
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  /* Tests are their own project (tsconfig.test.json). They read files from disk to
+     assert things the type system cannot -- that index.html's pre-paint script and
+     use-theme.ts agree on a storage key, that the two dark blocks in theme.css have
+     not drifted -- and that needs Node types. Granting those here would also grant
+     them to application code, which has no business touching the filesystem. */
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

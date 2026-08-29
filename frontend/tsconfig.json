@@ -1,0 +1,18 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.test.json" }
+  ],
+  // A solution-style tsconfig compiles nothing, so these options are inert for tsc.
+  // They are here because the shadcn CLI reads the ROOT tsconfig to resolve "@/..."
+  // when it decides where to write a component; without them it creates a literal
+  // directory named "@" in the project root and reports success.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}

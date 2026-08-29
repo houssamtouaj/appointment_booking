@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    /* `node` because these tests read index.html and theme.css off disk; `vitest`
+       and the jest-dom augmentation because the matchers are type-level additions
+       that the setup file's side-effect import brings in. */
+    "types": ["node", "vite/client"]
+  },
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "vitest.setup.ts"]
+}

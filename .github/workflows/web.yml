@@ -1,0 +1,98 @@
+name: Web
+
+# Deliberately separate from ci.yml, and deliberately filtered (F10).
+#
+# ci.yml carries no `paths:` filter and explains at length why: it is a REQUIRED
+# check on main, a release is a fast-forward, and under a filter a commit outside
+# the filter produces no check run on that SHA -- which GitHub reads as "not
+# passed", not as "not applicable". The release push is then rejected outright.
+#
+# This job is NOT a required check, so that trap does not apply and the filter is
+# free. It buys back about ninety seconds on every backend-only push.
+#
+# >> If this is ever promoted to a required check on main, delete the `paths:`
+# >> block in the SAME commit. Promoting it with the filter in place reproduces
+# >> exactly the deadlock ci.yml's header describes, and the only escape is to
+# >> unprotect the branch.
+on:
+  push:
+    # The same branch set as ci.yml. Wave branches are pushed before the
+    # fast-forward into dev, so this is where the signal matters.
+    branches: [main, dev, 'feat/**', 'fix/**', 'chore/**']
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/web.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/web.yml'
+
+# Pushing a fix two minutes after a push should not leave both runs competing for
+# a runner.
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    # Generous for a job that takes about two minutes, but far below the 6-hour
+    # default that a hung install would otherwise burn.
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 20 is the floor the toolchain actually supports, not a free choice:
+          # Vite 8 requires ^20.19 and jsdom is pinned to 29 for the same reason
+          # (30 dropped Node 20 entirely). If this moves up, the jsdom pin in
+          # package.json can be relaxed at the same time.
+          node-version: '20'
+          cache: npm
+          # Resolved from the repository root, NOT from defaults.run.working-directory
+          # -- that applies to `run:` steps only. A wrong path here does not fail
+          # the build, it just silently never caches. Same rule as ci.yml.
+          cache-dependency-path: frontend/package-lock.json
+
+      # `npm ci`, not `npm install`: it installs the lockfile exactly and fails if
+      # package.json and the lockfile disagree, which is the drift worth catching.
+      - name: Install
+        run: npm ci
+
+      # Four separate steps rather than one chained command, so that the Actions
+      # UI names which gate failed without anyone opening the log.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      # The wave 1 gate says .env.example must list every VITE_* the code reads,
+      # "verified by grep". This is that grep, so the claim stays true after
+      # wave 1 rather than being a thing that was true once.
+      - name: Every VITE_* the code reads is documented in .env.example
+        run: |
+          missing=0
+          for var in $(grep -rhoE 'VITE_[A-Z0-9_]+' src/ | sort -u); do
+            if ! grep -q "^# *$var=\|^$var=" .env.example; then
+              echo "::error file=frontend/.env.example::$var is read by the app but not documented in frontend/.env.example"
+              missing=1
+            fi
+          done
+          exit $missing

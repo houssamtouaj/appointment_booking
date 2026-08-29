@@ -13,3 +13,21 @@ mvnw.cmd text eol=crlf
 # needing changes at validate, on a pristine checkout. Pin it so the gate is a property of the
 # repository. The blobs are already LF, so this normalises the working tree, not the history.
 *.java text eol=lf
+
+# Prettier's `endOfLine` default is `lf`, and `npm run format:check` is a CI gate as of
+# wave 1. With no rule here the working-tree ending comes from core.autocrlf -- which is
+# set by the Git for Windows installer, not by this repository -- so a contributor who
+# clones with autocrlf=true gets CRLF on disk and every file fails the format check on a
+# pristine checkout. Same failure the *.java rule above exists to prevent, same fix: make
+# the ending a property of the repository. The blobs are already LF, so this normalises
+# the working tree rather than the history.
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.svg text eol=lf

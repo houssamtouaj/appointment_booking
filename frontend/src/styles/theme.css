@@ -1,0 +1,364 @@
+/* =============================================================================
+   SlotFlow design tokens — the whole visual language, in one file.
+   Wave 1 settles these; the reasoning is in docs/plans/frontend/01-*.md §Design.
+
+   The direction is "the appointment book": ruled paper, green ink, a timetable
+   heading. It is the artefact this software replaces, and it is where every
+   choice below comes from. Three looks were rejected on purpose — the blue that
+   every scheduling product ships, shadcn's cool slate, and the cream-and-serif
+   default — so if you are about to add a blue, or a grey with no chroma in it,
+   that is the thing this file exists to prevent.
+
+   Rules for editing:
+     - Raw palette values live ONCE, at the top of each mode block. Everything
+       else is a semantic alias pointing at them. Components use the aliases.
+     - No component may carry a literal hex, radius or ms value (wave 1 gate).
+     - Contrast is recorded beside each foreground token. If you change a value,
+       recheck it — the brief's bar is Lighthouse accessibility >= 95.
+   ========================================================================== */
+
+:root {
+  /* --- Paper: the warm neutral ramp -------------------------------------
+     Warm, not cool. This single decision is what separates the app from every
+     shadcn build at a glance: slate is blue-grey, this is greige. Kept light
+     and low-chroma so it does not read as the cream-background trend either. */
+  --paper-0: #ffffff; /* raised card — a slip laid on the book, lighter than the page */
+  --paper-50: #faf8f6; /* the page itself */
+  --paper-100: #f2eeea; /* muted surface: table headers, disabled fills */
+  --paper-200: #e6e0da; /* the rule — hairlines, borders, dividers */
+  --paper-300: #d3cac2; /* a rule that has to be seen: input borders */
+
+  --ink-900: #221e1b; /* body text       15.4:1 on --paper-50 */
+  --ink-600: #6f645d; /* secondary text   5.4:1 on --paper-50  (AA normal) */
+  --ink-400: #8c8078; /* decorative only  3.6:1 — icons, dividers, never body copy */
+
+  /* --- Green ink: the primary -------------------------------------------
+     The colour the appointments were written in. It marks two things and
+     nothing else: a slot that is free, and the action that takes it. Spending
+     the accent on exactly one idea is what keeps it meaningful once the
+     calendar is full of coloured blocks. */
+  --ink-green: #0f6b54; /* 6.2:1 on --paper-50; white on it is 6.5:1 */
+  --ink-green-strong: #0b5744; /* hover / active */
+  --ink-green-wash: #e4f0eb; /* tinted fill: selected slot, active nav row */
+
+  /* --- Ochre: awaiting ---------------------------------------------------
+     PENDING, and the deposit that has not landed yet. Pulled toward yellow and
+     away from terracotta so it never reads as the danger state at a glance —
+     these two sit side by side in a booking list. */
+  --ochre: #9a6207; /* 4.8:1 on --paper-50 */
+  --ochre-wash: #f7ecd9;
+
+  /* --- Vermilion: failed ------------------------------------------------- */
+  --vermilion: #b3261e; /* 6.2:1 on --paper-50 */
+  --vermilion-wash: #fbe6e4;
+
+  /* --- Azure: informational ---------------------------------------------
+     Reserved for the "you are viewing the salon's timezone" banner (F8) and
+     nothing louder. */
+  --azure: #1d5b8f; /* 6.7:1 on --paper-50 */
+  --azure-wash: #e3edf6;
+
+  /* --- Semantic layer ----------------------------------------------------
+     These are shadcn/ui's variable names, deliberately, pointed at the palette
+     above. Eight more waves will run `shadcn add`, and an atom arrives wired to
+     `bg-primary` and `border-input` whether we like the names or not. Adopting
+     its vocabulary once here means every future atom is correct on arrival and
+     nothing has to be hand-edited; the alternative is a second vocabulary that
+     drifts from the first.
+
+     One trap worth naming: to shadcn, `accent` is the quiet hover surface, not
+     the brand colour. The green is `primary`. Wiring the green to `--accent`
+     would turn every ghost-button hover bright green. */
+  --background: var(--paper-50);
+  --foreground: var(--ink-900);
+
+  --card: var(--paper-0);
+  --card-foreground: var(--ink-900);
+  --popover: var(--paper-0);
+  --popover-foreground: var(--ink-900);
+
+  --primary: var(--ink-green);
+  --primary-foreground: #ffffff; /* 6.5:1 on --primary */
+  --primary-strong: var(--ink-green-strong); /* ours: hover / active */
+  --primary-wash: var(--ink-green-wash); /* ours: selected slot, active nav row */
+
+  --secondary: var(--paper-100);
+  --secondary-foreground: var(--ink-900);
+  --muted: var(--paper-100);
+  --muted-foreground: var(--ink-600);
+  --accent: var(--paper-100); /* hover surface. NOT the brand green — see above. */
+  --accent-foreground: var(--ink-900);
+
+  --destructive: var(--vermilion);
+  --destructive-foreground: #ffffff;
+
+  --border: var(--paper-200);
+  --input: var(--paper-300); /* an input's edge has to be seen to be aimed at */
+
+  /* Focus. Deliberately the brand green, at 2px with a 2px page-coloured
+     offset, so it stays visible on a filled primary button as well as on paper.
+     The browser default is explicitly not good enough — rule 6 of the overview. */
+  --ring: var(--ink-green);
+
+  /* --- Ours, where shadcn has no word ----------------------------------- */
+
+  /* The signature. A hairline whose only job is to carry the time axis: the
+     week grid's hour lines, the working-hours rows, the ruled ground behind an
+     empty state. Rules appear where time does and nowhere else — that is the
+     difference between this and a broadsheet pastiche. */
+  --rule: var(--paper-200);
+  --rule-height: 1.5rem; /* the ruled-paper pitch, one written line */
+
+  /* Booking status colours. Defined here rather than in wave 6 so that the
+     calendar inherits them instead of inventing four hexes under deadline.
+     CONFIRMED -> success, PENDING -> warning, CANCELLED/NO_SHOW -> danger. */
+  --success: var(--ink-green);
+  --success-wash: var(--ink-green-wash);
+  --warning: var(--ochre);
+  --warning-wash: var(--ochre-wash);
+  --danger: var(--vermilion);
+  --danger-wash: var(--vermilion-wash);
+  --info: var(--azure);
+  --info-wash: var(--azure-wash);
+
+  /* --- Elevation ---------------------------------------------------------
+     Warm-tinted, never neutral black: a grey shadow on warm paper turns the
+     card's edge cold, and that is the tell that a theme was assembled from
+     defaults. Three steps, one job each.
+
+     Named --elevation-N rather than --shadow-N because `--shadow-*` is a
+     Tailwind v4 theme namespace; the mapping into it happens once, at the
+     bottom of this file. */
+  --elevation-1: 0 1px 2px 0 rgb(34 30 27 / 0.05), 0 1px 3px 0 rgb(34 30 27 / 0.06);
+  --elevation-2: 0 4px 8px -2px rgb(34 30 27 / 0.08), 0 2px 4px -2px rgb(34 30 27 / 0.06);
+  --elevation-3: 0 16px 32px -8px rgb(34 30 27 / 0.16), 0 4px 8px -4px rgb(34 30 27 / 0.08);
+}
+
+/* =============================================================================
+   Dark. Warm-shifted charcoal, not the cool near-black every dark theme uses —
+   it has to read as the same paper with the lights off.
+
+   The two selectors below carry identical bodies on purpose. A CSS custom
+   property cannot be aliased across a media query without a third variable per
+   token, which is worse to read and worse to grep. If you edit one, edit both;
+   the smoke test in src/styles/theme.test.ts fails when they drift.
+   ========================================================================== */
+
+:root[data-theme='dark'] {
+  --paper-0: #1c1917;
+  --paper-50: #131110;
+  --paper-100: #252119;
+  --paper-200: #332d28;
+  --paper-300: #463f39;
+
+  --ink-900: #f3efeb; /* 16.0:1 on --paper-50 */
+  --ink-600: #a79d95; /* 7.1:1  on --paper-50 */
+  --ink-400: #7d746d; /* decorative only */
+
+  --ink-green: #4fc79e; /* 9.0:1 on --paper-50 */
+  --ink-green-strong: #6ed6b2;
+  --ink-green-wash: #12312a;
+
+  --ochre: #e8a33c; /* 8.8:1 */
+  --ochre-wash: #33260f;
+
+  --vermilion: #f2867c; /* 7.7:1 */
+  --vermilion-wash: #3a1a17;
+
+  --azure: #7fbbea; /* 9.2:1 */
+  --azure-wash: #14293a;
+
+  /* Only three of the semantic aliases need restating. The rest point at the
+     raw palette above and flip with it — which is the reason the alias layer
+     exists at all. These three do not, because white on a light-on-dark accent
+     is unreadable: white on #4fc79e is 1.9:1. */
+  --primary-foreground: #0c1a15; /* 9.1:1 on --primary */
+  --destructive-foreground: #2a0f0d; /* 6.1:1 on --destructive */
+  --input: var(--paper-300);
+
+  /* Dark surfaces separate by border contrast, not by shadow: a shadow on a
+     near-black ground is invisible, and turning it up only makes a grey halo.
+     Elevation flattens here and --bg-raised does the work instead. */
+  --elevation-1: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --elevation-2: 0 4px 8px -2px rgb(0 0 0 / 0.5);
+  --elevation-3: 0 16px 32px -8px rgb(0 0 0 / 0.6);
+}
+
+/* The system preference, honoured unless the user has said otherwise. The
+   :not() guard is what makes system → light → dark a real three-state toggle:
+   without it, choosing light on a dark-set OS would do nothing. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper-0: #1c1917;
+    --paper-50: #131110;
+    --paper-100: #252119;
+    --paper-200: #332d28;
+    --paper-300: #463f39;
+
+    --ink-900: #f3efeb;
+    --ink-600: #a79d95;
+    --ink-400: #7d746d;
+
+    --ink-green: #4fc79e;
+    --ink-green-strong: #6ed6b2;
+    --ink-green-wash: #12312a;
+
+    --ochre: #e8a33c;
+    --ochre-wash: #33260f;
+
+    --vermilion: #f2867c;
+    --vermilion-wash: #3a1a17;
+
+    --azure: #7fbbea;
+    --azure-wash: #14293a;
+
+    --primary-foreground: #0c1a15;
+    --destructive-foreground: #2a0f0d;
+    --input: var(--paper-300);
+
+    --elevation-1: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --elevation-2: 0 4px 8px -2px rgb(0 0 0 / 0.5);
+    --elevation-3: 0 16px 32px -8px rgb(0 0 0 / 0.6);
+  }
+}
+
+/* =============================================================================
+   Type, radii, motion — mode-independent, and therefore declared straight into
+   Tailwind's theme. `@theme` emits every entry below onto :root as a real
+   custom property *and* generates the matching utility, so `--text-sm` is both
+   `var(--text-sm)` in hand-written CSS and `text-sm` in a className. The
+   mode-varying colours above cannot live here: `@theme` is resolved once at
+   build time and has no notion of a media query.
+   ========================================================================== */
+
+@theme {
+  /* --- Faces -------------------------------------------------------------
+     Three roles, because this interface has three kinds of text.
+
+     Display — Big Shoulders. A condensed signage face, and condensed is
+     load-bearing rather than decorative: the app is multi-tenant, business
+     names are arbitrary, and a narrow face is what lets a long one set on a
+     single line at 375px. It also happens to be what a timetable board looks
+     like. Used at >= 24px only; it is unreadable small, which is the restraint
+     built into the choice.
+
+     Body — IBM Plex Sans. Picked for its figures. This product is numbers:
+     times, durations, prices, counts. Plex has true tabular figures and an
+     unambiguous 1/l/I, and it is not Inter, which is what the reference shadcn
+     app is set in.
+
+     Mono — IBM Plex Mono. The same superfamily, so the numerals relate. It is
+     the time axis and the data face: the hour column down the left of the
+     calendar, prices in a table, the X-Request-Id on an error state. */
+  --font-display: 'Big Shoulders Display', 'Archivo Narrow', 'Arial Narrow', sans-serif;
+  --font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, 'Cascadia Mono', Menlo, monospace;
+  --font-sans: var(--font-body);
+
+  /* --- Scale -------------------------------------------------------------
+     Base is 16px and anything typed into never goes below it: iOS Safari zooms
+     the viewport when a focused input is under 16px, and this app's headline
+     flow is a form on a phone. Dense admin chrome is where 13px is allowed. */
+  --text-2xs: 0.6875rem; /* 11px — uppercase eyebrows only, with tracking */
+  --text-xs: 0.75rem; /* 12px — badges, table meta */
+  --text-sm: 0.8125rem; /* 13px — admin chrome, secondary labels */
+  --text-base: 1rem; /* 16px — body, and the floor for inputs */
+  --text-lg: 1.125rem; /* 18px — lead paragraph */
+  --text-xl: 1.375rem; /* 22px — section heading, body face at 600 */
+  --text-display-sm: 1.75rem; /* 28px — page title           (display face) */
+  --text-display-md: 2.5rem; /* 40px — landing section head (display face) */
+  --text-display-lg: clamp(2.75rem, 7vw, 4.5rem); /* hero    (display face) */
+
+  --leading-tight: 1.05; /* display face only — condensed, and it wants to be tight */
+  --leading-snug: 1.3;
+  --leading-normal: 1.55;
+
+  --tracking-display: -0.01em;
+  --tracking-eyebrow: 0.14em; /* the 11px uppercase label above a page title */
+
+  /* --- Radii -------------------------------------------------------------
+     A scale with a job per step, rather than shadcn's single --radius applied
+     to everything. A slot chip and a dialog should not share a corner. */
+  --radius-xs: 0.25rem; /* 4px  — badges and slot chips: written in the book, not floating */
+  --radius-sm: 0.375rem; /* 6px  — buttons, inputs */
+  --radius-md: 0.625rem; /* 10px — cards, panels */
+  --radius-lg: 1rem; /* 16px — dialogs, sheets */
+  --radius-full: 9999px; /* avatars, and nothing else */
+
+  /* One easing everywhere, paired with the one duration below. A sharp-out
+     curve: motion should finish, not settle. */
+  --ease-sharp: cubic-bezier(0.2, 0, 0, 1);
+
+  /* --- Layout ------------------------------------------------------------ */
+  --container-app: 76rem; /* 1216px — admin content */
+  --container-prose: 44rem; /* public copy, and the booking form */
+}
+
+:root {
+  /* One duration everywhere, per the wave 1 decision. 160ms is fast enough to
+     feel instant on a calendar that gets clicked all day, and slow enough to be
+     seen. It lives outside @theme because reduced-motion has to override it,
+     and @theme is resolved at build time. */
+  --motion-duration: 160ms;
+  --motion-ease: var(--ease-sharp);
+
+  --header-height: 3.5rem;
+}
+
+/* Not 0ms: a zero-length transition never fires transitionend, and any code
+   that waits for one would hang. This is below the threshold of perception. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration: 0.01ms;
+  }
+}
+
+/* =============================================================================
+   The bridge into Tailwind. `inline` means the generated utility carries the
+   value rather than a reference to it, which is what lets a colour defined on
+   :root still flip when :root[data-theme] changes underneath it.
+   ========================================================================== */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-wash: var(--primary-wash);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-rule: var(--rule);
+
+  --color-success: var(--success);
+  --color-success-wash: var(--success-wash);
+  --color-warning: var(--warning);
+  --color-warning-wash: var(--warning-wash);
+  --color-danger: var(--danger);
+  --color-danger-wash: var(--danger-wash);
+  --color-info: var(--info);
+  --color-info-wash: var(--info-wash);
+
+  --shadow-e1: var(--elevation-1);
+  --shadow-e2: var(--elevation-2);
+  --shadow-e3: var(--elevation-3);
+}

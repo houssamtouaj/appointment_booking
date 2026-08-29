@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Book an appointment, and run the day it lands in." />
+    <!-- The ground the browser paints before CSS arrives, and the colour of form
+         controls and scrollbars. Both themes are named so that the pre-paint
+         background matches whichever one the script below is about to choose. -->
+    <meta name="color-scheme" content="light dark" />
+
+    <!-- Fonts are third-party and render-blocking by default; preconnect buys back
+         the DNS and TLS round trip. `display=swap` means a slow font shows fallback
+         text rather than nothing — the booking flow has to be readable on a bad
+         connection, which is the same reason the theme script below exists. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+    />
+
+    <title>SlotFlow</title>
+
+    <!--
+      Theme, stamped before first paint.
+
+      This has to be a blocking inline script in <head>, and it has to run before
+      the stylesheet is applied. React mounts several hundred milliseconds later;
+      anything that waits for it paints a white page first and then corrects
+      itself, which is the white flash the wave 1 gate names — worst on exactly
+      the throttled connection where it is least forgivable.
+
+      It reads localStorage rather than a cookie because the choice is per-device
+      and never leaves it, and it stays a plain string rather than JSON so that a
+      corrupted value degrades to "system" instead of throwing.
+
+      Three states, not two: absent means follow the OS, and the media query in
+      theme.css handles that case on its own. Only an explicit choice is stamped.
+    -->
+    <script>
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('slotflow-theme')
+          if (stored === 'light' || stored === 'dark') {
+            document.documentElement.setAttribute('data-theme', stored)
+          }
+        } catch (_) {
+          /* Private mode, or storage disabled. Fall through to the OS preference. */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

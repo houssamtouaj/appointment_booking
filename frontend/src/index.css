@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+@import './styles/theme.css';
+
+/* Tailwind's own `dark:` variant, taught the same three-state rule the tokens
+   use. Most of the app should never need it — the tokens already flip — but an
+   escape hatch that disagrees with the token layer is worse than no escape
+   hatch at all, so it is defined here once and matches exactly. */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  html {
+    /* The stub shell is short enough to fit; without this the scrollbar appears
+       on the pages that do not and the layout shifts by its width between routes. */
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    /* Plex's tabular figures, on by default. Every number in this product is
+       either a time, a duration, a price or a count — all of them column data,
+       and all of them wrong when the glyph widths differ. */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The whole app's focus treatment, in one place. Not the browser default,
+     which is rule 6 of the overview and a wave 1 gate item. The 2px offset in
+     the page colour is what keeps the ring readable on a filled accent button
+     as well as on paper. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* Anything that opts into a transition gets the one duration and the one
+     easing. A component that wants a different speed is a component that has
+     stopped agreeing with the design system. */
+  @media (prefers-reduced-motion: no-preference) {
+    :root {
+      --tw-duration: var(--motion-duration);
+      --tw-ease: var(--motion-ease);
+    }
+  }
+
+  ::selection {
+    background-color: var(--primary-wash);
+    color: var(--foreground);
+  }
+}
+
+@layer components {
+  /* The signature, as a utility. Ruled paper: horizontal hairlines at the pitch
+     of one written line. It marks a surface where time is the axis — the empty
+     page of the appointment book — and it is deliberately available nowhere
+     else, so that later waves cannot spread it into decoration.
+
+     The gradient is masked to fade downward so the rules do not collide with
+     whatever sits at the bottom of the panel. */
+  .ruled-paper {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--rule-height) - 1px),
+      var(--rule) calc(var(--rule-height) - 1px),
+      var(--rule) var(--rule-height)
+    );
+    -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+    mask-image: linear-gradient(to bottom, black, transparent);
+  }
+}
