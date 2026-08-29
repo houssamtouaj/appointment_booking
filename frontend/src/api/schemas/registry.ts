@@ -8,6 +8,13 @@ import {
   resetPasswordRequestSchema,
 } from '@/api/schemas/auth'
 import { acceptInvitationRequestSchema, invitationPreviewSchema } from '@/api/schemas/invitation'
+import {
+  openingHoursSchema,
+  publicBusinessSchema,
+  publicServiceSchema,
+  publicStaffSchema,
+  slotSchema,
+} from '@/api/schemas/public'
 
 /**
  * Which Zod object claims to describe which `components.schemas` entry.
@@ -59,4 +66,14 @@ export const CONTRACT_SCHEMAS: Record<string, ContractSchema> = {
   // --- Invitations (wave 2) --------------------------------------------
   InvitationPreviewResponse: invitationPreviewSchema,
   AcceptInvitationRequest: acceptInvitationRequestSchema,
+
+  // --- Public booking (wave 3) -----------------------------------------
+  // `OpeningHours` is the one entry here whose component name is not
+  // `*Response`: it is a JPA embeddable the API returns directly rather than a
+  // response record, so springdoc names it after the entity.
+  PublicBusinessResponse: publicBusinessSchema,
+  PublicServiceResponse: publicServiceSchema,
+  PublicStaffResponse: publicStaffSchema,
+  OpeningHours: openingHoursSchema,
+  SlotResponse: slotSchema,
 }

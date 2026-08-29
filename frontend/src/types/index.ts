@@ -24,4 +24,13 @@ export type {
 
 export type { AcceptInvitationRequest, InvitationPreview } from '@/api/schemas/invitation'
 
+export type {
+  DayOfWeek,
+  OpeningHours,
+  PublicBusiness,
+  PublicService,
+  PublicStaff,
+  Slot,
+} from '@/api/schemas/public'
+
 export type { ErrorCode, ProblemDetail, ValidationError } from '@/api/schemas/problem'
