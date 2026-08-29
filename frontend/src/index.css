@@ -54,13 +54,20 @@
   }
 
   /* Anything that opts into a transition gets the one duration and the one
-     easing. A component that wants a different speed is a component that has
-     stopped agreeing with the design system. */
-  @media (prefers-reduced-motion: no-preference) {
-    :root {
-      --tw-duration: var(--motion-duration);
-      --tw-ease: var(--motion-ease);
-    }
+     easing -- Tailwind's `transition-*` utilities read these two variables, and
+     without them every transition silently falls back to Tailwind's own 150ms.
+     A component that wants a different speed is a component that has stopped
+     agreeing with the design system.
+
+     NOT wrapped in `prefers-reduced-motion: no-preference`. That looks right and
+     is backwards: under reduced motion the override would stop applying and the
+     Tailwind default would come back, which is the one case where motion was
+     meant to be gone. --motion-duration already collapses to 0.01ms under that
+     query (theme.css), so setting it unconditionally is what actually honours
+     the preference. */
+  :root {
+    --tw-duration: var(--motion-duration);
+    --tw-ease: var(--motion-ease);
   }
 
   ::selection {
