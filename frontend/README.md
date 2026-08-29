@@ -27,9 +27,10 @@ root). Nothing in the app calls it yet — that starts in wave 2.
 | `npm run format`       | Prettier, write                                 |
 | `npm run format:check` | Prettier, check only — what CI runs             |
 
-`.github/workflows/web.yml` runs typecheck, lint, test and build on every push that
-touches `frontend/`. It is deliberately **not** a required check on `main`; the header
-comment in that file explains what has to change before it can be.
+`.github/workflows/web.yml` runs typecheck, lint, format, test and build on every push
+that touches `frontend/`, plus a grep asserting that every `VITE_*` the code reads is
+documented in `.env.example`. It is deliberately **not** a required check on `main`; the
+header comment in that file explains what has to change before it can be.
 
 ## Source layout
 

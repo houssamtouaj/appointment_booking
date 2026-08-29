@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   build:
-    name: typecheck, lint, test, build
+    name: typecheck, lint, format, test, build
     runs-on: ubuntu-latest
     # Generous for a job that takes about two minutes, but far below the 6-hour
     # default that a hung install would otherwise burn.
@@ -69,13 +69,21 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Four separate steps rather than one chained command, so that the Actions
-      # UI names which gate failed without anyone opening the log.
+      # Separate steps rather than one chained command, so that the Actions UI
+      # names which gate failed without anyone opening the log.
       - name: Typecheck
         run: npm run typecheck
 
       - name: Lint
         run: npm run lint
+
+      # .gitattributes pins *.ts, *.tsx, *.css, *.html, *.json, *.md and *.yml to
+      # LF specifically because this step exists and Prettier's endOfLine default
+      # is lf. It described itself as protecting a CI gate before there was one;
+      # this is the step that makes that true. It also catches class-order drift,
+      # since prettier-plugin-tailwindcss sorts the class lists.
+      - name: Format
+        run: npm run format:check
 
       - name: Test
         run: npm run test
@@ -86,10 +94,15 @@ jobs:
       # The wave 1 gate says .env.example must list every VITE_* the code reads,
       # "verified by grep". This is that grep, so the claim stays true after
       # wave 1 rather than being a thing that was true once.
+      #
+      # vite.config.ts and index.html are scanned alongside src/ because import.meta.env
+      # is not the only reader: loadEnv() in the config sees the same variables, and
+      # wave 2's proxy mode reads VITE_API_MODE there. A variable read only outside
+      # src/ would ship undocumented with this step still green.
       - name: Every VITE_* the code reads is documented in .env.example
         run: |
           missing=0
-          for var in $(grep -rhoE 'VITE_[A-Z0-9_]+' src/ | sort -u); do
+          for var in $(grep -rhoE 'VITE_[A-Z0-9_]+' src/ vite.config.ts index.html | sort -u); do
             if ! grep -q "^# *$var=\|^$var=" .env.example; then
               echo "::error file=frontend/.env.example::$var is read by the app but not documented in frontend/.env.example"
               missing=1
