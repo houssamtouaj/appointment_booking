@@ -68,6 +68,11 @@ built into outbound mail, so they are not ours to rename.
 4. **Every mutation gets a toast**; status changes update optimistically.
 5. **Every colour, radius and duration comes from a token** in `src/styles/theme.css`.
    No literal hex or `ms` value in a component — `src/styles/theme.test.ts` enforces it.
+6. **A slot's day and hour are the business's, never the viewer's.** Every read goes
+   through `src/lib/time.ts`; `new Date(iso).getDay()` in a component is a bug, not a
+   shortcut. `src/lib/time.test.ts` passes identically under any `TZ`.
+7. **Prices are formatted only by `src/lib/money.ts`**, which divides by the currency's
+   own minor units rather than by 100 — JPY has none — and never through a `double`.
 
 ## Design system
 
@@ -150,8 +155,62 @@ cross-origin has no id at all. Adding `"X-Request-Id"` to that list is a one-lin
 change and is not ours to make; until then the UI omits the reference line rather than
 showing a blank.
 
+## The public booking flow
+
+`/b/:slug` is the landing page and `/b/:slug/book` is the flow: service → who → when.
+Both are anonymous; neither needs a token.
+
+**Flow state lives in the URL**, not in a context: `?service=&staff=&date=`. The back
+button walks the steps, a pasted link reopens the same service, person and week, and the
+wave-4 booking failure can send someone back to the slot picker with everything else
+intact — which a context loses on the navigation that gets them there. The current step
+is _derived_ from those parameters, so a step marker cannot disagree with the choices
+beside it, and there is no way forward past an unmade choice.
+
+**"Anyone" is the default and the first option**, because it finds the most slots.
+Choosing it omits `staffId` from the request entirely rather than sending an id lifted
+from a slot's `staffIds` — that field is the union of who _could_ take the slot, and
+sending one back removes the server's ability to balance the work. A service with exactly
+one eligible person skips the step instead of asking a question with one answer.
+
+**Times.** One week per request, `from` the displayed Monday and `to` its Sunday, with
+`tz` set to the _business's_ zone (F8) — the same zone every time on screen is rendered
+in, because framing days in one zone while drawing headings for another disagrees by a
+day at the edges. The range cap is 62 days **inclusive of both ends**, so `from + 62` is
+63 and a 422; `fetchAvailability` rejects that before the network.
+
+**Slot starts are not aligned to the clock.** The engine walks its grid from each opening
+window rather than from the hour, so the demo returns `:05`, `:10` and `:35` starts.
+Nothing rounds or bins them.
+
+**Keyboard.** The slot grid is a roving tabindex per day: arrows move within a day, Tab
+moves to the next day, Enter selects. A week can be 163 slots, and one tab stop each
+would put them all between the picker and the button below it.
+
+**The empty week does work.** There is no next-available endpoint, so "Find the next
+opening" issues one widened request — today across 60 days, inside the cap — and jumps to
+the first day with anything. `minLeadTimeHours` and `maxAdvanceDays` are on no public
+endpoint, so no copy quotes a number of days: the client asks wide and the server trims.
+
+### Known gap: the public payload has no contact details
+
+When a business has nothing bookable in its whole window, the right thing to offer is a
+way to contact it. `PublicBusinessResponse` carries slug, name, timezone, currency, the
+two deposit fields, opening hours and services — and no phone, address or email. So that
+empty state says so plainly and points at the opening hours instead of inventing a
+number. Adding a field is a backend change and deliberately not made here.
+
+### Deposit copy is conditional, and that is not fussiness
+
+`depositRequired` on the landing payload is the **raw** business setting.
+`PublicBusinessService` maps `business.requiresDeposit()`, and only `PublicBookingService`
+ANDs it with `payments.enabled()` — so the demo reports `true` and then confirms every
+booking with no deposit taken. The landing page may say a deposit _may_ be requested; only
+the booking response says one _is_. Asserting otherwise is a gate failure.
+
 ## Not built yet
 
-No business data, no public booking page, no calendar. `/dashboard` and the other admin
-routes are still wave-1 placeholders — what changed in wave 2 is who is allowed to see
-them. The screen list is tracked in the local project brief (see `docs/`, not committed).
+No booking is created yet: the slot picker ends with a selected slot and a `Continue`
+button that is deliberately disabled. The details form, the deposit and the manage page
+are wave 4. `/dashboard` and the other admin routes are still wave-1 placeholders. The
+screen list is tracked in the local project brief (see `docs/`, not committed).

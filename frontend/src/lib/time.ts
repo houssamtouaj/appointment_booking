@@ -1,6 +1,6 @@
 import { formatInTimeZone, getTimezoneOffset } from 'date-fns-tz'
 
-import type { Slot } from '@/types'
+import type { DayOfWeek, Slot } from '@/types'
 
 /**
  * Every read of a time in this app, in the business's zone (F8).
@@ -292,6 +292,47 @@ export function viewerTimeZone(): string {
  */
 export function zonesAgree(a: string, b: string, at: Date = new Date()): boolean {
   return a === b || getTimezoneOffset(a, at) === getTimezoneOffset(b, at)
+}
+
+/**
+ * Monday-first, matching the order the API sends opening hours in and the order
+ * `weekOf` builds a week in.
+ */
+export const WEEKDAYS: readonly DayOfWeek[] = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+]
+
+/** Which weekday a calendar date is. Pure calendar arithmetic — see `atUtcNoon`. */
+export function weekdayOf(dayKey: DayKey): DayOfWeek {
+  // `% 7` guarantees 0–6 and therefore a hit, which `noUncheckedIndexedAccess`
+  // cannot derive from modulo arithmetic. Asserted here rather than handed a
+  // fallback weekday, which would be a wrong answer dressed as a safe one.
+  return WEEKDAYS[(atUtcNoon(dayKey).getUTCDay() + 6) % 7] as DayOfWeek
+}
+
+/** `"Monday"`, for a week table that never shows a date. */
+export function formatWeekday(weekday: DayOfWeek, locale?: string): string {
+  // 2026-08-31 is a Monday, so its index is the offset into a real week.
+  const monday = atUtcNoon('2026-08-31')
+  monday.setUTCDate(monday.getUTCDate() + WEEKDAYS.indexOf(weekday))
+  return monday.toLocaleDateString(locale, { weekday: 'long', timeZone: 'UTC' })
+}
+
+/**
+ * `"08:30:00"` becomes `"08:30"`.
+ *
+ * A `LocalTime` from the API, trimmed for display and never parsed into a
+ * `Date`. It is a wall clock with no date attached — the salon opens at 08:30
+ * every Monday — and giving it one is how it acquires an offset it never had.
+ */
+export function formatLocalTime(localTime: string): string {
+  return localTime.slice(0, 5)
 }
 
 /** `20` becomes `"20 min"`, `60` becomes `"1 hr"`, `90` becomes `"1 hr 30 min"`. */

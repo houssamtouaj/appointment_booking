@@ -1,6 +1,8 @@
 import { Navigate, type RouteObject } from 'react-router-dom'
 
 import { RootLayout } from '@/components/root-layout'
+import { BookingFlowPage } from '@/features/booking/booking-flow-page'
+import { BusinessLandingPage } from '@/features/booking/business-landing-page'
 import { AcceptInvitationPage } from '@/features/auth/accept-invitation-page'
 import { ForgotPasswordPage } from '@/features/auth/forgot-password-page'
 import { LoginPage } from '@/features/auth/login-page'
@@ -39,28 +41,8 @@ export const routes: RouteObject[] = [
         // button between `/` and `/b/demo-salon`.
         element: <Navigate to={`/b/${DEMO_SLUG}`} replace />,
       },
-      {
-        path: 'b/:slug',
-        element: (
-          <Placeholder
-            eyebrow="Public"
-            title="Business landing"
-            wave="Wave 3"
-            description="Services, prices and durations, and the entry point to the booking flow."
-          />
-        ),
-      },
-      {
-        path: 'b/:slug/book',
-        element: (
-          <Placeholder
-            eyebrow="Public"
-            title="Book an appointment"
-            wave="Wave 3"
-            description="Service, then staff, then a slot the availability engine offered."
-          />
-        ),
-      },
+      { path: 'b/:slug', element: <BusinessLandingPage /> },
+      { path: 'b/:slug/book', element: <BookingFlowPage /> },
       {
         // Named by the backend (F12). Not ours to rename.
         path: 'booking/:cancellationToken',

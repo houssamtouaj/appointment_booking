@@ -28,6 +28,18 @@ import {
  * through `new Date(iso).getDay()`.
  */
 
+/**
+ * Indexing under `noUncheckedIndexedAccess`. Throws rather than returning
+ * `undefined`, so a grouping that produced fewer days than the case expects
+ * fails as "no item at index 1" instead of as a confusing comparison against
+ * undefined three lines later.
+ */
+function at<T>(items: readonly T[], index: number): T {
+  const item = items[index]
+  if (item === undefined) throw new Error(`no item at index ${index}`)
+  return item
+}
+
 /** Slots as the engine sends them: UTC instants, `staffIds` a union. */
 function slot(start: string, ...staffIds: string[]): Slot {
   const end = new Date(new Date(start).getTime() + 60 * 60 * 1000).toISOString()
@@ -46,15 +58,15 @@ describe('day grouping across the business timezone', () => {
     const days = groupSlotsByDay([slot('2026-08-31T23:40:00Z')], 'Europe/Paris')
 
     expect(days).toHaveLength(1)
-    expect(days[0].dayKey).toBe('2026-09-01')
-    expect(clockOf(days[0].slots[0].start, 'Europe/Paris')).toBe('01:40')
+    expect(at(days, 0).dayKey).toBe('2026-09-01')
+    expect(clockOf(at(at(days, 0).slots, 0).start, 'Europe/Paris')).toBe('01:40')
   })
 
   it('groups the same 23:40Z slot under the correct London day when the business is in London', () => {
     const days = groupSlotsByDay([slot('2026-08-31T23:40:00Z')], 'Europe/London')
 
-    expect(days[0].dayKey).toBe('2026-09-01')
-    expect(clockOf(days[0].slots[0].start, 'Europe/London')).toBe('00:40')
+    expect(at(days, 0).dayKey).toBe('2026-09-01')
+    expect(clockOf(at(at(days, 0).slots, 0).start, 'Europe/London')).toBe('00:40')
   })
 
   // The discriminating case, and the reason the two above are not enough: here
@@ -64,8 +76,8 @@ describe('day grouping across the business timezone', () => {
   it('puts one instant on different days for a Paris business and a London one', () => {
     const late = slot('2026-08-31T22:40:00Z')
 
-    expect(groupSlotsByDay([late], 'Europe/Paris')[0].dayKey).toBe('2026-09-01')
-    expect(groupSlotsByDay([late], 'Europe/London')[0].dayKey).toBe('2026-08-31')
+    expect(at(groupSlotsByDay([late], 'Europe/Paris'), 0).dayKey).toBe('2026-09-01')
+    expect(at(groupSlotsByDay([late], 'Europe/London'), 0).dayKey).toBe('2026-08-31')
   })
 
   it('sorts days ascending and slots within a day by instant', () => {
@@ -75,7 +87,10 @@ describe('day grouping across the business timezone', () => {
     )
 
     expect(days.map((day) => day.dayKey)).toEqual(['2026-08-31', '2026-09-02'])
-    expect(days[0].slots.map((s) => clockOf(s.start, 'Europe/Paris'))).toEqual(['10:15', '16:00'])
+    expect(at(days, 0).slots.map((s) => clockOf(s.start, 'Europe/Paris'))).toEqual([
+      '10:15',
+      '16:00',
+    ])
   })
 })
 
@@ -96,7 +111,7 @@ describe('slot starts the engine actually produces', () => {
       'Europe/Paris',
     )
 
-    expect(days[0].slots.map((s) => clockOf(s.start, 'Europe/Paris'))).toEqual([
+    expect(at(days, 0).slots.map((s) => clockOf(s.start, 'Europe/Paris'))).toEqual([
       '15:10',
       '15:35',
       '15:55',
@@ -128,13 +143,13 @@ describe('a DST-transition week', () => {
     const days = groupSlotsByDay(fallBackNight, 'Europe/Paris')
 
     expect(days).toHaveLength(1)
-    expect(days[0].dayKey).toBe('2026-10-25')
+    expect(at(days, 0).dayKey).toBe('2026-10-25')
   })
 
   it('renders the repeated wall clock twice rather than deduping two real offers', () => {
     // Two distinct instants that a customer sees as the same time. They are
     // different appointments; collapsing them would delete a bookable hour.
-    const clocks = groupSlotsByDay(fallBackNight, 'Europe/Paris')[0].slots.map((s) =>
+    const clocks = at(groupSlotsByDay(fallBackNight, 'Europe/Paris'), 0).slots.map((s) =>
       clockOf(s.start, 'Europe/Paris'),
     )
 
@@ -149,8 +164,11 @@ describe('a DST-transition week', () => {
       'Europe/Paris',
     )
 
-    expect(days[0].slots.map((s) => clockOf(s.start, 'Europe/Paris'))).toEqual(['01:30', '03:30'])
-    expect(days[0].dayKey).toBe('2026-03-29')
+    expect(at(days, 0).slots.map((s) => clockOf(s.start, 'Europe/Paris'))).toEqual([
+      '01:30',
+      '03:30',
+    ])
+    expect(at(days, 0).dayKey).toBe('2026-03-29')
   })
 })
 
@@ -163,14 +181,14 @@ describe('deduping by start', () => {
       'Europe/Paris',
     )
 
-    expect(days[0].slots).toHaveLength(1)
-    expect([...days[0].slots[0].staffIds].sort()).toEqual(['staff-a', 'staff-b'])
+    expect(at(days, 0).slots).toHaveLength(1)
+    expect([...at(at(days, 0).slots, 0).staffIds].sort()).toEqual(['staff-a', 'staff-b'])
   })
 
   it('keeps a slot that only one staff member can take', () => {
     const days = groupSlotsByDay([slot('2026-09-01T10:00:00Z', 'staff-a')], 'Europe/Paris')
 
-    expect(days[0].slots[0].staffIds).toEqual(['staff-a'])
+    expect(at(at(days, 0).slots, 0).staffIds).toEqual(['staff-a'])
   })
 })
 

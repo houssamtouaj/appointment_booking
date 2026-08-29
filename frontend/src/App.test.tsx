@@ -34,6 +34,33 @@ const USER = {
 const AUTH = { accessToken: 'token-1', tokenType: 'Bearer', expiresIn: 900, user: USER }
 
 /**
+ * The public booking payload, shaped like the real one because wave 3's screens
+ * parse it (F4). A stub that returned the session user — which is what this
+ * adapter used to do for every URL — now fails at the schema boundary and
+ * renders an error state, which is the parsing layer working rather than a test
+ * to loosen.
+ */
+const PUBLIC_BUSINESS = {
+  slug: DEMO_SLUG,
+  name: 'Demo Salon',
+  timezone: 'Europe/Paris',
+  currency: 'EUR',
+  depositRequired: false,
+  openingHours: [
+    { dayOfWeek: 'MONDAY', opensAt: '09:00:00', closesAt: '17:00:00', closesNextDay: false },
+  ],
+  services: [
+    {
+      id: '33333333-3333-3333-3333-333333333333',
+      name: 'Coupe classique',
+      description: 'Wash, cut and finish.',
+      durationMinutes: 30,
+      priceCents: 3500,
+    },
+  ],
+}
+
+/**
  * From wave 2 the route table is behind a session, so every render here needs
  * one — or needs to prove it does not have one. `role` is a parameter because
  * `RequireOwner` is the only thing in the table that reads it.
@@ -60,7 +87,12 @@ function stubApi(session: 'owner' | 'staff' | 'anonymous') {
     }
 
     const user = { ...USER, role: session === 'owner' ? 'OWNER' : 'STAFF' }
-    const data = config.url === '/api/auth/refresh' ? { ...AUTH, user } : user
+    const url = config.url ?? ''
+    const data = url.includes('/api/public/businesses')
+      ? PUBLIC_BUSINESS
+      : url === '/api/auth/refresh'
+        ? { ...AUTH, user }
+        : user
     return Promise.resolve({
       data,
       status: 200,
