@@ -11,7 +11,7 @@ import { resetBootstrap } from '@/api/bootstrap'
 import { endSessionQuietly } from '@/api/session'
 import { AuthProvider } from '@/features/auth/auth-provider'
 import { routes } from '@/routes'
-import { addDays, todayIn, weekOf } from '@/lib/time'
+import { addDays, dayKeyOf, formatDayHeading, todayIn, weekOf } from '@/lib/time'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -73,7 +73,13 @@ const BUSINESS = {
 
 type Handler = (config: AxiosRequestConfig) => unknown
 
-let handlers: { business?: Handler; staff?: Handler; availability?: Handler }
+let handlers: {
+  business?: Handler
+  staff?: Handler
+  availability?: Handler
+  /** `POST .../bookings`. Wave 4's only write on this surface. */
+  booking?: Handler
+}
 
 function ok(data: unknown, config: AxiosRequestConfig): AxiosResponse {
   return {
@@ -82,6 +88,37 @@ function ok(data: unknown, config: AxiosRequestConfig): AxiosResponse {
     statusText: 'OK',
     headers: {},
     config: config as AxiosResponse['config'],
+  }
+}
+
+/**
+ * A problem body with the extra members `ApiException.with(...)` attaches.
+ *
+ * The bodies below are copied from what the API actually sends —
+ * `earliestStart` on a lead-time refusal, `deadline` on a cutoff, the echoed
+ * slot on a `409` — rather than reduced to `{ code }`. Half the copy this wave
+ * writes is built from those members, and a fixture without them would let a
+ * screen that renders "too soon" pass a test for one that renders "the earliest
+ * we can take you is Thursday".
+ */
+function problemWith(status: number, code: string, extra: Record<string, unknown> = {}) {
+  return (config: AxiosRequestConfig) => {
+    const error = new Error(String(status)) as Error & {
+      isAxiosError: boolean
+      config: unknown
+      response: unknown
+      toJSON: () => object
+    }
+    error.isAxiosError = true
+    error.config = config
+    error.response = {
+      status,
+      data: { status, code, title: code, detail: 'The server refused this request.', ...extra },
+      headers: {},
+      config,
+    }
+    error.toJSON = () => ({})
+    throw error
   }
 }
 
@@ -111,11 +148,13 @@ const adapter: AxiosAdapter = (config) => {
   // Anonymous: the bootstrap refresh must fail, or the shell waits forever.
   if (url.includes('/api/auth')) return Promise.reject(problem(401, 'UNAUTHENTICATED')(config))
 
-  const handler = url.includes('/availability')
-    ? handlers.availability
-    : url.includes('/staff')
-      ? handlers.staff
-      : handlers.business
+  const handler = url.includes('/bookings')
+    ? handlers.booking
+    : url.includes('/availability')
+      ? handlers.availability
+      : url.includes('/staff')
+        ? handlers.staff
+        : handlers.business
 
   if (!handler) throw new Error(`no handler for ${url}`)
   return Promise.resolve(ok(handler(config), config)) as ReturnType<AxiosAdapter>
@@ -462,5 +501,319 @@ describe('an empty week', () => {
     // A truthful answer, and different from an error: the request succeeded.
     expect(await screen.findByText(/Nothing is bookable in the next two months/)).toBeVisible()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
+//  Wave 4 — the details step, the write, and the ways it does not work
+// ---------------------------------------------------------------------------
+
+const TOKEN = 'c0ffee00-1111-4222-8333-444455556666'
+
+/** A `201`, shaped like `PublicBookingResponse`. `guest` is absent by design. */
+function confirmedBooking(startsAt: string) {
+  return {
+    id: '7f1b0e6a-9d0c-4d1e-8a2b-3c4d5e6f7a8b',
+    serviceId: COULEUR.id,
+    staffId: AMELIE.id,
+    startsAt,
+    endsAt: new Date(Date.parse(startsAt) + 60 * 60_000).toISOString().replace('.000Z', 'Z'),
+    status: 'CONFIRMED',
+    priceCents: COULEUR.priceCents,
+    currency: 'EUR',
+    cancellationToken: TOKEN,
+    depositRefundable: false,
+    cancellable: true,
+    cancellationDeadline: new Date(Date.parse(startsAt) - 24 * 3_600_000)
+      .toISOString()
+      .replace('.000Z', 'Z'),
+  }
+}
+
+const MONDAY = weekOf(todayIn(TZ)).from
+
+describe('the details step', () => {
+  const slot = slotAt(MONDAY, '09:35')
+  const detailsPath = `/b/${SLUG}/book?service=${COULEUR.id}&staff=anyone&date=${MONDAY}&slot=${encodeURIComponent(slot.start)}`
+
+  beforeEach(() => {
+    handlers.staff = () => [AMELIE, CAMILLE]
+    handlers.availability = () => [slot, slotAt(MONDAY, '14:05')]
+  })
+
+  it('is reached from the picker, and the slot goes into the URL verbatim', async () => {
+    const user = userEvent.setup()
+    const router = renderAt(`/b/${SLUG}/book?service=${COULEUR.id}&staff=anyone&date=${MONDAY}`)
+
+    await user.click(await screen.findByRole('button', { name: /^09:35/ }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Who is this for?' })).toBeVisible()
+    // Byte for byte what the availability response sent. A start rebuilt from a
+    // wall clock is how a booking lands an hour out on a DST boundary.
+    expect(new URLSearchParams(router.state.location.search).get('slot')).toBe(slot.start)
+  })
+
+  it('restates what is being booked, on the salon clock and in the salon currency', async () => {
+    renderAt(detailsPath)
+
+    // The picker is not on screen at this step, so each of these appears once
+    // and appears because the summary put it there.
+    //
+    // 09:35 is the Paris wall clock of a 07:35Z instant. Under any runner
+    // timezone but Paris, finding it is the proof that the summary reads the
+    // salon's clock rather than the reader's.
+    expect(await screen.findByText('09:35')).toBeVisible()
+    expect(screen.getByText(/72[.,]00/)).toBeVisible()
+    expect(screen.getByText(formatDayHeading(dayKeyOf(slot.start, TZ)))).toBeVisible()
+  })
+
+  it('says a deposit may be requested and never that one is (F5)', async () => {
+    renderAt(detailsPath)
+
+    // depositRequired is true on this payload and still only means "maybe":
+    // PublicBookingService ANDs it with payments.enabled(), which this client
+    // cannot see.
+    expect(await screen.findByText(/If a deposit is required/i)).toBeVisible()
+    expect(screen.queryByText(/you will be charged/i)).not.toBeInTheDocument()
+  })
+
+  it('will not spend a rate-limit budget on an address that is not one', async () => {
+    const user = userEvent.setup()
+    let posted = 0
+    handlers.booking = () => {
+      posted += 1
+      return confirmedBooking(slot.start)
+    }
+    renderAt(detailsPath)
+
+    await user.type(await screen.findByLabelText('Your name'), 'Camille Doe')
+    await user.type(screen.getByLabelText('Email'), 'camille@example')
+    await user.click(screen.getByRole('button', { name: 'Confirm booking' }))
+
+    expect(await screen.findByText('That does not look like an email address')).toBeVisible()
+    // Caught here rather than at the server, which matters: the address is the
+    // per-email rate-limit key (backend D12), so a mistyped one costs a retry.
+    expect(posted).toBe(0)
+  })
+})
+
+describe('a booking that works', () => {
+  const slot = slotAt(MONDAY, '09:35')
+  const detailsPath = `/b/${SLUG}/book?service=${COULEUR.id}&staff=anyone&date=${MONDAY}&slot=${encodeURIComponent(slot.start)}`
+
+  beforeEach(() => {
+    handlers.staff = () => [AMELIE, CAMILLE]
+    handlers.availability = () => [slot]
+  })
+
+  async function book(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(await screen.findByLabelText('Your name'), 'Camille Doe')
+    await user.type(screen.getByLabelText('Email'), 'camille@example.test')
+    await user.click(screen.getByRole('button', { name: 'Confirm booking' }))
+  }
+
+  it('omits staffId entirely for "anyone", and sends the slot start unchanged', async () => {
+    const user = userEvent.setup()
+    let body: Record<string, unknown> = {}
+    handlers.booking = (config) => {
+      body = JSON.parse(String(config.data)) as Record<string, unknown>
+      return confirmedBooking(slot.start)
+    }
+    renderAt(detailsPath)
+    await book(user)
+
+    await screen.findByRole('heading', { level: 1, name: 'You are booked' })
+    expect(body.startsAt).toBe(slot.start)
+    // Not a member of the slot's staffIds. Sending one takes the server's
+    // ability to balance the booking away from it.
+    expect('staffId' in body).toBe(false)
+    // A blank optional field is omitted rather than sent as an empty string.
+    expect('guestPhone' in body).toBe(false)
+  })
+
+  it('shows the manage link as text, not only as a button', async () => {
+    const user = userEvent.setup()
+    handlers.booking = () => confirmedBooking(slot.start)
+    renderAt(detailsPath)
+    await book(user)
+
+    await screen.findByRole('heading', { level: 1, name: 'You are booked' })
+    // The only credential this customer will ever have (backend D1). A copy
+    // button alone puts it behind an API that silently does nothing on an
+    // insecure origin.
+    expect(screen.getByText(`${window.location.origin}/booking/${TOKEN}`)).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Manage this booking' })).toHaveAttribute(
+      'href',
+      `/booking/${TOKEN}`,
+    )
+  })
+
+  it('renders a confirmation, not a checkout, when the response says CONFIRMED', async () => {
+    const user = userEvent.setup()
+    // The deployed configuration: depositRequired is true on the business and
+    // payments are off, so every booking confirms with nothing to pay.
+    handlers.booking = () => confirmedBooking(slot.start)
+    renderAt(detailsPath)
+    await book(user)
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'You are booked' })).toBeVisible()
+    expect(screen.queryByText(/secure checkout/i)).not.toBeInTheDocument()
+  })
+
+  it('takes the deposit branch from the response and nowhere else (F5)', async () => {
+    const user = userEvent.setup()
+    handlers.booking = () => ({
+      ...confirmedBooking(slot.start),
+      status: 'PENDING',
+      checkoutUrl: 'https://checkout.stripe.test/c/pay/cs_test_123',
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString().replace(/\.\d+Z$/, 'Z'),
+    })
+    renderAt(detailsPath)
+    await book(user)
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'One more step: the deposit' }),
+    ).toBeVisible()
+    // The hold, from expiresAt — stated before the customer leaves for a domain
+    // this app does not control.
+    expect(screen.getByText(/This slot is held until/)).toBeVisible()
+    // D7, in words, before the click.
+    expect(screen.getByText(/not refunded/)).toBeVisible()
+    expect(screen.getByRole('button', { name: /Continue to secure checkout/ })).toBeVisible()
+  })
+
+  it('never renders a countdown for a booking with no expiresAt', async () => {
+    const user = userEvent.setup()
+    handlers.booking = () => confirmedBooking(slot.start)
+    renderAt(detailsPath)
+    await book(user)
+
+    await screen.findByRole('heading', { level: 1, name: 'You are booked' })
+    // `expiresAt` is omitted on a CONFIRMED booking, and a countdown that
+    // assumed it exists renders NaN.
+    expect(screen.queryByText(/held until/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument()
+  })
+})
+
+describe('the ways a booking does not work', () => {
+  const slot = slotAt(MONDAY, '09:35')
+  const other = slotAt(MONDAY, '14:05')
+  const detailsPath = `/b/${SLUG}/book?service=${COULEUR.id}&staff=anyone&date=${MONDAY}&slot=${encodeURIComponent(slot.start)}`
+
+  beforeEach(() => {
+    handlers.staff = () => [AMELIE, CAMILLE]
+    handlers.availability = () => [slot, other]
+  })
+
+  async function attempt(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(await screen.findByLabelText('Your name'), 'Camille Doe')
+    await user.type(screen.getByLabelText('Email'), 'camille@example.test')
+    await user.click(screen.getByRole('button', { name: 'Confirm booking' }))
+  }
+
+  it('409 BOOKING_SLOT_TAKEN returns to the picker with the details intact', async () => {
+    const user = userEvent.setup()
+    handlers.booking = problemWith(409, 'BOOKING_SLOT_TAKEN', {
+      staffId: AMELIE.id,
+      startsAt: slot.start,
+      endsAt: slot.end,
+    })
+    const router = renderAt(detailsPath)
+    await attempt(user)
+
+    // The expected outcome of the whole double-booking guarantee, worded as an
+    // ordinary thing that happened rather than as a crash.
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'That time was taken while you were filling this in',
+    )
+    await waitFor(() =>
+      expect(new URLSearchParams(router.state.location.search).has('slot')).toBe(false),
+    )
+    expect(await screen.findByRole('heading', { level: 1, name: 'When suits you?' })).toBeVisible()
+
+    // The gate item: what was typed survives the return. Forward again, and it
+    // is still there — because the form outlives the step.
+    // `find`, not `get`: this render is the first time the picker has been
+    // mounted in this test, so the week is still in flight.
+    await user.click(await screen.findByRole('button', { name: /^14:05/ }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(await screen.findByLabelText('Your name')).toHaveValue('Camille Doe')
+    expect(screen.getByLabelText('Email')).toHaveValue('camille@example.test')
+  })
+
+  it('422 POLICY_LEAD_TIME moves the picker to the earliest day the server named', async () => {
+    const user = userEvent.setup()
+    const earliest = slotAt(addDays(MONDAY, 2), '10:00').start
+    handlers.booking = problemWith(422, 'POLICY_LEAD_TIME', { earliestStart: earliest })
+    const router = renderAt(detailsPath)
+    await attempt(user)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'That is sooner than this business takes bookings',
+    )
+    await waitFor(() =>
+      expect(new URLSearchParams(router.state.location.search).get('date')).toBe(
+        addDays(MONDAY, 2),
+      ),
+    )
+  })
+
+  it('422 SERVICE_INACTIVE goes back to the catalogue and says why', async () => {
+    const user = userEvent.setup()
+    handlers.booking = problemWith(422, 'SERVICE_INACTIVE')
+    const router = renderAt(detailsPath)
+    await attempt(user)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('That service is no longer bookable')
+    await waitFor(() =>
+      expect(new URLSearchParams(router.state.location.search).has('service')).toBe(false),
+    )
+    expect(screen.getByRole('heading', { level: 1, name: 'What are you booking?' })).toBeVisible()
+  })
+
+  it('429 keeps the customer where they are, with real copy', async () => {
+    const user = userEvent.setup()
+    handlers.booking = problemWith(429, 'RATE_LIMITED', { retryAfterSeconds: 45 })
+    renderAt(detailsPath)
+    await attempt(user)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Too many booking attempts from here')
+    // From retryAfterSeconds, so it is a number somebody can act on.
+    expect(alert).toHaveTextContent('45 seconds')
+    // Not sent back a step: nothing about the slot was wrong.
+    expect(screen.getByRole('heading', { level: 1, name: 'Who is this for?' })).toBeVisible()
+    expect(screen.getByLabelText('Your name')).toHaveValue('Camille Doe')
+  })
+
+  it('lands a 422 errors[] entry on the field it names', async () => {
+    const user = userEvent.setup()
+    handlers.booking = problemWith(422, 'VALIDATION_FAILED', {
+      errors: [{ field: 'guestName', message: 'must not be blank' }],
+    })
+    renderAt(detailsPath)
+    await attempt(user)
+
+    expect(await screen.findByText('must not be blank')).toBeVisible()
+    expect(screen.getByLabelText('Your name')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('surfaces a 422 about a field this form does not have', async () => {
+    const user = userEvent.setup()
+    // `startsAt` is not an input anybody can see. React Hook Form accepts
+    // setError on a path it does not know without complaint, so without the
+    // unmatched list this message would vanish and leave a form with no errors
+    // on it that refuses to submit.
+    handlers.booking = problemWith(422, 'VALIDATION_FAILED', {
+      errors: [{ field: 'startsAt', message: 'must not be null' }],
+    })
+    renderAt(detailsPath)
+    await attempt(user)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('startsAt')
+    expect(alert).toHaveTextContent('must not be null')
   })
 })
