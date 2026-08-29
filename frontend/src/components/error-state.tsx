@@ -40,7 +40,7 @@ export function ErrorState({ title, description, requestId, onRetry, className }
         </span>
         <p className="text-foreground text-base font-medium">{title}</p>
         {description ? (
-          <p className="text-muted-foreground mt-1 max-w-prose text-sm">{description}</p>
+          <p className="text-muted-foreground max-w-copy mt-1 text-sm">{description}</p>
         ) : null}
 
         {onRetry ? (

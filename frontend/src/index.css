@@ -1,6 +1,17 @@
 @import 'tailwindcss';
 @import './styles/theme.css';
 
+/* Tests are not source, and the two halves of that claim have to agree. The
+   token-discipline guard in styles/theme.test.ts skips *.test.ts(x) when it
+   scans for literal colours and durations, on the grounds that a test may
+   legitimately write one -- but Tailwind's content scanner reads those same
+   files and happily emits a utility for anything that looks like a class name.
+   The `duration-[120ms]` quoted in that test's own comment shipped a real rule
+   into dist. Take test files out of the scan so the exemption means what it
+   says. */
+@source not './**/*.test.ts';
+@source not './**/*.test.tsx';
+
 /* Tailwind's own `dark:` variant, taught the same three-state rule the tokens
    use. Most of the app should never need it — the tokens already flip — but an
    escape hatch that disagrees with the token layer is worse than no escape
@@ -54,10 +65,19 @@
   }
 
   /* Anything that opts into a transition gets the one duration and the one
-     easing -- Tailwind's `transition-*` utilities read these two variables, and
-     without them every transition silently falls back to Tailwind's own 150ms.
-     A component that wants a different speed is a component that has stopped
-     agreeing with the design system.
+     easing. A component that wants a different speed is a component that has
+     stopped agreeing with the design system.
+
+     These are the `--default-*` theme variables, NOT `--tw-duration` /
+     `--tw-ease`. The `--tw-*` pair looks like the right lever and cannot work:
+     Tailwind registers both with `@property { inherits: false }` (and, for
+     browsers without @property, resets them to `initial` on `*, ::before,
+     ::after`), so a value set here never reaches the element that reads it.
+     `transition-duration: var(--tw-duration, var(--default-transition-duration))`
+     would fall through to Tailwind's own 150ms on every element in the app. The
+     `--default-*` variables are plain inheriting custom properties, so they do
+     reach it -- and they are the fallback arm of that var(), which is the arm
+     that is actually taken unless a `duration-*` utility is on the element.
 
      NOT wrapped in `prefers-reduced-motion: no-preference`. That looks right and
      is backwards: under reduced motion the override would stop applying and the
@@ -66,8 +86,8 @@
      query (theme.css), so setting it unconditionally is what actually honours
      the preference. */
   :root {
-    --tw-duration: var(--motion-duration);
-    --tw-ease: var(--motion-ease);
+    --default-transition-duration: var(--motion-duration);
+    --default-transition-timing-function: var(--motion-ease);
   }
 
   ::selection {

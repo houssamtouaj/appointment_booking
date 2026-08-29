@@ -18,6 +18,15 @@
    ========================================================================== */
 
 :root {
+  /* The UA's half of the theme: form controls, the always-present scrollbar
+     (html has scrollbar-gutter: stable), and the canvas painted before this
+     stylesheet arrives. index.html's <meta name="color-scheme"> only says which
+     schemes are supported — the UA then resolves it from the OS, which is not
+     the same question as which theme the user picked. Declared here, and in
+     both dark blocks below, so the native chrome follows data-theme rather than
+     prefers-color-scheme; the pre-paint half is handled by the inline script. */
+  color-scheme: light;
+
   /* --- Paper: the warm neutral ramp -------------------------------------
      Warm, not cool. This single decision is what separates the app from every
      shadcn build at a glance: slate is blue-grey, this is greige. Kept light
@@ -145,6 +154,8 @@
    ========================================================================== */
 
 :root[data-theme='dark'] {
+  color-scheme: dark;
+
   --paper-0: #1c1917;
   --paper-50: #131110;
   --paper-100: #252119;
@@ -189,6 +200,8 @@
    without it, choosing light on a dark-set OS would do nothing. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    color-scheme: dark;
+
     --paper-0: #1c1917;
     --paper-50: #131110;
     --paper-100: #252119;
@@ -291,7 +304,13 @@
 
   /* --- Layout ------------------------------------------------------------ */
   --container-app: 76rem; /* 1216px — admin content */
-  --container-prose: 44rem; /* public copy, and the booking form */
+  /* `copy`, not `prose`: Tailwind ships max-w-prose as a STATIC utility (65ch),
+     and a static utility beats a --container-* theme key. Named --container-prose
+     this token emitted no utility at all and every `max-w-prose` in the app
+     silently resolved to 65ch — font-relative, so the same class produced ~624px
+     next to 16px text and ~507px next to 13px text, three widths where the design
+     specifies one. Any name Tailwind does not already own works; this one is free. */
+  --container-copy: 44rem; /* 704px — public copy, and the booking form */
 }
 
 :root {

@@ -5,9 +5,13 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Book an appointment, and run the day it lands in." />
-    <!-- The ground the browser paints before CSS arrives, and the colour of form
-         controls and scrollbars. Both themes are named so that the pre-paint
-         background matches whichever one the script below is about to choose. -->
+    <!-- Declares which schemes this document supports, and nothing more: with no
+         further input the UA resolves it from prefers-color-scheme, i.e. from the
+         OS. That is the right answer only for the "follow the OS" state. When a
+         theme has actually been chosen, the script below stamps it as an inline
+         style on <html> so the pre-paint canvas, the scrollbar and every native
+         control follow the choice instead of the OS. theme.css carries the same
+         declaration for every state after the stylesheet lands. -->
     <meta name="color-scheme" content="light dark" />
 
     <!-- Fonts are third-party and render-blocking by default; preconnect buys back
@@ -45,6 +49,13 @@
           var stored = localStorage.getItem('slotflow-theme')
           if (stored === 'light' || stored === 'dark') {
             document.documentElement.setAttribute('data-theme', stored)
+            // The attribute alone is not enough before the stylesheet lands: the
+            // canvas the browser paints in the meantime comes from the meta tag
+            // above, which follows the OS. Dark chosen on a light OS would flash
+            // white — the flash this whole script exists to prevent. An inline
+            // style is the one thing that applies immediately. use-theme.ts
+            // clears it again when the user goes back to "system".
+            document.documentElement.style.colorScheme = stored
           }
         } catch (_) {
           /* Private mode, or storage disabled. Fall through to the OS preference. */

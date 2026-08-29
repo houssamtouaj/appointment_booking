@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
  */
 export function NotFoundPage() {
   return (
-    <Container width="prose">
+    <Container width="copy">
       <div className="flex min-h-[60vh] flex-col items-center justify-center py-16 text-center">
         <p className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
           Error 404
@@ -19,7 +19,7 @@ export function NotFoundPage() {
         <h1 className="font-display text-display-md text-foreground tracking-display mt-2 leading-tight">
           No such page
         </h1>
-        <p className="text-muted-foreground mt-3 max-w-prose text-base">
+        <p className="text-muted-foreground max-w-copy mt-3 text-base">
           The link may be incomplete. Links sent by email expire, and some mail clients cut long
           ones in half — if you followed one, request a fresh link.
         </p>

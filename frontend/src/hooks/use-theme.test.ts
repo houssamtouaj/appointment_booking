@@ -9,12 +9,14 @@ import { THEME_STORAGE_KEY, resetThemeStoreForTests, useTheme } from '@/hooks/us
 beforeEach(() => {
   localStorage.clear()
   document.documentElement.removeAttribute('data-theme')
+  document.documentElement.style.colorScheme = ''
   resetThemeStoreForTests()
 })
 
 afterEach(() => {
   localStorage.clear()
   document.documentElement.removeAttribute('data-theme')
+  document.documentElement.style.colorScheme = ''
 })
 
 describe('the theme toggle', () => {
@@ -53,6 +55,24 @@ describe('the theme toggle', () => {
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull()
   })
 
+  it('moves the UA colour scheme with the theme, and releases it on system', () => {
+    // Not cosmetic: this is what the always-present scrollbar (scrollbar-gutter:
+    // stable) and every native form control are painted from. The inline style is
+    // written by index.html's pre-paint script to beat the meta tag, and it
+    // outranks theme.css — so leaving a stale one behind pins the native chrome to
+    // the theme the user just left.
+    const { result } = renderHook(() => useTheme())
+
+    act(() => result.current.setTheme('dark'))
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+
+    act(() => result.current.setTheme('light'))
+    expect(document.documentElement.style.colorScheme).toBe('light')
+
+    act(() => result.current.setTheme('system'))
+    expect(document.documentElement.style.colorScheme).toBe('')
+  })
+
   it('keeps two mounted toggles in agreement', () => {
     const a = renderHook(() => useTheme())
     const b = renderHook(() => useTheme())
@@ -74,6 +94,15 @@ describe('the pre-paint script in index.html', () => {
   // the other produces a white flash that nothing else in the suite would catch.
   it('reads the same storage key this module writes', () => {
     expect(INDEX_HTML).toContain(`localStorage.getItem('${THEME_STORAGE_KEY}')`)
+  })
+
+  it('stamps the UA colour scheme too, not just the attribute', () => {
+    // The attribute alone reaches nothing until the stylesheet lands. Until then
+    // the canvas comes from <meta name="color-scheme">, which follows the OS — so
+    // dark-chosen-on-a-light-OS paints white first. Only an inline style applies
+    // this early. The matching clear on the way back to "system" is asserted
+    // above, against the hook.
+    expect(INDEX_HTML).toMatch(/document\.documentElement\.style\.colorScheme\s*=\s*stored/)
   })
 
   it('stamps the attribute before the stylesheet is applied', () => {

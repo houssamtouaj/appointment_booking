@@ -40,6 +40,12 @@ function apply(theme: Theme) {
   } else {
     root.setAttribute('data-theme', theme)
   }
+  // Cleared, not set, for "system" — index.html's pre-paint script writes this
+  // inline style to beat the meta tag before the stylesheet lands, and an inline
+  // style outranks the color-scheme declarations in theme.css. Leaving a stale
+  // one behind would pin the scrollbars and form controls to the theme the user
+  // just navigated away from, for the rest of the page's life.
+  root.style.colorScheme = theme === 'system' ? '' : theme
 }
 
 export function setTheme(theme: Theme) {

@@ -9,8 +9,8 @@ import { describe, expect, it } from 'vitest'
 const SRC = join(process.cwd(), 'src')
 const THEME_CSS = readFileSync(join(SRC, 'styles/theme.css'), 'utf8')
 
-/** Pull the declarations out of the block that starts at `selector`. */
-function blockAfter(css: string, selector: string): Record<string, string> {
+/** The body of the block that starts at `selector`, comments stripped. */
+function bodyAfter(css: string, selector: string): string {
   const start = css.indexOf(selector)
   if (start === -1) throw new Error(`theme.css no longer contains ${selector}`)
 
@@ -28,7 +28,12 @@ function blockAfter(css: string, selector: string): Record<string, string> {
     }
   }
 
-  const body = css.slice(open + 1, end).replace(/\/\*[\s\S]*?\*\//g, '')
+  return css.slice(open + 1, end).replace(/\/\*[\s\S]*?\*\//g, '')
+}
+
+/** Pull the custom-property declarations out of the block that starts at `selector`. */
+function blockAfter(css: string, selector: string): Record<string, string> {
+  const body = bodyAfter(css, selector)
   const declarations: Record<string, string> = {}
   for (const line of body.split(';')) {
     const match = /^\s*(--[\w-]+)\s*:\s*([\s\S]+)$/.exec(line)
@@ -70,6 +75,45 @@ describe('the two dark blocks', () => {
     for (const token of colourLiterals) {
       expect(Object.keys(explicit)).toContain(token)
     }
+  })
+})
+
+describe('the UA colour scheme', () => {
+  // Scrollbars and native form controls are painted by the UA from this property,
+  // not from the tokens above. Without it they follow prefers-color-scheme while
+  // everything else follows data-theme, and the two disagree for as long as the
+  // page is open. index.html's <meta> covers only the moment before this file
+  // loads; these three declarations cover the rest.
+  it.each([
+    [':root', 'light'],
+    [":root[data-theme='dark']", 'dark'],
+    [":root:not([data-theme='light'])", 'dark'],
+  ])('%s declares color-scheme: %s', (selector, expected) => {
+    expect(bodyAfter(THEME_CSS, selector)).toMatch(new RegExp(`color-scheme:\\s*${expected}\\b`))
+  })
+})
+
+const INDEX_CSS = readFileSync(join(SRC, 'index.css'), 'utf8')
+
+describe('the one duration and the one easing', () => {
+  it('are driven through the --default-* variables', () => {
+    expect(INDEX_CSS).toContain('--default-transition-duration: var(--motion-duration)')
+    expect(INDEX_CSS).toContain('--default-transition-timing-function: var(--motion-ease)')
+  })
+
+  it('are not driven through the --tw-* internals', () => {
+    // The trap this replaced. Tailwind registers --tw-duration and --tw-ease with
+    // `@property { inherits: false }`, so a value set on :root reaches no element
+    // and every transition silently falls back to Tailwind's own 150ms -- taking
+    // the prefers-reduced-motion override down with it, since that override works
+    // by collapsing --motion-duration.
+    expect(INDEX_CSS).not.toMatch(/--tw-(duration|ease)\s*:/)
+  })
+
+  it('collapse under prefers-reduced-motion', () => {
+    expect(bodyAfter(THEME_CSS, '@media (prefers-reduced-motion: reduce)')).toMatch(
+      /--motion-duration:\s*0\.01ms/,
+    )
   })
 })
 
