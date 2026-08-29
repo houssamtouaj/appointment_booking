@@ -22,6 +22,14 @@ export type {
   Role,
 } from '@/api/schemas/auth'
 
+export type {
+  BookingRequest,
+  BookingStatus,
+  GuestContact,
+  GuestDetails,
+  PublicBooking,
+} from '@/api/schemas/booking'
+
 export type { AcceptInvitationRequest, InvitationPreview } from '@/api/schemas/invitation'
 
 export type {

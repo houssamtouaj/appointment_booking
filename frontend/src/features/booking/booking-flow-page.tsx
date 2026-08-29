@@ -1,19 +1,30 @@
-import { useCallback } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useCallback, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { Link, useParams } from 'react-router-dom'
 
-import { isApiError } from '@/api/error'
+import { applyFieldErrors, isApiError } from '@/api/error'
 import { describeError, requestIdOf } from '@/api/error-copy'
+import { guestDetailsSchema } from '@/api/schemas/booking'
 import { Container } from '@/components/container'
 import { ErrorState } from '@/components/error-state'
 import { BusinessNotFound } from '@/features/booking/business-not-found'
+import { describeBookingFailure, type BookingFailure } from '@/features/booking/booking-errors'
+import { BookingFailureAlert } from '@/features/booking/booking-failure-alert'
 import {
   ANYONE,
   stepOf,
+  toSearch,
   useBookingParams,
   type BookingParams,
   type BookingStep,
 } from '@/features/booking/booking-params'
+import { useCreateBooking } from '@/features/booking/booking-queries'
+import { rememberedBookingToken } from '@/features/booking/booking-storage'
 import { BookingStepper } from '@/features/booking/booking-stepper'
+import { Confirmation } from '@/features/booking/confirmation'
+import { DepositHandoff } from '@/features/booking/deposit-handoff'
+import { DetailsStep } from '@/features/booking/details-step'
 import { NoServices } from '@/features/booking/no-services'
 import { useBusiness, useStaffForService } from '@/features/booking/public-queries'
 import { ServiceCard } from '@/features/booking/service-card'
@@ -22,15 +33,24 @@ import { SlotStep } from '@/features/booking/slot-step'
 import { StaffStep } from '@/features/booking/staff-step'
 import { formatDuration } from '@/lib/time'
 import { formatMoney } from '@/lib/money'
-import type { PublicBusiness } from '@/types'
+import type {
+  GuestDetails,
+  PublicBooking,
+  PublicBusiness,
+  PublicService,
+  ValidationError,
+} from '@/types'
 
 /**
- * `/b/:slug/book` — service, then who, then when.
+ * `/b/:slug/book` — service, then who, then when, then who you are.
  *
  * Every choice is a query parameter, so the back button walks the steps, a
- * pasted link reopens the same state, and wave 4 can send someone back here
- * after a failed booking with everything else intact. See `booking-params.ts`
- * for why that beat a context.
+ * pasted link reopens the same state, and a failed booking can return someone to
+ * step 3 with everything else intact. See `booking-params.ts` for why that beat
+ * a context — and note that the details form is declared *here* rather than in
+ * `DetailsStep` for the same reason: this component survives the query-string
+ * change that takes the customer back a step, and what they typed survives with
+ * it.
  */
 export function BookingFlowPage() {
   const { slug = '' } = useParams()
@@ -70,6 +90,29 @@ const STEP_TITLE: Record<BookingStep, string> = {
   service: 'What are you booking?',
   staff: 'Who would you like?',
   slot: 'When suits you?',
+  details: 'Who is this for?',
+}
+
+/**
+ * A booking that came back, kept with the service it was for.
+ *
+ * The service travels with it rather than being looked up again from the
+ * catalogue, because at the moment of the `201` it was certainly there — that is
+ * what was submitted — and re-deriving it afterwards means handling a
+ * `find(...)` that returns `undefined` on the one screen that must not fail.
+ */
+type Booked = {
+  booking: PublicBooking
+  service: PublicService
+  staffName?: string
+}
+
+/** A failure, and the slot it happened on — see `visibleFailure` below. */
+type FlowFailure = {
+  failure: BookingFailure
+  /** `params.slot` at the moment of the attempt. `undefined` is impossible here. */
+  slot: string
+  unmatched: ValidationError[]
 }
 
 function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
@@ -83,10 +126,10 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
    * question the customer can answer, where the alternative is a staff step
    * headed by a service name we do not have.
    *
-   * This is not the staleness check the wave plan rules out. That one is about
-   * *preventing* `422 SERVICE_INACTIVE` at booking time, which stays the
-   * server's answer to give in wave 4; this is only about not rendering a step
-   * whose subject is missing.
+   * This is not a staleness check standing in for the server's. Whether a
+   * service is still *bookable* is answered by `422 SERVICE_INACTIVE` at booking
+   * time and by nothing here; this is only about not rendering a step whose
+   * subject is missing.
    */
   const service = business.services.find((candidate) => candidate.id === params.serviceId)
 
@@ -121,13 +164,6 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
       : { serviceId: params.serviceId }
   const effectiveStep: BookingStep = stepOf(effective)
 
-  const chooseStaff = useCallback(
-    (staff: string, options?: { replace?: boolean }) => setParams({ staff }, options),
-    [setParams],
-  )
-
-  const chooseDate = useCallback((date: string) => setParams({ date }), [setParams])
-
   const staffSummary =
     effective.staff === ANYONE
       ? // When one person is the only candidate the step answered itself, so the
@@ -135,6 +171,163 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
         // choice the customer did not make.
         (onlyStaff?.displayName ?? 'Anyone')
       : staffList?.find((member) => member.id === effective.staff)?.displayName
+
+  // ------------------------------------------------------------------
+  //  Step 4: the form, the write, and the six ways it does not work
+  // ------------------------------------------------------------------
+
+  /**
+   * Declared at the flow level and never remounted, which is the whole
+   * mechanism behind "a `409` preserves the entered contact details". There is
+   * no draft to serialise and no effect to restore one: the component holding
+   * the state simply outlives the step.
+   *
+   * `defaultValues` for all four, including the optional ones, because
+   * `applyFieldErrors` matches a server field against `getValues()` — a field
+   * with no default is absent from that object, and a 422 naming it would be
+   * silently dropped.
+   */
+  const form = useForm<GuestDetails>({
+    resolver: zodResolver(guestDetailsSchema),
+    defaultValues: { guestName: '', guestEmail: '', guestPhone: '', notes: '' },
+  })
+
+  const create = useCreateBooking(slug)
+  const [booked, setBooked] = useState<Booked | null>(null)
+  const [failure, setFailure] = useState<FlowFailure | null>(null)
+
+  /**
+   * A booking this tab already started, if Stripe's redirect never came back.
+   *
+   * The token was written to `sessionStorage` immediately before the hand-off
+   * (see `deposit-handoff.tsx`), and the browser's Back button from an abandoned
+   * or failed Checkout lands here — on a form for a slot that is already held by
+   * the customer looking at it. Without this line the obvious next action is to
+   * fill it in again, which is how one person ends up with two appointments.
+   *
+   * Read once, in an initialiser: it changes only when this tab navigates away,
+   * and this component does not survive that.
+   */
+  const [resumeToken] = useState(rememberedBookingToken)
+
+  const chooseStaff = useCallback(
+    (staff: string, options?: { replace?: boolean }) => setParams({ staff }, options),
+    [setParams],
+  )
+
+  const chooseDate = useCallback((date: string) => setParams({ date }), [setParams])
+
+  function submit(values: GuestDetails) {
+    if (!service || !effective.slot) return
+    const slot = effective.slot
+
+    create.mutate(
+      {
+        serviceId: service.id,
+        // "Anyone" omits the field entirely rather than sending an id lifted
+        // from the slot's `staffIds`, which would take the server's ability to
+        // balance the booking away from it.
+        staffId: effective.staff === ANYONE ? undefined : effective.staff,
+        // Verbatim. Not reformatted, not rebuilt from a wall clock.
+        startsAt: slot,
+        guestName: values.guestName,
+        guestEmail: values.guestEmail,
+        // A blank optional field is omitted rather than sent as "". The column
+        // is nullable and the API omits nulls; storing an empty string makes
+        // "gave no phone number" and "gave an empty one" two states where the
+        // domain has one.
+        guestPhone: blankToUndefined(values.guestPhone),
+        notes: blankToUndefined(values.notes),
+      },
+      {
+        onSuccess: (created) => {
+          setFailure(null)
+          setBooked({ booking: created, service, staffName: staffSummary })
+        },
+        onError: (caught) => handleFailure(caught, slot),
+      },
+    )
+  }
+
+  function handleFailure(caught: unknown, slot: string) {
+    // Field-level messages first, so that a 422 lands under the input it is
+    // about rather than only in the banner. What matches nothing comes back and
+    // is shown, because React Hook Form accepts `setError` on an unregistered
+    // path without complaint and the message would otherwise vanish.
+    const unmatched = applyFieldErrors(caught, form)
+    const described = describeBookingFailure(caught, business.timezone)
+    setFailure({ failure: described, slot, unmatched })
+
+    if (described.recover === 'slot') {
+      // Back to the picker: clear the slot, and open the week the server named
+      // when it named one. The availability cache was already invalidated by the
+      // mutation, so what redraws is what is free now.
+      setParams({ slot: undefined, date: described.goToDate ?? params.date })
+      return
+    }
+    if (described.recover === 'service') {
+      // The catalogue changed underneath. Everything downstream of the service
+      // is now meaningless, including the week.
+      setParams({ serviceId: undefined, staff: undefined, date: undefined, slot: undefined })
+    }
+  }
+
+  /**
+   * Whether the failure still describes the situation on screen.
+   *
+   * It survives being sent back a step — that is the point of it — and stops the
+   * moment the customer has chosen a *different* slot, because at that point the
+   * sentence is about a decision they have already replaced. Comparing against
+   * the slot it happened on is what expresses that without a second piece of
+   * state to keep in step.
+   */
+  const visibleFailure =
+    failure && (!params.slot || params.slot === failure.slot) ? failure : undefined
+
+  // ------------------------------------------------------------------
+  //  Rendering
+  // ------------------------------------------------------------------
+
+  if (booked) {
+    const checkoutUrl = booked.booking.checkoutUrl
+    return (
+      <Container width="copy" className="pb-20">
+        <div className="pt-8 pb-6">
+          <Link
+            to={`/b/${slug}`}
+            className="text-muted-foreground text-2xs tracking-eyebrow hover:text-foreground font-mono uppercase"
+          >
+            {business.name}
+          </Link>
+        </div>
+
+        {/*
+         * The branch is on the response and on nothing else (F5). A `PENDING`
+         * with a `checkoutUrl` is a deposit in flight; anything else is a
+         * finished booking. `depositRequired` from the landing payload does not
+         * appear here, because it is the raw business setting and the server
+         * ANDs it with `payments.enabled()` — which is off on the deployed demo,
+         * where every one of these is `CONFIRMED`.
+         */}
+        {booked.booking.status === 'PENDING' && checkoutUrl ? (
+          <DepositHandoff
+            booking={booked.booking}
+            checkoutUrl={checkoutUrl}
+            business={business}
+            service={booked.service}
+            staffName={booked.staffName}
+          />
+        ) : (
+          <Confirmation
+            booking={booked.booking}
+            business={business}
+            service={booked.service}
+            staffName={booked.staffName}
+          />
+        )}
+      </Container>
+    )
+  }
 
   // The step that answered itself is not a step anyone can go back to: StaffStep
   // redirects out of it on mount, so a link there would do nothing visible.
@@ -150,6 +343,18 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
           {business.name}
         </Link>
       </div>
+
+      {resumeToken && !booked ? (
+        <div className="border-border bg-muted text-foreground mb-6 flex flex-wrap items-center justify-between gap-3 rounded-sm border px-4 py-3 text-sm">
+          <span>You already started a booking in this tab.</span>
+          <Link
+            to={`/booking/${resumeToken}`}
+            className="text-primary underline underline-offset-4"
+          >
+            Open it
+          </Link>
+        </div>
+      ) : null}
 
       <BookingStepper
         slug={slug}
@@ -169,6 +374,13 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
       </h1>
 
       <div className="mt-6">
+        {visibleFailure ? (
+          <BookingFailureAlert
+            failure={visibleFailure.failure}
+            unmatched={visibleFailure.unmatched}
+          />
+        ) : null}
+
         {effectiveStep === 'service' && business.services.length === 0 ? (
           // The same answer the landing page gives for the same payload. A
           // direct link to /book must not put the question above nothing.
@@ -211,6 +423,7 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
               staff={effective.staff}
               date={effective.date}
               onDateChange={chooseDate}
+              onContinue={(slot) => setParams({ slot: slot.start })}
             />
             <p className="text-muted-foreground mt-8 text-sm">
               {service.name} · {formatDuration(service.durationMinutes)} ·{' '}
@@ -218,7 +431,30 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
             </p>
           </>
         ) : null}
+
+        {effectiveStep === 'details' && service && effective.slot ? (
+          <DetailsStep
+            form={form}
+            business={business}
+            service={service}
+            staffName={staffSummary}
+            startsAt={effective.slot}
+            submitting={create.isPending}
+            onSubmit={submit}
+            backHref={`/b/${slug}/book${toSearch({
+              serviceId: effective.serviceId,
+              staff: effective.staff,
+              date: effective.date,
+            })}`}
+          />
+        ) : null}
       </div>
     </Container>
   )
+}
+
+/** `""` and `"   "` both mean "not given". */
+function blankToUndefined(value: string | undefined): string | undefined {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : undefined
 }

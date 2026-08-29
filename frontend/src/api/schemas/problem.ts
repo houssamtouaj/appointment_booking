@@ -79,8 +79,20 @@ export type ValidationError = z.infer<typeof validationErrorSchema>
  * parse failure in an already-deployed SPA. It degrades to the status-derived
  * code, which is what a client that had never heard of the new one would have
  * done anyway.
+ *
+ * **`looseObject` and not `object`, which is the whole reason a screen can say
+ * anything specific.** `ApiException.with(...)` attaches extra members at the
+ * throw site and they are the actionable half of several refusals: a
+ * `POLICY_LEAD_TIME` carries `earliestStart`, a `POLICY_MAX_ADVANCE` carries
+ * `latestStart`, a `CANCELLATION_CUTOFF` carries `deadline`, a
+ * `BOOKING_SLOT_TAKEN` echoes the slot it lost. Zod's default object *strips*
+ * unknown keys, so a plain `z.object` here would parse every one of those
+ * successfully and throw the useful part away — leaving the page to say "too
+ * soon" and not "the earliest we can take you is Thursday". They are read
+ * through {@link problemMember}, which is where the absence of a type for them
+ * is handled.
  */
-export const problemDetailSchema = z.object({
+export const problemDetailSchema = z.looseObject({
   type: z.string().optional(),
   title: z.string().optional(),
   status: z.number().optional(),

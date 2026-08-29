@@ -39,6 +39,8 @@ type SlotStepProps = {
   /** The day whose week is showing. Absent means "this week, where the business is". */
   date?: DayKey
   onDateChange: (date: DayKey) => void
+  /** Advance to step 4 with this slot's `start`, byte for byte as the API sent it. */
+  onContinue: (slot: Slot) => void
 }
 
 /**
@@ -50,7 +52,15 @@ type SlotStepProps = {
  * to frame days in one place while the client draws headings for another, and
  * the two would disagree by a day at the edges.
  */
-export function SlotStep({ slug, business, serviceId, staff, date, onDateChange }: SlotStepProps) {
+export function SlotStep({
+  slug,
+  business,
+  serviceId,
+  staff,
+  date,
+  onDateChange,
+  onContinue,
+}: SlotStepProps) {
   const timeZone = business.timezone
   const today = todayIn(timeZone)
   const week = weekRangeFor(date ?? today)
@@ -153,7 +163,7 @@ export function SlotStep({ slug, business, serviceId, staff, date, onDateChange 
         />
       )}
 
-      <SelectionBar business={business} selected={selected} />
+      <SelectionBar business={business} selected={selected} onContinue={onContinue} />
     </div>
   )
 }
@@ -333,14 +343,20 @@ function EmptyWeek({
 }
 
 /**
- * What has been chosen, and the button that does not work yet.
+ * What has been chosen, and the way on.
  *
- * Wave 3 ends here on purpose: this wave proves a customer can reach a real slot
- * from the real engine. The details form, the deposit and the booking call are
- * wave 4, and shipping a Continue button that went nowhere would be worse than
- * one that is visibly not ready.
+ * Sticky, because the grid is taller than a phone and the confirmation of what
+ * was just tapped has to stay in view while the thumb is still near the chips.
  */
-function SelectionBar({ business, selected }: { business: PublicBusiness; selected: Slot | null }) {
+function SelectionBar({
+  business,
+  selected,
+  onContinue,
+}: {
+  business: PublicBusiness
+  selected: Slot | null
+  onContinue: (slot: Slot) => void
+}) {
   if (!selected) return null
 
   return (
@@ -356,7 +372,7 @@ function SelectionBar({ business, selected }: { business: PublicBusiness; select
           {clockOf(selected.start, business.timezone)}
         </span>
       </p>
-      <Button size="lg" disabled>
+      <Button size="lg" onClick={() => onContinue(selected)}>
         Continue
       </Button>
     </div>

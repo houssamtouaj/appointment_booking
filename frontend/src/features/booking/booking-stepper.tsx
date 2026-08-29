@@ -14,6 +14,7 @@ const STEPS: { id: BookingStep; label: string }[] = [
   { id: 'service', label: 'Service' },
   { id: 'staff', label: 'Who' },
   { id: 'slot', label: 'Time' },
+  { id: 'details', label: 'Details' },
 ]
 
 type BookingStepperProps = {

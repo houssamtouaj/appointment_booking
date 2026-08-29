@@ -4,6 +4,7 @@
  * `.parse()` at an API boundary, `contract:check`.
  */
 export * from '@/api/schemas/auth'
+export * from '@/api/schemas/booking'
 export * from '@/api/schemas/common'
 export * from '@/api/schemas/invitation'
 export * from '@/api/schemas/problem'

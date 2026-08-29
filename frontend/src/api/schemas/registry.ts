@@ -7,6 +7,11 @@ import {
   registerRequestSchema,
   resetPasswordRequestSchema,
 } from '@/api/schemas/auth'
+import {
+  bookingRequestSchema,
+  guestContactSchema,
+  publicBookingSchema,
+} from '@/api/schemas/booking'
 import { acceptInvitationRequestSchema, invitationPreviewSchema } from '@/api/schemas/invitation'
 import {
   openingHoursSchema,
@@ -76,4 +81,12 @@ export const CONTRACT_SCHEMAS: Record<string, ContractSchema> = {
   PublicStaffResponse: publicStaffSchema,
   OpeningHours: openingHoursSchema,
   SlotResponse: slotSchema,
+
+  // --- Booking (wave 4) ------------------------------------------------
+  // `PublicBookingResponse` is the one shape three endpoints answer with —
+  // the 201, the manage page and a successful cancel — so one entry here
+  // covers all three.
+  PublicBookingResponse: publicBookingSchema,
+  GuestContactResponse: guestContactSchema,
+  BookingRequest: bookingRequestSchema,
 }

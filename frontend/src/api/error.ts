@@ -78,6 +78,41 @@ export function isApiError(error: unknown, ...codes: ErrorCode[]): error is ApiE
   return codes.length === 0 || codes.includes(error.code)
 }
 
+/**
+ * One of the extra members `ApiException.with(...)` attached at the throw site.
+ *
+ * These are the actionable half of a refusal — `earliestStart` on a
+ * `POLICY_LEAD_TIME`, `deadline` on a `CANCELLATION_CUTOFF`, `startsAt` on a
+ * `BOOKING_SLOT_TAKEN` — and they reach here only because
+ * `problemDetailSchema` is a loose object. They are deliberately **not** typed
+ * members of it: there is no published schema for the error body at all
+ * (springdoc emits none, see `schemas/registry.ts`), so a typed field would be a
+ * claim this side invented, and a screen that trusted it would render
+ * `undefined` the day a code stopped carrying one.
+ *
+ * `unknown` is therefore the honest return type, and {@link problemInstant} is
+ * the narrowing every call site in this wave actually wants.
+ */
+export function problemMember(error: unknown, name: string): unknown {
+  if (!isApiError(error) || !error.problem) return undefined
+  return (error.problem as Record<string, unknown>)[name]
+}
+
+/**
+ * An extension member that should be an ISO instant, or `undefined`.
+ *
+ * Validated rather than cast, because the consequence of a wrong guess is the
+ * one this app has spent two waves avoiding: `new Date(undefined)` is an
+ * `Invalid Date`, every formatter renders it "Invalid Date" or `NaN`, and the
+ * screen that was trying to be helpful about a deadline becomes the least
+ * trustworthy thing on the page.
+ */
+export function problemInstant(error: unknown, name: string): string | undefined {
+  const value = problemMember(error, name)
+  if (typeof value !== 'string') return undefined
+  return Number.isNaN(Date.parse(value)) ? undefined : value
+}
+
 /** The detail shown when the request never reached the API and there is no body to quote. */
 const NETWORK_DETAIL = 'Could not reach the server. Check your connection and try again.'
 
