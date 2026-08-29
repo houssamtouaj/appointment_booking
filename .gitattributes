@@ -25,6 +25,11 @@ mvnw.cmd text eol=crlf
 *.tsx text eol=lf
 *.js text eol=lf
 *.jsx text eol=lf
+# `scripts/contract-check.mjs` arrived in wave 2 and this line did not, so on a Windows
+# clone that one file came back with CRLF and failed `format:check` on a pristine
+# checkout — the exact failure the paragraph above exists to prevent, reintroduced by an
+# extension nobody thought to list.
+*.mjs text eol=lf
 *.css text eol=lf
 *.html text eol=lf
 *.json text eol=lf
