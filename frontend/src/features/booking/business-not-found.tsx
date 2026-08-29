@@ -33,7 +33,7 @@ export function BusinessNotFound({ slug }: BusinessNotFoundProps) {
         </h1>
         <p className="text-muted-foreground max-w-copy mt-3 text-base">
           Nothing is published at{' '}
-          <code className="text-foreground bg-muted rounded-xs px-1.5 py-0.5 font-mono text-sm">
+          <code className="text-foreground bg-muted rounded-xs px-1.5 py-0.5 font-mono text-sm break-all">
             /b/{slug}
           </code>
           . Check the link for a typo, or ask the business for a fresh one — some mail clients cut

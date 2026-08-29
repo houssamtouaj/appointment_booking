@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { CalendarSearch, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { fetchAvailability, publicKeys } from '@/api/public'
 import { describeError, requestIdOf } from '@/api/error-copy'
@@ -279,7 +280,10 @@ function EmptyWeek({
         description={`${business.name} has no openings for this service inside its booking window. Its opening hours are on the main page — you may have better luck with a shorter service.`}
         action={
           <Button variant="outline" asChild>
-            <a href={`/b/${slug}`}>See opening hours</a>
+            {/* `Link`, not `<a href>`: a plain anchor reloads the document,
+                throws away the query cache and re-runs the auth bootstrap to
+                move between two routes of the same app. */}
+            <Link to={`/b/${slug}`}>See opening hours</Link>
           </Button>
         }
       />
