@@ -28,9 +28,6 @@
 /**
  * How many decimal places this currency actually has. EUR and USD are 2, JPY is
  * 0, BHD is 3.
- *
- * Cached because `Intl.NumberFormat` construction is the expensive half of
- * formatting and the slot picker renders up to a hundred prices in a pass.
  */
 const digitsByCurrency = new Map<string, number>()
 
@@ -87,10 +84,31 @@ function toDecimalString(minorUnits: number, digits: number): `${number}` {
  */
 export function formatMoney(minorUnits: number, currency: string, locale?: string): string {
   const digits = minorUnitDigits(currency)
-  return new Intl.NumberFormat(locale, {
+  return formatterFor(currency, digits, locale).format(toDecimalString(minorUnits, digits))
+}
+
+/**
+ * One formatter per currency and locale, kept.
+ *
+ * `Intl.NumberFormat` construction is the expensive half of formatting, and a
+ * catalogue renders a price per card in a pass. Keyed by locale as well as
+ * currency because `locale` is `undefined` in every call this app makes today —
+ * it means "the browser's" — and a cache that ignored it would hand the second
+ * caller the first one's punctuation the day a screen passes one explicitly.
+ */
+const formatters = new Map<string, Intl.NumberFormat>()
+
+function formatterFor(currency: string, digits: number, locale?: string): Intl.NumberFormat {
+  const key = `${currency}|${locale ?? ''}`
+  const cached = formatters.get(key)
+  if (cached) return cached
+
+  const formatter = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
-  }).format(toDecimalString(minorUnits, digits))
+  })
+  formatters.set(key, formatter)
+  return formatter
 }

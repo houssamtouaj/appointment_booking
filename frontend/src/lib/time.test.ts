@@ -8,9 +8,11 @@ import {
   daysBetween,
   formatDuration,
   groupSlotsByDay,
+  isDayKey,
   partOfDay,
   splitByPartOfDay,
   weekOf,
+  zoneAbbreviation,
   zoneCity,
   zonesAgree,
 } from '@/lib/time'
@@ -261,6 +263,52 @@ describe('telling the viewer which clock they are reading', () => {
   it('names the city rather than the country', () => {
     expect(zoneCity('Europe/Paris')).toBe('Paris')
     expect(zoneCity('America/New_York')).toBe('New York')
+  })
+})
+
+describe('a zone this browser has never heard of', () => {
+  // The payload does not validate `zoneId` against the tz database on purpose —
+  // the server's copy and the viewer's can differ by a release. That trade needs
+  // a fallback at the far end, because `Intl` throws from inside a render and
+  // there is no boundary above these screens to catch it.
+  const unknown = 'Mars/Olympus_Mons'
+
+  it('reads times in UTC instead of throwing a RangeError mid-render', () => {
+    expect(() => dayKeyOf('2026-08-31T22:40:00Z', unknown)).not.toThrow()
+    expect(dayKeyOf('2026-08-31T22:40:00Z', unknown)).toBe('2026-08-31')
+    expect(clockOf('2026-08-31T22:40:00Z', unknown)).toBe('22:40')
+    expect(partOfDay('2026-08-31T22:40:00Z', unknown)).toBe('evening')
+  })
+
+  it('labels the degraded times UTC rather than naming a city they are not on', () => {
+    expect(zoneCity(unknown)).toBe('UTC')
+    expect(zoneAbbreviation(unknown, new Date('2026-08-31T12:00:00Z'), 'en-GB')).toBe('UTC')
+    expect(zonesAgree(unknown, 'UTC')).toBe(true)
+  })
+})
+
+describe('a day key from the URL', () => {
+  it('accepts a real date', () => {
+    expect(isDayKey('2026-08-31')).toBe(true)
+    expect(isDayKey('2026-02-28')).toBe(true)
+    // 2028 is a leap year, so this one exists.
+    expect(isDayKey('2028-02-29')).toBe(true)
+  })
+
+  it('rejects a well-formed date that does not exist', () => {
+    // The case `Date.parse` does not catch: V8 rolls these over to 3 March and
+    // 1 May rather than returning NaN, so a picker trusting it opens on a week
+    // nobody asked for.
+    expect(isDayKey('2026-02-31')).toBe(false)
+    expect(isDayKey('2026-04-31')).toBe(false)
+    expect(isDayKey('2026-02-29')).toBe(false)
+  })
+
+  it('rejects anything that is not a calendar date at all', () => {
+    expect(isDayKey('2026-13-01')).toBe(false)
+    expect(isDayKey('2026-00-10')).toBe(false)
+    expect(isDayKey('31-08-2026')).toBe(false)
+    expect(isDayKey('')).toBe(false)
   })
 })
 

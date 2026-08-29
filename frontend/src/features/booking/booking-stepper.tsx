@@ -23,6 +23,15 @@ type BookingStepperProps = {
   summary: Partial<Record<BookingStep, string>>
   /** Set when step 2 answered itself — see `StaffStep`. */
   note?: Partial<Record<BookingStep, string>>
+  /**
+   * Completed steps that must stay plain text rather than becoming links.
+   *
+   * For the step that answered itself: a service exactly one person performs
+   * sends `StaffStep` straight back out again on mount, so a "Who" link would
+   * be a control that visibly does nothing. The `note` beside it already says
+   * why there was no choice.
+   */
+  locked?: readonly BookingStep[]
 }
 
 /**
@@ -42,7 +51,7 @@ type BookingStepperProps = {
  * The numbers earn their place here: this is a real sequence, and the count is
  * information a person uses to decide whether to start.
  */
-export function BookingStepper({ slug, params, summary, note }: BookingStepperProps) {
+export function BookingStepper({ slug, params, summary, note, locked }: BookingStepperProps) {
   const current = stepOf(params)
   const currentIndex = STEPS.findIndex((step) => step.id === current)
 
@@ -51,6 +60,9 @@ export function BookingStepper({ slug, params, summary, note }: BookingStepperPr
       <ol className="flex items-start gap-2 sm:gap-6">
         {STEPS.map((step, index) => {
           const done = index < currentIndex
+          // Complete either way — the tick and the styling follow `done`; only
+          // whether it is a link follows this.
+          const navigable = done && !locked?.includes(step.id)
           const isCurrent = index === currentIndex
           const body = (
             <>
@@ -95,7 +107,7 @@ export function BookingStepper({ slug, params, summary, note }: BookingStepperPr
 
           return (
             <li key={step.id} className="flex min-w-0 flex-1 sm:flex-none">
-              {done ? (
+              {navigable ? (
                 <Link
                   to={`/b/${slug}/book${toSearch(paramsForStep(params, step.id))}`}
                   className="flex min-w-0 items-center gap-2 rounded-xs hover:opacity-80"

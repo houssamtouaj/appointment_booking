@@ -34,8 +34,13 @@ export const uuid = z.guid()
  * An IANA zone id — `"Europe/Paris"`. Deliberately not validated against the tz
  * database here: the browser's list and the server's can legitimately differ by
  * a release, and rejecting a zone the API considers valid would black out a
- * whole tenant over a rename. `Intl.DateTimeFormat` is where a bad zone gets
- * caught, at the point where a fallback can be rendered instead.
+ * whole tenant over a rename.
+ *
+ * The other half of that trade lives in `lib/time.ts`, which probes the zone
+ * once and falls back to UTC for one this browser cannot resolve. It has to be
+ * there and not here: `Intl` throws `RangeError` from inside a render, this app
+ * has no error boundary above the public screens, and an unhandled throw at that
+ * depth is a white page rather than a fallback.
  */
 export const zoneId = z.string().min(1)
 

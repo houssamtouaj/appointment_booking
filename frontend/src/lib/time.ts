@@ -1,4 +1,4 @@
-import { formatInTimeZone, getTimezoneOffset } from 'date-fns-tz'
+import { getTimezoneOffset } from 'date-fns-tz'
 
 import type { DayOfWeek, Slot } from '@/types'
 
@@ -51,9 +51,93 @@ export const MAX_RANGE_DAYS = 62
 //  Instant -> the business's wall clock
 // ---------------------------------------------------------------------------
 
+/**
+ * The zone to actually format in, which is the business's unless this browser
+ * has never heard of it.
+ *
+ * `zoneId` is not validated when the payload is parsed, on the deliberate
+ * grounds that the server's tz database and the viewer's can differ by a release
+ * and a rename must not black out a tenant. That trade only holds if there is a
+ * fallback at the far end, and there is not one anywhere else: `Intl` throws
+ * `RangeError: Invalid time zone specified` from inside a render, and the app
+ * has no error boundary above these screens, so the unhandled throw is a white
+ * page rather than a page with the wrong offset. UTC is the honest degradation —
+ * the times are then labelled by {@link zoneAbbreviation}, which degrades with
+ * it, so the screen still says which clock it is on.
+ *
+ * Cached because the probe is a formatter construction, and this is asked once
+ * per slot per render.
+ */
+const resolvedZones = new Map<string, string>()
+
+function usableZone(timeZone: string): string {
+  const cached = resolvedZones.get(timeZone)
+  if (cached !== undefined) return cached
+
+  let resolved = timeZone
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone })
+  } catch {
+    resolved = 'UTC'
+  }
+  resolvedZones.set(timeZone, resolved)
+  return resolved
+}
+
+/**
+ * One formatter per zone, kept.
+ *
+ * `Intl.DateTimeFormat` construction is the expensive half of formatting, and
+ * this is the hot path: a chip asks for its clock twice and its part of day
+ * once, every arrow key re-renders the whole day, and a week is 163 slots. A
+ * formatter built per call — which is what `formatInTimeZone` does internally —
+ * is a few hundred constructions per keystroke.
+ *
+ * `formatToParts` rather than a format string, because the fields are read back
+ * as numbers and assembled here; and `hourCycle: 'h23'` rather than
+ * `hour12: false`, which renders midnight as `24` in some ICU builds.
+ */
+const wallClockFormatters = new Map<string, Intl.DateTimeFormat>()
+
+function wallClockIn(timeZone: string): Intl.DateTimeFormat {
+  const cached = wallClockFormatters.get(timeZone)
+  if (cached) return cached
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: usableZone(timeZone),
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  wallClockFormatters.set(timeZone, formatter)
+  return formatter
+}
+
+type WallClock = { year: string; month: string; day: string; hour: string; minute: string }
+
+/**
+ * An instant, spelled out in the business's zone.
+ *
+ * The one place a UTC instant becomes wall-clock fields, so the system zone
+ * cannot participate in the answer anywhere — see this file's header for why
+ * that, and not `toZonedTime`, is the rule.
+ */
+function wallClockOf(instant: string | Date, timeZone: string): WallClock {
+  const parts = wallClockIn(timeZone).formatToParts(new Date(instant))
+  const fields: WallClock = { year: '', month: '', day: '', hour: '', minute: '' }
+  for (const part of parts) {
+    if (part.type in fields) fields[part.type as keyof WallClock] = part.value
+  }
+  return fields
+}
+
 /** The calendar day this instant falls on **in `timeZone`**. The grouping key. */
 export function dayKeyOf(instant: string | Date, timeZone: string): DayKey {
-  return formatInTimeZone(new Date(instant), timeZone, 'yyyy-MM-dd')
+  const { year, month, day } = wallClockOf(instant, timeZone)
+  return `${year}-${month}-${day}`
 }
 
 /**
@@ -67,15 +151,13 @@ export function dayKeyOf(instant: string | Date, timeZone: string): DayKey {
  * scans if the digits line up.
  */
 export function clockOf(instant: string | Date, timeZone: string): string {
-  return formatInTimeZone(new Date(instant), timeZone, 'HH:mm')
+  const { hour, minute } = wallClockOf(instant, timeZone)
+  return `${hour}:${minute}`
 }
 
-/**
- * The hour 0–23 in `timeZone`. Read back out of the formatted string, so the
- * system zone never participates in the answer.
- */
+/** The hour 0–23 in `timeZone`, never the viewer's. */
 export function hourOf(instant: string | Date, timeZone: string): number {
-  return Number(formatInTimeZone(new Date(instant), timeZone, 'HH'))
+  return Number(wallClockOf(instant, timeZone).hour)
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +178,22 @@ function atUtcNoon(dayKey: DayKey): Date {
 
 function toDayKey(date: Date): DayKey {
   return date.toISOString().slice(0, 10)
+}
+
+/**
+ * Whether `raw` names a calendar date that exists.
+ *
+ * The shape test alone is not the check it looks like, and neither is
+ * `Date.parse`: V8 **rolls an impossible day over** rather than rejecting it, so
+ * `2026-02-31T12:00:00Z` parses happily as 3 March and `2026-04-31` as 1 May
+ * (verified on Node 22). A `?date=` that survived only those two tests would
+ * quietly open the picker on a week nobody asked for. Round-tripping is the real
+ * check: a date that formats back to itself is the date that went in.
+ */
+export function isDayKey(raw: string): raw is DayKey {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false
+  const date = atUtcNoon(raw)
+  return !Number.isNaN(date.getTime()) && toDayKey(date) === raw
 }
 
 /** Calendar-date arithmetic. Safe in UTC because a `DayKey` has already left its zone behind. */
@@ -256,9 +354,15 @@ export function formatRange(range: DayRange, locale?: string): string {
  * From the id rather than from `Intl`'s `shortGeneric`, which renders
  * `"France Time"` — the country, not the city, and wrong the moment a tenant
  * sits in a zone not named after its country.
+ *
+ * Through {@link usableZone} like every other read, so a zone this browser
+ * cannot resolve says "UTC" here as well as in the abbreviation beside it. A
+ * city name lifted from the unusable id would label UTC times with a city whose
+ * clock they are not on.
  */
 export function zoneCity(timeZone: string): string {
-  const last = timeZone.split('/').pop() ?? timeZone
+  const zone = usableZone(timeZone)
+  const last = zone.split('/').pop() ?? zone
   return last.replace(/_/g, ' ')
 }
 
@@ -269,10 +373,12 @@ export function zoneCity(timeZone: string): string {
  * would be worse than an offset.
  */
 export function zoneAbbreviation(timeZone: string, at: Date = new Date(), locale?: string): string {
-  const parts = new Intl.DateTimeFormat(locale, { timeZone, timeZoneName: 'short' }).formatToParts(
-    at,
-  )
-  return parts.find((part) => part.type === 'timeZoneName')?.value ?? timeZone
+  const zone = usableZone(timeZone)
+  const parts = new Intl.DateTimeFormat(locale, {
+    timeZone: zone,
+    timeZoneName: 'short',
+  }).formatToParts(at)
+  return parts.find((part) => part.type === 'timeZoneName')?.value ?? zone
 }
 
 /** The zone the viewer's device is set to. */
@@ -291,7 +397,9 @@ export function viewerTimeZone(): string {
  * picker is showing.
  */
 export function zonesAgree(a: string, b: string, at: Date = new Date()): boolean {
-  return a === b || getTimezoneOffset(a, at) === getTimezoneOffset(b, at)
+  const left = usableZone(a)
+  const right = usableZone(b)
+  return left === right || getTimezoneOffset(left, at) === getTimezoneOffset(right, at)
 }
 
 /**

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-import type { DayKey } from '@/lib/time'
+import { isDayKey, type DayKey } from '@/lib/time'
 
 /**
  * The booking flow's state, and it lives in the URL rather than in a context.
@@ -73,12 +73,15 @@ export function toSearch(params: BookingParams): string {
   return query ? `?${query}` : ''
 }
 
-/** `yyyy-MM-dd`, and anything else is treated as absent rather than trusted. */
+/**
+ * `yyyy-MM-dd`, and anything else is treated as absent rather than trusted.
+ *
+ * The impossible-date half of that — `2026-02-31` — is {@link isDayKey}'s job
+ * rather than a `Date.parse` here, which looks like the same check and is not:
+ * V8 rolls that date over to 3 March instead of rejecting it.
+ */
 function readDate(raw: string | null): DayKey | undefined {
-  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined
-  // A well-formed but impossible date — 2026-02-31 — would otherwise reach
-  // date arithmetic and produce a week nobody asked for.
-  return Number.isNaN(Date.parse(`${raw}T12:00:00Z`)) ? undefined : raw
+  return raw && isDayKey(raw) ? raw : undefined
 }
 
 export function useBookingParams(): {

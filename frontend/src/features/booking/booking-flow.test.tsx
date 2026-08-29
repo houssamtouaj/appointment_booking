@@ -204,6 +204,15 @@ describe('the landing page', () => {
     expect(screen.queryByText(/deposit is required/i)).not.toBeInTheDocument()
   })
 
+  it('says a business with no catalogue is not bookable, on the flow page too', async () => {
+    // Same payload, one answer. A direct link to /book must not put "What are
+    // you booking?" above nothing where the landing page explains itself.
+    handlers.business = () => ({ ...BUSINESS, services: [] })
+    renderAt(`/b/${SLUG}/book`)
+
+    expect(await screen.findByText('Nothing is bookable here yet')).toBeVisible()
+  })
+
   it('shows a designed 404 for an unknown slug, not a blank page', async () => {
     handlers.business = problem(404, 'NOT_FOUND')
     renderAt('/b/unknown-slug')
@@ -244,6 +253,36 @@ describe('the staff step', () => {
     // Straight past a question with one answer, into the picker.
     await waitFor(() => expect(router.state.location.search).toContain('staff=anyone'))
     expect(await screen.findByRole('heading', { level: 1, name: 'When suits you?' })).toBeVisible()
+  })
+
+  it('does not offer a way back to the step that answered itself', async () => {
+    handlers.staff = () => [AMELIE]
+    handlers.availability = () => []
+    renderAt(`/b/${SLUG}/book?service=${COUPE.id}`)
+
+    await screen.findByRole('heading', { level: 1, name: 'When suits you?' })
+
+    // The step is complete and says why — but it is not somewhere anyone can go:
+    // StaffStep redirects straight back out of it, so a link there would be a
+    // control that visibly does nothing.
+    expect(screen.getByText('the only one for this service')).toBeVisible()
+    expect(screen.queryByRole('link', { name: /Who/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Service/ })).toBeVisible()
+  })
+
+  it('asks again when the URL names a staff member this service does not have', async () => {
+    handlers.staff = () => [AMELIE, CAMILLE]
+    handlers.availability = () => []
+    // A shared link that outlived the assignment. Sending this id on to the
+    // availability request buys an error screen or a permanently empty picker,
+    // and no way for the customer to understand either.
+    const stale = '11111111-2222-3333-4444-555555555555'
+    renderAt(`/b/${SLUG}/book?service=${COULEUR.id}&staff=${stale}`)
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Who would you like?' }),
+    ).toBeVisible()
+    expect(screen.getByRole('button', { name: /Camille/ })).toBeVisible()
   })
 })
 
@@ -330,6 +369,26 @@ describe('the slot picker', () => {
     expect(await screen.findByText(/Selected/)).toBeVisible()
   })
 
+  it('drops the selection when the week does, rather than describing a slot that is gone', async () => {
+    const user = userEvent.setup()
+    // Only the displayed week has anything, so "next week" genuinely redraws.
+    handlers.availability = (config) => {
+      const params = config.params as { from: string }
+      return params.from === monday ? [slotAt(monday, '09:35')] : []
+    }
+    renderAt(path)
+
+    await user.click(await screen.findByRole('button', { name: /^09:35/ }))
+    expect(screen.getByText(/Selected/)).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Next week' }))
+
+    // The sticky bar went with it: a live Continue button for a slot no longer
+    // on screen is worse than no bar at all.
+    expect(await screen.findByText('No times this week')).toBeVisible()
+    expect(screen.queryByText(/Selected/)).not.toBeInTheDocument()
+  })
+
   it('reaches the next day with Tab', async () => {
     const user = userEvent.setup()
     renderAt(path)
@@ -363,6 +422,32 @@ describe('an empty week', () => {
     await user.click(screen.getByRole('button', { name: 'Find the next opening' }))
 
     await waitFor(() => expect(router.state.location.search).toContain(`date=${laterDay}`))
+  })
+
+  it('does not carry a failed search into the next week', async () => {
+    const user = userEvent.setup()
+    handlers.staff = () => [AMELIE, CAMILLE]
+    handlers.availability = (config) => {
+      const params = config.params as { from: string; to: string }
+      const span = Number(new Date(params.to)) - Number(new Date(params.from))
+      // The widened search fails; every week request succeeds and is empty.
+      if (span > 7 * 86_400_000) return problem(500, 'INTERNAL_ERROR')(config)
+      return []
+    }
+
+    renderAt(`/b/${SLUG}/book?service=${COULEUR.id}&staff=anyone&date=${monday}`)
+
+    await user.click(await screen.findByRole('button', { name: 'Find the next opening' }))
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(
+      'The search could not be completed',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Next week' }))
+
+    // That week's own request succeeded and the answer is that it is empty. One
+    // failed search must not paint an error over every empty week after it.
+    expect(await screen.findByText('No times this week')).toBeVisible()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('says so plainly when the whole booking window is empty', async () => {

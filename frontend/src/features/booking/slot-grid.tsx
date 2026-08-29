@@ -92,6 +92,16 @@ function SlotDaySection({
    * answer rather than back at 09:00.
    */
   const [activeIndex, setActiveIndex] = useState(() => (selectedIndex >= 0 ? selectedIndex : 0))
+  /**
+   * Clamped every render, because the day's list can shrink underneath it.
+   *
+   * This section is keyed by `dayKey`, so it survives a refetch — a reconnect,
+   * or wave 4 invalidating availability after a booking — and the seeded index
+   * can end up past the end of a shorter list. Every chip would then be
+   * `tabIndex={-1}` and the whole day would drop out of the tab order, which is
+   * the one thing the roving tabindex exists to guarantee.
+   */
+  const active = Math.min(activeIndex, ordered.length - 1)
   const buttons = useRef<(HTMLButtonElement | null)[]>([])
 
   // Plain functions, not useCallback: the React Compiler is on for this project
@@ -150,7 +160,7 @@ function SlotDaySection({
                     // One tab stop per day. Tab therefore moves between days,
                     // which is the half of the model that makes 98 slots
                     // reachable without 98 key presses.
-                    tabIndex={slotIndex === activeIndex ? 0 : -1}
+                    tabIndex={slotIndex === active ? 0 : -1}
                     aria-pressed={selected}
                     // The visible label is the time alone; a screen reader
                     // landing here by Tab has no column header to fall back on,

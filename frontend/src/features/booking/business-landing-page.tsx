@@ -4,10 +4,10 @@ import { Link, useParams } from 'react-router-dom'
 import { describeError, requestIdOf } from '@/api/error-copy'
 import { isApiError } from '@/api/error'
 import { Container } from '@/components/container'
-import { EmptyState } from '@/components/empty-state'
 import { ErrorState } from '@/components/error-state'
 import { Button } from '@/components/ui/button'
 import { BusinessNotFound } from '@/features/booking/business-not-found'
+import { NoServices } from '@/features/booking/no-services'
 import { OpeningHoursTable } from '@/features/booking/opening-hours-table'
 import { useBusiness } from '@/features/booking/public-queries'
 import { ServiceCard } from '@/features/booking/service-card'
@@ -108,12 +108,7 @@ function Landing({ business, slug }: { business: PublicBusiness; slug: string })
           </h2>
 
           {business.services.length === 0 ? (
-            <EmptyState
-              className="mt-4"
-              icon={CalendarPlus}
-              title="Nothing is bookable here yet"
-              description="This business has not published any services. Check back, or get in touch with them directly."
-            />
+            <NoServices className="mt-4" />
           ) : (
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {business.services.map((service) => (

@@ -6,8 +6,15 @@ import { describeError, requestIdOf } from '@/api/error-copy'
 import { Container } from '@/components/container'
 import { ErrorState } from '@/components/error-state'
 import { BusinessNotFound } from '@/features/booking/business-not-found'
-import { ANYONE, useBookingParams, type BookingStep } from '@/features/booking/booking-params'
+import {
+  ANYONE,
+  stepOf,
+  useBookingParams,
+  type BookingParams,
+  type BookingStep,
+} from '@/features/booking/booking-params'
 import { BookingStepper } from '@/features/booking/booking-stepper'
+import { NoServices } from '@/features/booking/no-services'
 import { useBusiness, useStaffForService } from '@/features/booking/public-queries'
 import { ServiceCard } from '@/features/booking/service-card'
 import { LandingSkeleton } from '@/features/booking/skeletons'
@@ -66,7 +73,7 @@ const STEP_TITLE: Record<BookingStep, string> = {
 }
 
 function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
-  const { params, step, setParams } = useBookingParams()
+  const { params, setParams } = useBookingParams()
 
   /**
    * The service the URL names, **if the catalogue still has it**.
@@ -82,10 +89,37 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
    * whose subject is missing.
    */
   const service = business.services.find((candidate) => candidate.id === params.serviceId)
-  const effectiveStep: BookingStep = service ? step : 'service'
 
   const { data: staffList } = useStaffForService(slug, service?.id)
   const onlyStaff = staffList?.length === 1 ? staffList[0] : undefined
+
+  /**
+   * The same rule applied to `?staff=`, for the same reason.
+   *
+   * A link can outlive a staff member's assignment as easily as a service —
+   * they leave, or stop performing this one — and an id nobody recognises goes
+   * straight into the availability request as `staffId`, where the customer gets
+   * an error screen or a permanently empty picker and no way to understand
+   * either. Dropping back to step 2 asks a question they can answer.
+   *
+   * Only once the list has arrived: `staffList` is `undefined` while it loads,
+   * and bouncing on that would send every direct link through the staff step
+   * for a moment on its way in.
+   */
+  const staffKnown =
+    params.staff === ANYONE || !staffList || staffList.some((member) => member.id === params.staff)
+
+  /**
+   * The choices the URL is allowed to claim. Everything below reads these rather
+   * than the raw parameters, so the stepper, the heading and the step being
+   * rendered cannot disagree about which choices are still real.
+   */
+  const effective: BookingParams = !service
+    ? {}
+    : staffKnown
+      ? params
+      : { serviceId: params.serviceId }
+  const effectiveStep: BookingStep = stepOf(effective)
 
   const chooseStaff = useCallback(
     (staff: string, options?: { replace?: boolean }) => setParams({ staff }, options),
@@ -95,12 +129,16 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
   const chooseDate = useCallback((date: string) => setParams({ date }), [setParams])
 
   const staffSummary =
-    params.staff === ANYONE
+    effective.staff === ANYONE
       ? // When one person is the only candidate the step answered itself, so the
         // stepper names them rather than saying "Anyone" — which would read as a
         // choice the customer did not make.
         (onlyStaff?.displayName ?? 'Anyone')
-      : staffList?.find((member) => member.id === params.staff)?.displayName
+      : staffList?.find((member) => member.id === effective.staff)?.displayName
+
+  // The step that answered itself is not a step anyone can go back to: StaffStep
+  // redirects out of it on mount, so a link there would do nothing visible.
+  const answeredItself = Boolean(onlyStaff) && effective.staff === ANYONE
 
   return (
     <Container width="copy" className="pb-20">
@@ -115,16 +153,15 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
 
       <BookingStepper
         slug={slug}
-        params={service ? params : {}}
+        params={effective}
         summary={{
           service: service
             ? `${service.name} · ${formatDuration(service.durationMinutes)}`
             : undefined,
           staff: staffSummary,
         }}
-        note={{
-          staff: onlyStaff && params.staff === ANYONE ? 'the only one for this service' : undefined,
-        }}
+        note={{ staff: answeredItself ? 'the only one for this service' : undefined }}
+        locked={answeredItself ? ['staff'] : undefined}
       />
 
       <h1 className="font-display text-display-sm text-foreground tracking-display mt-8 leading-tight">
@@ -132,7 +169,13 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
       </h1>
 
       <div className="mt-6">
-        {effectiveStep === 'service' ? (
+        {effectiveStep === 'service' && business.services.length === 0 ? (
+          // The same answer the landing page gives for the same payload. A
+          // direct link to /book must not put the question above nothing.
+          <NoServices />
+        ) : null}
+
+        {effectiveStep === 'service' && business.services.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2">
             {business.services.map((candidate) => (
               <ServiceCard
@@ -159,14 +202,14 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
           />
         ) : null}
 
-        {effectiveStep === 'slot' && service && params.staff ? (
+        {effectiveStep === 'slot' && service && effective.staff ? (
           <>
             <SlotStep
               slug={slug}
               business={business}
               serviceId={service.id}
-              staff={params.staff}
-              date={params.date}
+              staff={effective.staff}
+              date={effective.date}
               onDateChange={chooseDate}
             />
             <p className="text-muted-foreground mt-8 text-sm">

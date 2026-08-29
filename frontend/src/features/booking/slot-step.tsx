@@ -60,7 +60,23 @@ export function SlotStep({ slug, business, serviceId, staff, date, onDateChange 
   const { data, isPending, isError, error, refetch } = useAvailability(slug, request)
   const prefetchWeek = usePrefetchWeek(slug)
 
-  const [selected, setSelected] = useState<Slot | null>(null)
+  /**
+   * The chosen slot, **and the week it was chosen in**.
+   *
+   * This component stays mounted while the week changes, so a bare `Slot` here
+   * outlives the grid it came from: the chips redraw for the new week, none is
+   * highlighted, and the sticky bar goes on offering "Monday 31 August at 09:35"
+   * with a live Continue button for a slot that is not on screen. Carrying the
+   * week and comparing during render is what makes the two agree — and it keeps
+   * the selection when the customer navigates back to the week it belongs to,
+   * where clearing it outright would throw the answer away.
+   */
+  const [chosen, setChosen] = useState<{ week: DayKey; slot: Slot } | null>(null)
+  const selected = chosen?.week === week.from ? chosen.slot : null
+
+  function select(slot: Slot) {
+    setChosen({ week: week.from, slot })
+  }
 
   const nextWeekStart = addDays(week.from, 7)
   const previousWeekStart = addDays(week.from, -7)
@@ -130,8 +146,9 @@ export function SlotStep({ slug, business, serviceId, staff, date, onDateChange 
           serviceId={serviceId}
           staff={staff}
           today={today}
+          weekStart={week.from}
           selected={selected}
-          onSelect={setSelected}
+          onSelect={select}
           onDateChange={onDateChange}
         />
       )}
@@ -148,6 +165,7 @@ function WeekBody({
   serviceId,
   staff,
   today,
+  weekStart,
   selected,
   onSelect,
   onDateChange,
@@ -158,6 +176,8 @@ function WeekBody({
   serviceId: string
   staff: string
   today: DayKey
+  /** The displayed Monday, which is what the empty state's own state is scoped to. */
+  weekStart: DayKey
   selected: Slot | null
   onSelect: (slot: Slot) => void
   onDateChange: (date: DayKey) => void
@@ -176,7 +196,15 @@ function WeekBody({
   }
 
   return (
+    /*
+     * Keyed by the week, so its state does not outlive the week it describes.
+     * `searchError` and `exhausted` are answers about *this* week's search, and
+     * without the key one failed search paints "The search could not be
+     * completed" over every empty week the customer navigates to afterwards —
+     * weeks whose own request succeeded.
+     */
     <EmptyWeek
+      key={weekStart}
       slug={slug}
       business={business}
       serviceId={serviceId}
