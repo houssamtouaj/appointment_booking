@@ -13,19 +13,20 @@ npm run dev                    # http://localhost:5173
 ```
 
 The API is expected on `http://localhost:8081` (`docker compose up` from the repository
-root). Nothing in the app calls it yet — that starts in wave 2.
+root, with `SPRING_PROFILES_ACTIVE=demo` so that `POST /api/auth/demo-login` exists).
 
-| Script                 | What it does                                    |
-| ---------------------- | ----------------------------------------------- |
-| `npm run dev`          | Vite dev server                                 |
-| `npm run build`        | Production bundle into `dist/`                  |
-| `npm run preview`      | Serve that bundle                               |
-| `npm run typecheck`    | `tsc -b` across the app, node and test projects |
-| `npm run lint`         | ESLint, zero warnings tolerated                 |
-| `npm run test`         | Vitest once                                     |
-| `npm run test:watch`   | Vitest in watch mode                            |
-| `npm run format`       | Prettier, write                                 |
-| `npm run format:check` | Prettier, check only — what CI runs             |
+| Script                   | What it does                                                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`            | Vite dev server                                                                                                       |
+| `npm run build`          | Production bundle into `dist/`                                                                                        |
+| `npm run preview`        | Serve that bundle                                                                                                     |
+| `npm run typecheck`      | `tsc -b` across the app, node and test projects                                                                       |
+| `npm run lint`           | ESLint, zero warnings tolerated                                                                                       |
+| `npm run test`           | Vitest once                                                                                                           |
+| `npm run test:watch`     | Vitest in watch mode                                                                                                  |
+| `npm run format`         | Prettier, write                                                                                                       |
+| `npm run format:check`   | Prettier, check only — what CI runs                                                                                   |
+| `npm run contract:check` | Diff the Zod schemas against the running API's `/v3/api-docs`. Local only — it needs the stack up, so it is not in CI |
 
 `.github/workflows/web.yml` runs typecheck, lint, format, test and build on every push
 that touches `frontend/`, plus a grep asserting that every `VITE_*` the code reads is
@@ -38,11 +39,12 @@ header comment in that file explains what has to change before it can be.
 | -------------------- | ------------------------------------------------------------------ |
 | `styles/`            | `theme.css` — the design tokens, and the reasoning behind them     |
 | `api/`               | Axios instance, refresh-token interceptor, typed endpoint wrappers |
-| `types/`             | TypeScript types mirroring the API DTOs                            |
+| `api/schemas/`       | Zod schemas — the source of truth for the contract, hand-written   |
+| `types/`             | `z.infer` of those schemas, nothing hand-written                   |
 | `components/ui/`     | shadcn/ui primitives                                               |
 | `components/`        | Shared presentational components                                   |
 | `hooks/`             | Reusable hooks (TanStack Query wrappers, media queries)            |
-| `lib/`               | date-fns/date-fns-tz helpers, formatters, Zod schemas              |
+| `lib/`               | date-fns/date-fns-tz helpers, formatters, the single `env` read    |
 | `pages/`             | Route-level components wired to React Router                       |
 | `features/auth`      | Login, demo-admin shortcut, token refresh handling                 |
 | `features/booking`   | Public flow: service → staff → slot → details → confirm            |
@@ -90,8 +92,55 @@ There is no generic full-page loader and no shared spinner, deliberately. `Skele
 an atom; each surface composes its own skeleton so the placeholder holds the geometry of
 the content it replaces and the page does not reflow when data lands.
 
+## The API client
+
+`src/api/client.ts` is the one Axios instance. `withCredentials: true` in every mode,
+because the refresh cookie is not sent without it, and no path in `baseURL` — the cookie
+is scoped `Path=/api/auth`, so anything that rewrites that prefix detaches it and the
+symptom is "sessions randomly die" rather than a path bug.
+
+**The access token lives in a module variable and nowhere else.** Not `localStorage`, not
+a readable cookie. The refresh token is in an httpOnly cookie the browser attaches to
+`/api/auth/refresh` and `/api/auth/logout` only; the whole point of that design is that an
+XSS bug cannot exfiltrate a seven-day credential, and putting the fifteen-minute one in
+storage gives most of it back.
+
+On a 401 the interceptor joins a **single in-flight refresh promise** and replays the
+original request once. The single flight is the wave's reason for existing: the backend
+rotates on every refresh and treats a re-presented token as theft, so six queries that all
+401 at once would fire six refreshes, five of which come back `401 REFRESH_REUSED` and
+revoke the chain — signing the user out at the exact moment the code was trying to keep
+them in. `src/api/client.test.ts` asserts one refresh for three concurrent 401s, no
+recursion when `/refresh` itself 401s, and one replay rather than two.
+
+`REFRESH_REUSED` gets its own sentence — "You were signed out because your session was
+used from somewhere else" — because it means something different from an expiry, and a
+generic "session expired" would hide a security event behind routine copy.
+
+### Three dev modes
+
+`VITE_API_MODE` picks how the dev server reaches the API. `direct` is the default because
+it is the only one that exercises CORS, `allowCredentials` and `withCredentials`, all
+three of which production depends on and the proxy hides. `proxy` makes everything
+same-origin for debugging something that is not CORS. `crosssite` serves the SPA from
+`127.0.0.1:5173` against `localhost:8081` — a bare IP has no registrable domain, so the
+browser treats the pair as cross-_site_, which is the deployed Vercel + Render topology
+reproduced locally. `.env.example` documents what the API needs restarted with for that
+last one.
+
+### Known gap: request ids are cross-origin invisible
+
+Every API response carries `X-Request-Id`, and `ErrorState` and `FormAlert` show it so a
+person reporting a failure has something to quote. They mostly will not have one:
+`CorsConfig.setExposedHeaders` lists `Location, Retry-After` and not `X-Request-Id`, so
+cross-origin JavaScript cannot read it — which is `direct`, `crosssite` and the deployed
+pair. The body carries `requestId` on 5xx only, by deliberate backend design, so a 4xx
+cross-origin has no id at all. Adding `"X-Request-Id"` to that list is a one-line backend
+change and is not ours to make; until then the UI omits the reference line rather than
+showing a blank.
+
 ## Not built yet
 
-No API call, no Axios, no TanStack Query, no real screen — every route renders a
-placeholder. That starts in wave 2.
-The screen list is tracked in the local project brief (see `docs/`, not committed).
+No business data, no public booking page, no calendar. `/dashboard` and the other admin
+routes are still wave-1 placeholders — what changed in wave 2 is who is allowed to see
+them. The screen list is tracked in the local project brief (see `docs/`, not committed).
