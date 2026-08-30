@@ -12,7 +12,10 @@ import {
   guestContactSchema,
   publicBookingSchema,
 } from '@/api/schemas/booking'
+import { serviceSchema, servicePageSchema } from '@/api/schemas/catalog'
+import { bookingSummarySchema, dashboardStatsSchema } from '@/api/schemas/dashboard'
 import { acceptInvitationRequestSchema, invitationPreviewSchema } from '@/api/schemas/invitation'
+import { staffSchema } from '@/api/schemas/staff'
 import {
   openingHoursSchema,
   publicBusinessSchema,
@@ -89,4 +92,15 @@ export const CONTRACT_SCHEMAS: Record<string, ContractSchema> = {
   PublicBookingResponse: publicBookingSchema,
   GuestContactResponse: guestContactSchema,
   BookingRequest: bookingRequestSchema,
+
+  // --- Reference data and the dashboard (wave 5) ------------------------
+  // `PageResponse<T>` is generic, and springdoc names each instantiation after
+  // its element type rather than emitting one component with a type parameter.
+  // So the key here is `PageResponseServiceResponse`, and a second paged
+  // resource in wave 6 gets its own entry rather than reusing this one.
+  ServiceResponse: serviceSchema,
+  PageResponseServiceResponse: servicePageSchema,
+  StaffResponse: staffSchema,
+  BookingSummaryResponse: bookingSummarySchema,
+  DashboardStatsResponse: dashboardStatsSchema,
 }

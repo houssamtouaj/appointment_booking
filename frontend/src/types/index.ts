@@ -30,6 +30,10 @@ export type {
   PublicBooking,
 } from '@/api/schemas/booking'
 
+export type { Service, ServicePage } from '@/api/schemas/catalog'
+
+export type { BookingSummary, DashboardStats } from '@/api/schemas/dashboard'
+
 export type { AcceptInvitationRequest, InvitationPreview } from '@/api/schemas/invitation'
 
 export type {
@@ -42,3 +46,5 @@ export type {
 } from '@/api/schemas/public'
 
 export type { ErrorCode, ProblemDetail, ValidationError } from '@/api/schemas/problem'
+
+export type { Staff } from '@/api/schemas/staff'
