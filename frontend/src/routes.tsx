@@ -1,6 +1,8 @@
 import { Navigate, type RouteObject } from 'react-router-dom'
 
+import { PublicLayout } from '@/components/public-layout'
 import { RootLayout } from '@/components/root-layout'
+import { AdminLayout } from '@/features/admin/admin-layout'
 import { BookingFlowPage } from '@/features/booking/booking-flow-page'
 import { BusinessLandingPage } from '@/features/booking/business-landing-page'
 import { ManageBookingPage } from '@/features/booking/manage-booking-page'
@@ -30,123 +32,147 @@ import { Placeholder } from '@/pages/placeholder'
  *   `/accept-invitation/:token` are named by the backend. `FrontendLinks` builds
  *   them into outbound mail, so a link sitting in an inbox from three weeks ago
  *   still has to resolve. Renaming one breaks messages already sent.
+ *
+ * Wave 5 split the chrome in two. `RootLayout` is now the frame — skip link,
+ * toaster, debug panel — and the two branches below choose their own header:
+ * `PublicLayout` for anything a stranger can reach, `AdminLayout` for the shell.
+ * Nesting the admin shell inside the old single layout put two headers on every
+ * admin screen, and giving the admin branch its own root would have duplicated
+ * the frame instead.
  */
 export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
     children: [
-      // --- Public -------------------------------------------------------
       {
-        index: true,
-        // `replace`, so the redirect does not sit in history and trap the back
-        // button between `/` and `/b/demo-salon`.
-        element: <Navigate to={`/b/${DEMO_SLUG}`} replace />,
-      },
-      { path: 'b/:slug', element: <BusinessLandingPage /> },
-      { path: 'b/:slug/book', element: <BookingFlowPage /> },
-      {
-        // Named by the backend (F12). Not ours to rename: `FrontendLinks` builds
-        // this path into every customer email, and it is also the URL Stripe
-        // returns to with `?checkout=success|cancelled`.
-        path: 'booking/:cancellationToken',
-        element: <ManageBookingPage />,
-      },
+        // Everything a stranger can reach, plus the four account screens: thin
+        // header, no nav rail, a footer.
+        element: <PublicLayout />,
+        children: [
+          // --- Public -------------------------------------------------------
+          {
+            index: true,
+            // `replace`, so the redirect does not sit in history and trap the back
+            // button between `/` and `/b/demo-salon`.
+            element: <Navigate to={`/b/${DEMO_SLUG}`} replace />,
+          },
+          { path: 'b/:slug', element: <BusinessLandingPage /> },
+          { path: 'b/:slug/book', element: <BookingFlowPage /> },
+          {
+            // Named by the backend (F12). Not ours to rename: `FrontendLinks` builds
+            // this path into every customer email, and it is also the URL Stripe
+            // returns to with `?checkout=success|cancelled`.
+            path: 'booking/:cancellationToken',
+            element: <ManageBookingPage />,
+          },
 
-      // --- Account ------------------------------------------------------
-      { path: 'login', element: <LoginPage /> },
-      { path: 'register', element: <RegisterPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      {
-        // Named by the backend (F12).
-        path: 'reset-password/:token',
-        element: <ResetPasswordPage />,
-      },
-      {
-        // Named by the backend (F12).
-        path: 'accept-invitation/:token',
-        element: <AcceptInvitationPage />,
+          // --- Account ------------------------------------------------------
+          { path: 'login', element: <LoginPage /> },
+          { path: 'register', element: <RegisterPage /> },
+          { path: 'forgot-password', element: <ForgotPasswordPage /> },
+          {
+            // Named by the backend (F12).
+            path: 'reset-password/:token',
+            element: <ResetPasswordPage />,
+          },
+          {
+            // Named by the backend (F12).
+            path: 'accept-invitation/:token',
+            element: <AcceptInvitationPage />,
+          },
+
+          // --- 404 ----------------------------------------------------------
+          // A splat outranks nothing: React Router ranks by specificity rather
+          // than by order, so `/dashboard` still wins over this.
+          { path: '*', element: <NotFoundPage /> },
+        ],
       },
 
       // --- Admin --------------------------------------------------------
       // Bare paths, not /admin/*, so they read well in the portfolio
       // screenshots the brief asks for (§10).
       //
-      // Wave 2 adds the layout route around them. Nothing under here renders
-      // until the bootstrap refresh has answered, which is what keeps a cold
-      // load from opening with a burst of 401s.
+      // `AdminLayout` wraps `RequireAuth` rather than the other way round, so the
+      // shell is on screen — with skeleton nav rows — while the bootstrap
+      // refresh is in flight, instead of appearing a round trip after the page
+      // does. It renders nothing but the outlet for an anonymous visitor, so the
+      // redirect below still happens without a flash of the product's insides.
       {
-        element: <RequireAuth />,
+        element: <AdminLayout />,
         children: [
           {
-            path: 'dashboard',
-            element: (
-              <Placeholder
-                eyebrow="Admin"
-                title="Dashboard"
-                wave="Wave 5"
-                description="Today's bookings, the week's count, revenue and no-show rate."
-              />
-            ),
-          },
-          {
-            path: 'calendar',
-            element: (
-              <Placeholder
-                eyebrow="Admin"
-                title="Calendar"
-                wave="Wave 6"
-                description="Week and day views. The brief's nominated cover image."
-              />
-            ),
-          },
-          // Services and Team are *shared* routes, not owner-only. F19 is about
-          // actions: a staff member may read the catalogue and the roster and
-          // may not create, edit or invite. Gating the whole route would hide
-          // information they are allowed to see, so the check belongs on the
-          // buttons, in the waves that add them.
-          {
-            path: 'services',
-            element: <Placeholder eyebrow="Admin" title="Services" wave="Wave 7" />,
-          },
-          {
-            path: 'team',
-            element: <Placeholder eyebrow="Admin" title="Team" wave="Wave 7" />,
-          },
-          {
-            path: 'team/:id/hours',
-            element: (
-              <Placeholder
-                eyebrow="Admin"
-                title="Working hours"
-                wave="Wave 8"
-                description="A seven-row weekly grid, plus the exceptions calendar."
-              />
-            ),
-          },
-          {
-            // The one route in the table that is owner-only end to end (F19):
-            // business settings and the booking policy have no staff-readable
-            // half.
-            element: <RequireOwner />,
+            element: <RequireAuth />,
             children: [
               {
-                path: 'settings',
+                path: 'dashboard',
                 element: (
                   <Placeholder
                     eyebrow="Admin"
-                    title="Settings"
-                    wave="Wave 8"
-                    description="Timezone, deposit rules and booking policy."
+                    title="Dashboard"
+                    wave="Wave 5"
+                    description="Today's bookings, the week's count, revenue and no-show rate."
                   />
                 ),
+              },
+              {
+                path: 'calendar',
+                element: (
+                  <Placeholder
+                    eyebrow="Admin"
+                    title="Calendar"
+                    wave="Wave 6"
+                    description="Week and day views. The brief's nominated cover image."
+                  />
+                ),
+              },
+              // Services and Team are *shared* routes, not owner-only. F19 is about
+              // actions: a staff member may read the catalogue and the roster and
+              // may not create, edit or invite. Gating the whole route would hide
+              // information they are allowed to see, so the check belongs on the
+              // buttons, in the waves that add them — and the nav simply does not
+              // offer the link (`features/admin/nav.ts`).
+              {
+                path: 'services',
+                element: <Placeholder eyebrow="Admin" title="Services" wave="Wave 7" />,
+              },
+              {
+                path: 'team',
+                element: <Placeholder eyebrow="Admin" title="Team" wave="Wave 7" />,
+              },
+              {
+                path: 'team/:id/hours',
+                element: (
+                  <Placeholder
+                    eyebrow="Admin"
+                    title="Working hours"
+                    wave="Wave 8"
+                    description="A seven-row weekly grid, plus the exceptions calendar."
+                  />
+                ),
+              },
+              {
+                // The one route in the table that is owner-only end to end (F19):
+                // business settings and the booking policy have no staff-readable
+                // half.
+                element: <RequireOwner />,
+                children: [
+                  {
+                    path: 'settings',
+                    element: (
+                      <Placeholder
+                        eyebrow="Admin"
+                        title="Settings"
+                        wave="Wave 8"
+                        description="Timezone, deposit rules and booking policy."
+                      />
+                    ),
+                  },
+                ],
               },
             ],
           },
         ],
       },
-
-      // --- 404 ----------------------------------------------------------
-      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ]

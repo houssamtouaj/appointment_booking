@@ -1,7 +1,8 @@
-import { Link, Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { toast } from 'sonner'
 
 import { Container } from '@/components/container'
-import { ErrorState } from '@/components/error-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/features/auth/use-auth'
 
@@ -39,37 +40,54 @@ export function RequireAuth() {
  * Owner-only routes. Nested inside `RequireAuth`, so by the time this renders
  * the session is known and the only question left is the role.
  *
- * A staff member who follows a bookmarked owner URL gets told what happened,
- * not bounced to the dashboard: a silent redirect is indistinguishable from a
- * broken link, and they would try it again tomorrow.
+ * **Redirect *and* say why, which is a change of behaviour from wave 2.** That
+ * wave rendered an explanation in place and argued, correctly, that a silent
+ * bounce is indistinguishable from a broken link — somebody following an old
+ * bookmark would simply try it again tomorrow. Wave 5's gate then asked for the
+ * opposite: typing `/settings` as a staff member must redirect rather than sit
+ * on a page that only says no. Both are right about something, and a redirect
+ * carrying a toast is the answer that keeps both: the URL resolves to a screen
+ * with work on it, and nobody is left guessing what happened to the one they
+ * asked for.
+ *
+ * `replace`, so the refused URL does not sit in history waiting for the back
+ * button to walk into it a second time.
  */
 export function RequireOwner() {
   const { user } = useAuth()
+  const denied = user !== null && user.role !== 'OWNER'
 
-  if (user?.role !== 'OWNER') {
-    return (
-      <Container className="py-16">
-        <ErrorState
-          title="This page is for owners"
-          description="Your account has staff access, which covers your own calendar and working hours. Ask an owner of this business if you need more."
-        />
-        <p className="mt-6 text-center text-sm">
-          <Link to="/dashboard" className="text-primary underline underline-offset-4">
-            Back to the dashboard
-          </Link>
-        </p>
-      </Container>
-    )
-  }
+  // In an effect and not in the render body: a toast is a side effect on a store
+  // outside React, and firing one during render is a state update in another
+  // component's render phase. The redirect below unmounts this on the same tick,
+  // and the effect still runs — cleanup ordering guarantees it.
+  //
+  // The `id` is what keeps it to **one** message. `StrictMode` mounts every
+  // effect twice in development, so without it a staff member typing `/settings`
+  // is told twice, in two stacked toasts — verified in the browser, not
+  // theorised. A fixed id also collapses the honest repeat: three owner-only
+  // URLs in a row is one sentence worth saying, not three.
+  useEffect(() => {
+    if (denied) {
+      toast.error('That page is for owners. Your account has staff access.', {
+        id: 'owner-only',
+      })
+    }
+  }, [denied])
+
+  if (denied) return <Navigate to="/dashboard" replace />
 
   return <Outlet />
 }
 
 /**
- * The bootstrap placeholder: the shape of the admin shell, not a spinner (F20).
+ * The bootstrap placeholder: the shape of an admin screen, not a spinner (F20).
  * It is on screen for one round trip on a cold load and for no time at all
- * afterwards, and it holds the geometry so the page does not jump when the real
- * header arrives.
+ * afterwards.
+ *
+ * From wave 5 it renders *inside* the admin shell — `AdminLayout` sits above
+ * this guard in the table — so the rail and the header are already there and
+ * this only has to hold the geometry of the page body.
  */
 function SessionPending() {
   return (

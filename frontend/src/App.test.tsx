@@ -2,6 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
+import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { client, resetInFlightRefresh } from '@/api/client'
@@ -61,6 +62,27 @@ const PUBLIC_BUSINESS = {
 }
 
 /**
+ * The wave-5 admin reads: the dashboard's figures and the two reference lists.
+ *
+ * Shaped like the real ones, for the reason `PUBLIC_BUSINESS` is: these bodies
+ * are `.parse`d at the boundary (F4), and a stub that returned the session user
+ * for every URL would fail there and turn this file's route smoke test into an
+ * assertion about an error state. The dashboard's own behaviour is asserted in
+ * `features/dashboard/dashboard.test.tsx`; what is wanted here is only that the
+ * route renders the screen.
+ */
+const STATS = {
+  todayBookings: 0,
+  weekBookings: 0,
+  revenueCents: 0,
+  depositsCents: 0,
+  noShowRate: null,
+  upcoming: [],
+}
+
+const SERVICE_PAGE = { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 }
+
+/**
  * From wave 2 the route table is behind a session, so every render here needs
  * one — or needs to prove it does not have one. `role` is a parameter because
  * `RequireOwner` is the only thing in the table that reads it.
@@ -92,7 +114,13 @@ function stubApi(session: 'owner' | 'staff' | 'anonymous') {
       ? PUBLIC_BUSINESS
       : url === '/api/auth/refresh'
         ? { ...AUTH, user }
-        : user
+        : url.includes('/api/dashboard/stats')
+          ? STATS
+          : url.includes('/api/services')
+            ? SERVICE_PAGE
+            : url.includes('/api/staff')
+              ? []
+              : user
     return Promise.resolve({
       data,
       status: 200,
@@ -121,6 +149,7 @@ async function renderAt(path: string, session: 'owner' | 'staff' | 'anonymous' =
 }
 
 beforeEach(() => {
+  vi.clearAllMocks()
   resetInFlightRefresh()
   resetBootstrap()
   endSessionQuietly()
@@ -192,12 +221,20 @@ describe('the route guards', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Calendar' })).toBeInTheDocument()
   })
 
-  it('tells a staff member why /settings is closed rather than bouncing them (F19)', async () => {
-    // A silent redirect is indistinguishable from a broken link, and they would
-    // try it again tomorrow.
-    await renderAt('/settings', 'staff')
+  it('redirects a staff member off /settings, and says why (F19)', async () => {
+    // Wave 2 rendered an explanation in place, on the grounds that a silent
+    // redirect is indistinguishable from a broken link. Wave 5's gate asks for
+    // the redirect. Both halves are asserted here, because either one alone is
+    // the version that was rejected: the URL has to resolve to a screen with
+    // work on it, *and* nobody may be left guessing what happened.
+    const router = await renderAt('/settings', 'staff')
 
-    expect(screen.getByRole('alert')).toHaveTextContent('This page is for owners')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
     expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument()
+    // The fixed id is what keeps this to one message: StrictMode mounts the
+    // guard's effect twice, and without it a staff member is told twice.
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('for owners'), {
+      id: 'owner-only',
+    })
   })
 })
