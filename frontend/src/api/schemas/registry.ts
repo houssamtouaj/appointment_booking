@@ -12,9 +12,15 @@ import {
   guestContactSchema,
   publicBookingSchema,
 } from '@/api/schemas/booking'
+import {
+  bookingDetailSchema,
+  bookingPageSchema,
+  bookingStatusRequestSchema,
+} from '@/api/schemas/booking-admin'
 import { serviceSchema, servicePageSchema } from '@/api/schemas/catalog'
 import { bookingSummarySchema, dashboardStatsSchema } from '@/api/schemas/dashboard'
 import { acceptInvitationRequestSchema, invitationPreviewSchema } from '@/api/schemas/invitation'
+import { policySchema } from '@/api/schemas/policy'
 import { staffSchema } from '@/api/schemas/staff'
 import {
   openingHoursSchema,
@@ -103,4 +109,14 @@ export const CONTRACT_SCHEMAS: Record<string, ContractSchema> = {
   StaffResponse: staffSchema,
   BookingSummaryResponse: bookingSummarySchema,
   DashboardStatsResponse: dashboardStatsSchema,
+
+  // --- The calendar (wave 6) -------------------------------------------
+  // The second paged resource, and it gets its own entry rather than reusing
+  // the services one: springdoc names each instantiation of `PageResponse<T>`
+  // after its element type, so these two are unrelated component names that
+  // happen to share a shape.
+  PageResponseBookingSummaryResponse: bookingPageSchema,
+  BookingResponse: bookingDetailSchema,
+  BookingStatusRequest: bookingStatusRequestSchema,
+  PolicyResponse: policySchema,
 }

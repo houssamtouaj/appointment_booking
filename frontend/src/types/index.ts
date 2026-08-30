@@ -30,6 +30,13 @@ export type {
   PublicBooking,
 } from '@/api/schemas/booking'
 
+export type {
+  BookingDetail,
+  BookingPage,
+  BookingStatusRequest,
+  StaffTransition,
+} from '@/api/schemas/booking-admin'
+
 export type { Service, ServicePage } from '@/api/schemas/catalog'
 
 export type { BookingSummary, DashboardStats } from '@/api/schemas/dashboard'
@@ -44,6 +51,8 @@ export type {
   PublicStaff,
   Slot,
 } from '@/api/schemas/public'
+
+export type { Policy } from '@/api/schemas/policy'
 
 export type { ErrorCode, ProblemDetail, ValidationError } from '@/api/schemas/problem'
 

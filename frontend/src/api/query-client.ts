@@ -3,6 +3,30 @@ import { QueryClient } from '@tanstack/react-query'
 import { isApiError } from '@/api/error'
 
 /**
+ * Whether a failed read is worth asking about again.
+ *
+ * **Never retry a 4xx.** A 403 does not get better by asking again, a 422 is the
+ * same shape every time, and a 404 three times over is three times the latency
+ * before the empty state a person could already have been reading. Retries are
+ * for the failures that are genuinely transient: a 5xx, and a request that never
+ * got an answer at all.
+ *
+ * `status === 0` is that second case. `toApiError` gives a network failure status
+ * 0 because there is no HTTP status to give it, and the plain `>= 500` test would
+ * classify a dropped packet as permanent — which is the one failure most worth
+ * retrying.
+ *
+ * Exported as well as used as the default, so a query with an extra reason to
+ * give up can decline first and then defer to this rather than restating it —
+ * the calendar's week does exactly that.
+ */
+export function shouldRetry(failureCount: number, error: unknown): boolean {
+  if (!isApiError(error)) return failureCount < 2
+  if (error.status === 0 || error.status >= 500) return failureCount < 2
+  return false
+}
+
+/**
  * The TanStack Query defaults, decided once here so that no feature has to
  * think about them (F7).
  *
@@ -26,11 +50,7 @@ export function createQueryClient(): QueryClient {
          * plain `>= 500` test would classify a dropped packet as permanent —
          * which is the one failure most worth retrying.
          */
-        retry: (failureCount, error) => {
-          if (!isApiError(error)) return failureCount < 2
-          if (error.status === 0 || error.status >= 500) return failureCount < 2
-          return false
-        },
+        retry: shouldRetry,
         /**
          * Thirty seconds. Long enough that moving between two admin screens does
          * not refetch, short enough that a booking taken on another device shows
