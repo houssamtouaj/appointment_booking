@@ -3,6 +3,7 @@ import { Navigate, type RouteObject } from 'react-router-dom'
 import { PublicLayout } from '@/components/public-layout'
 import { RootLayout } from '@/components/root-layout'
 import { AdminLayout } from '@/features/admin/admin-layout'
+import { CalendarPage } from '@/features/calendar/calendar-page'
 import { DashboardPage } from '@/features/dashboard/dashboard-page'
 import { BookingFlowPage } from '@/features/booking/booking-flow-page'
 import { BusinessLandingPage } from '@/features/booking/business-landing-page'
@@ -105,17 +106,7 @@ export const routes: RouteObject[] = [
             element: <RequireAuth />,
             children: [
               { path: 'dashboard', element: <DashboardPage /> },
-              {
-                path: 'calendar',
-                element: (
-                  <Placeholder
-                    eyebrow="Admin"
-                    title="Calendar"
-                    wave="Wave 6"
-                    description="Week and day views. The brief's nominated cover image."
-                  />
-                ),
-              },
+              { path: 'calendar', element: <CalendarPage /> },
               // Services and Team are *shared* routes, not owner-only. F19 is about
               // actions: a staff member may read the catalogue and the roster and
               // may not create, edit or invite. Gating the whole route would hide
