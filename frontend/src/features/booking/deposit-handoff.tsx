@@ -1,4 +1,5 @@
 import { CreditCard, ExternalLink } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { CopyText } from '@/components/copy-text'
 import { Button } from '@/components/ui/button'
@@ -9,9 +10,18 @@ import { manageUrlFor } from '@/features/booking/manage-url'
 import type { PublicBooking, PublicBusiness, PublicService } from '@/types'
 
 type DepositHandoffProps = {
-  /** A `PENDING` booking. `checkoutUrl` is present exactly on those. */
+  /** A `PENDING` booking. */
   booking: PublicBooking
-  checkoutUrl: string
+  /**
+   * Stripe's hosted page, **and optional on purpose**.
+   *
+   * The API offers one on every `PENDING` booking it returns today — a failure
+   * to open the session rolls the booking back rather than returning it — so
+   * this is the branch that should not happen. It is here because the
+   * alternative when it does is worse than a plain sentence: an unpaid hold
+   * falling through to "You are booked, nothing else to do".
+   */
+  checkoutUrl?: string
   business: PublicBusiness
   service: PublicService
   staffName?: string
@@ -44,6 +54,7 @@ export function DepositHandoff({
   staffName,
 }: DepositHandoffProps) {
   function goToCheckout() {
+    if (!checkoutUrl) return
     // Before the navigation, never after: this document stops existing on the
     // next line. It is the only way back if Stripe's return redirect fails, and
     // unlike an access token it is not a credential worth protecting from
@@ -89,13 +100,25 @@ export function DepositHandoff({
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button size="lg" onClick={goToCheckout}>
-          Continue to secure checkout
-          <ExternalLink className="size-4" aria-hidden="true" />
-        </Button>
-        <p className="text-muted-foreground text-xs">You will be taken to Stripe to pay.</p>
-      </div>
+      {checkoutUrl ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button size="lg" onClick={goToCheckout}>
+            Continue to secure checkout
+            <ExternalLink className="size-4" aria-hidden="true" />
+          </Button>
+          <p className="text-muted-foreground text-xs">You will be taken to Stripe to pay.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <p className="border-danger/40 text-foreground rounded-sm border px-3 py-2 text-sm">
+            We could not open the payment page just now. Your booking exists and the slot is held —
+            open it below to try again.
+          </p>
+          <Button size="lg" asChild>
+            <Link to={`/booking/${booking.cancellationToken}`}>Open your booking</Link>
+          </Button>
+        </div>
+      )}
 
       <section className="border-border bg-card rounded-md border p-5">
         <h2 className="text-foreground text-base font-medium">If anything goes wrong</h2>

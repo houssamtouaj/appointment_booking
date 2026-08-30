@@ -1,7 +1,7 @@
 import { Timer } from 'lucide-react'
-import { useEffect, useState } from 'react'
 
-import { clockOf } from '@/lib/time'
+import { useRemaining } from '@/features/booking/hold-clock'
+import { clockOf, zoneAbbreviation } from '@/lib/time'
 import { cn } from '@/lib/utils'
 
 type HoldNoticeProps = {
@@ -57,37 +57,19 @@ export function HoldNotice({ expiresAt, timeZone, className }: HoldNoticeProps) 
         ) : (
           <>
             This slot is held until{' '}
-            <span className="font-mono">{clockOf(expiresAt, timeZone)}</span>
+            <span className="font-mono">{clockOf(expiresAt, timeZone)}</span>{' '}
+            {/* The zone is named because this same deadline is quoted again on
+                the manage page after the Stripe round trip, and that page has
+                no business in its payload so it renders the viewer's own clock.
+                Two different numbers for one instant is only a contradiction
+                while neither of them says which clock it is on. */}
+            ({zoneAbbreviation(timeZone, new Date(expiresAt))})
             {remaining === undefined ? null : <> — {describeRemaining(remaining)} left</>}.
           </>
         )}
       </span>
     </p>
   )
-}
-
-/**
- * Milliseconds until the deadline, re-read once a second, or `undefined` when
- * there is no deadline to count towards.
- *
- * A second rather than a minute because the last minute is the one anybody
- * watches, and a per-minute tick spends up to fifty-nine seconds telling
- * somebody they have a minute left after they no longer do.
- */
-function useRemaining(expiresAt: string | undefined): number | undefined {
-  const deadline = expiresAt ? Date.parse(expiresAt) : Number.NaN
-  const valid = !Number.isNaN(deadline)
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (!valid) return
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
-    // Cleared on unmount. This screen is one a customer leaves by being sent to
-    // Stripe, and an interval left behind ticks for the life of the tab.
-    return () => window.clearInterval(timer)
-  }, [valid])
-
-  return valid ? deadline - now : undefined
 }
 
 /** `"27 minutes"`, `"45 seconds"`. Never a bare number of milliseconds. */

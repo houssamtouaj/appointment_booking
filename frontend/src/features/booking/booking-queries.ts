@@ -108,13 +108,32 @@ export function useBookingByToken(cancellationToken: string) {
    * below is an effect or an interval callback, so the clock is only ever read
    * outside render.
    */
-  const startedAt = useRef<number | null>(null)
-  const [gaveUp, setGaveUp] = useState(false)
+  const startedAt = useRef<{ token: string; at: number } | null>(null)
 
-  function elapsedMs(): number {
-    startedAt.current ??= Date.now()
-    return Date.now() - startedAt.current
-  }
+  /**
+   * **Which booking gave up, rather than whether one did.**
+   *
+   * `ManageBookingPage` is one route element, so moving from `/booking/A` to
+   * `/booking/B` inside the app re-renders this hook rather than remounting it.
+   * A plain boolean would still be A's, and B would arrive with the window
+   * already closed: no "checking for your payment", the manual button from the
+   * first paint, and not one automatic poll for a booking a webhook may confirm
+   * a second later. Stamping it with the token it belongs to makes the reset
+   * fall out of the comparison, with no effect to write it and no render in
+   * which the two disagree.
+   */
+  const [gaveUpOn, setGaveUpOn] = useState<string | null>(null)
+  const gaveUp = gaveUpOn === cancellationToken
+
+  const elapsedMs = useCallback((): number => {
+    // Stamped with the token for the same reason, and re-read here rather than
+    // in a reset: this is the one place the window's start is used, and a
+    // different booking has not started waiting yet.
+    if (startedAt.current?.token !== cancellationToken) {
+      startedAt.current = { token: cancellationToken, at: Date.now() }
+    }
+    return Date.now() - startedAt.current.at
+  }, [cancellationToken])
 
   const query = useQuery({
     queryKey: publicKeys.booking(cancellationToken),
@@ -150,11 +169,11 @@ export function useBookingByToken(cancellationToken: string) {
     // browser has painted the first, and `Math.max` says the same thing without
     // one. It fires on the next tick when the window has already closed.
     const timer = window.setTimeout(
-      () => setGaveUp(true),
+      () => setGaveUpOn(cancellationToken),
       Math.max(0, POLL_WINDOW_MS - elapsedMs()),
     )
     return () => window.clearTimeout(timer)
-  }, [waiting, gaveUp])
+  }, [waiting, gaveUp, cancellationToken, elapsedMs])
 
   /**
    * The manual way on, after the window closed. One request, and it does not

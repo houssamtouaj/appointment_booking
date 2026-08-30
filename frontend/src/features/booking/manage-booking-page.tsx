@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useBookingByToken, useCancelBooking } from '@/features/booking/booking-queries'
 import { forgetBookingToken } from '@/features/booking/booking-storage'
 import { CancelDialog } from '@/features/booking/cancel-dialog'
+import { useHoldExpired } from '@/features/booking/hold-clock'
 import { HoldNotice } from '@/features/booking/hold-notice'
 import { manageUrlFor } from '@/features/booking/manage-url'
 import { formatMoney } from '@/lib/money'
@@ -63,15 +64,63 @@ export function ManageBookingPage() {
     if (loaded) forgetBookingToken()
   }, [loaded])
 
-  if (query.isPending) {
+  /**
+   * **The absence of a booking is what makes this a failure screen, not the
+   * presence of an error.**
+   *
+   * A poll that fails puts the query into `error` while it keeps the booking it
+   * already had — that is TanStack Query's whole reason for having
+   * `isRefetchError` as well as `isLoadingError`. Reading `isError` first would
+   * mean one 5xx during the ninety seconds of polling replaces a booking that is
+   * on screen and correct — its status, its times, its guest, its cancel button
+   * and the link that is the customer's only credential — with "could not be
+   * loaded". So the whole-page failures below are the ones with nothing to show,
+   * and a failed refresh is a line inside the page instead.
+   */
+  if (query.data === undefined) {
+    if (query.isError) {
+      // A 404 here is a designed screen, not a failure to log: this URL is
+      // typed, forwarded and truncated, and "we cannot find that booking" is the
+      // honest answer to all three.
+      if (isApiError(query.error, 'NOT_FOUND')) {
+        return (
+          <Container width="copy" className="py-16">
+            <h1 className="sr-only">Your booking</h1>
+            <EmptyState
+              icon={CircleSlash}
+              title="We could not find that booking"
+              description="The link may be incomplete, or it may belong to a booking that was removed. Check the link in your confirmation email — it is the full one."
+              action={
+                <Button variant="outline" asChild>
+                  <Link to="/">Go to the booking page</Link>
+                </Button>
+              }
+            />
+          </Container>
+        )
+      }
+
+      return (
+        <Container width="copy" className="py-16">
+          <h1 className="sr-only">Your booking</h1>
+          <ErrorState
+            title="Your booking could not be loaded"
+            description={describeError(query.error)}
+            requestId={requestIdOf(query.error)}
+            onRetry={() => void query.refetch()}
+          />
+        </Container>
+      )
+    }
+
     return (
       <Container width="copy" className="py-12">
         {/*
          * The page's name, for a screen reader and for anything that walks the
-         * document outline. It is `sr-only` in all three states below because
-         * what a *sighted* reader needs first is the state itself — "we could
-         * not find that booking" — and rendering both would put a generic title
-         * above a specific one saying the same thing twice.
+         * document outline. It is `sr-only` in all three states because what a
+         * *sighted* reader needs first is the state itself — "we could not find
+         * that booking" — and rendering both would put a generic title above a
+         * specific one saying the same thing twice.
          */}
         <h1 className="sr-only">Your booking</h1>
         <p role="status" className="sr-only">
@@ -84,44 +133,6 @@ export function ManageBookingPage() {
     )
   }
 
-  if (query.isError) {
-    // A 404 here is a designed screen, not a failure to log: this URL is typed,
-    // forwarded and truncated, and "we cannot find that booking" is the honest
-    // answer to all three.
-    if (isApiError(query.error, 'NOT_FOUND')) {
-      return (
-        <Container width="copy" className="py-16">
-          <h1 className="sr-only">Your booking</h1>
-          <EmptyState
-            icon={CircleSlash}
-            title="We could not find that booking"
-            description="The link may be incomplete, or it may belong to a booking that was removed. Check the link in your confirmation email — it is the full one."
-            action={
-              <Button variant="outline" asChild>
-                <Link to="/">Go to the booking page</Link>
-              </Button>
-            }
-          />
-        </Container>
-      )
-    }
-
-    return (
-      <Container width="copy" className="py-16">
-        <h1 className="sr-only">Your booking</h1>
-        <ErrorState
-          title="Your booking could not be loaded"
-          description={describeError(query.error)}
-          requestId={requestIdOf(query.error)}
-          onRetry={() => void query.refetch()}
-        />
-      </Container>
-    )
-  }
-
-  // Read after the two guards above, not before them: `UseQueryResult` narrows
-  // on the object, so `query.data` is defined here and a variable captured
-  // earlier would not be.
   return (
     <ManageBooking
       booking={query.data}
@@ -130,6 +141,10 @@ export function ManageBookingPage() {
       gaveUp={gaveUp}
       onCheckAgain={checkAgain}
       refetching={query.isFetching}
+      // Set only when there is still a booking underneath it. Rendered as one
+      // line, because the page below it is the last good answer rather than a
+      // wrong one.
+      stale={query.isError}
     />
   )
 }
@@ -182,6 +197,22 @@ const STATUS: Record<
   },
 }
 
+/**
+ * The sixth row, for a booking whose status has not caught up with its clock.
+ *
+ * `PENDING` past its `expiresAt` is a real state and not a brief one: the
+ * sweeper cancels an unpaid hold at the thirty-minute mark (backend D3), so
+ * between the deadline and that job the API still answers `PENDING` for a slot
+ * that is gone. Rendering {@link STATUS}`.PENDING` there tells a customer their
+ * slot is held directly above a notice saying it is not.
+ */
+const HOLD_EXPIRED: (typeof STATUS)[BookingStatus] = {
+  icon: CircleSlash,
+  title: 'This hold has expired',
+  body: 'The deposit was not paid in time, so the slot has gone back into the calendar. This booking will be cancelled shortly.',
+  tone: 'gone',
+}
+
 function ManageBooking({
   booking,
   checkout,
@@ -189,6 +220,7 @@ function ManageBooking({
   gaveUp,
   onCheckAgain,
   refetching,
+  stale,
 }: {
   booking: PublicBooking
   checkout: string | null
@@ -196,6 +228,7 @@ function ManageBooking({
   gaveUp: boolean
   onCheckAgain: () => void
   refetching: boolean
+  stale: boolean
 }) {
   /**
    * The **viewer's** zone, and this is the one screen in the app where that is
@@ -211,7 +244,16 @@ function ManageBooking({
    * gap in the wave notes rather than papered over.
    */
   const timeZone = viewerTimeZone()
-  const status = STATUS[booking.status]
+
+  /**
+   * Live, not read once at mount. This page is left open — it is where Stripe
+   * returns to, and where somebody sits while they go and find their card — so
+   * the deadline passes *while it is on screen* rather than before it loads.
+   */
+  const holdExpired = useHoldExpired(booking.status === 'PENDING' ? booking.expiresAt : undefined)
+  const held = booking.status === 'PENDING' && !holdExpired
+
+  const status = booking.status === 'PENDING' && holdExpired ? HOLD_EXPIRED : STATUS[booking.status]
   const Icon = status.icon
 
   const cancel = useCancelBooking(booking.cancellationToken)
@@ -232,7 +274,24 @@ function ManageBooking({
         </p>
       </div>
 
-      <CheckoutNote checkout={checkout} status={booking.status} />
+      {stale ? (
+        <p
+          role="status"
+          className="bg-muted text-muted-foreground mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm px-3 py-2 text-sm"
+        >
+          We could not check for an update just now. What is below is the last answer we had.
+          <button
+            type="button"
+            onClick={onCheckAgain}
+            disabled={refetching}
+            className="text-foreground underline underline-offset-4 disabled:no-underline"
+          >
+            {refetching ? 'Checking…' : 'Try again'}
+          </button>
+        </p>
+      ) : null}
+
+      <CheckoutNote checkout={checkout} status={booking.status} holdExpired={holdExpired} />
 
       <div className="flex items-start gap-4">
         <span
@@ -253,7 +312,9 @@ function ManageBooking({
         </div>
       </div>
 
-      {booking.status === 'PENDING' ? (
+      {/* Only while it is still a hold. Once it is not, the heading above says
+          so, and the notice would be the same sentence twice. */}
+      {held ? (
         <HoldNotice expiresAt={booking.expiresAt} timeZone={timeZone} className="mt-6" />
       ) : null}
 
@@ -285,7 +346,10 @@ function ManageBooking({
         Times shown in your own time zone ({zoneAbbreviation(timeZone)}).
       </p>
 
-      {booking.status === 'PENDING' ? (
+      {/* Nothing to pay towards a slot that has gone back into the calendar.
+          Paying here would be paying for an appointment the sweeper is about to
+          cancel. */}
+      {held ? (
         <PaymentSection
           booking={booking}
           polling={polling}
@@ -348,8 +412,20 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
  * one says nothing at all — the status heading above already tells the truth,
  * and a thank-you over it would be the worst version of this screen.
  */
-function CheckoutNote({ checkout, status }: { checkout: string | null; status: BookingStatus }) {
+function CheckoutNote({
+  checkout,
+  status,
+  holdExpired,
+}: {
+  checkout: string | null
+  status: BookingStatus
+  holdExpired: boolean
+}) {
   if (checkout !== 'success' && checkout !== 'cancelled') return null
+  // "Expired" is the case the paragraph above names and the one both sentences
+  // below would get wrong: "your slot is still held" is false, and thanking
+  // somebody for a payment that did not arrive in time is worse.
+  if (holdExpired) return null
 
   if (checkout === 'cancelled') {
     if (status !== 'PENDING') return null

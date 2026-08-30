@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { applyFieldErrors, isApiError } from '@/api/error'
 import { describeError, requestIdOf } from '@/api/error-copy'
@@ -107,16 +107,20 @@ type Booked = {
   staffName?: string
 }
 
-/** A failure, and the slot it happened on — see `visibleFailure` below. */
+/** A failure, and the choices it was about — see `visibleFailure` below. */
 type FlowFailure = {
   failure: BookingFailure
   /** `params.slot` at the moment of the attempt. `undefined` is impossible here. */
   slot: string
+  /** `params.serviceId` at the moment of the attempt. `undefined` is impossible here. */
+  serviceId: string
   unmatched: ValidationError[]
 }
 
 function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
   const { params, setParams } = useBookingParams()
+  const navigate = useNavigate()
+  const location = useLocation()
 
   /**
    * The service the URL names, **if the catalogue still has it**.
@@ -243,20 +247,38 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
         onSuccess: (created) => {
           setFailure(null)
           setBooked({ booking: created, service, staffName: staffSummary })
+          /**
+           * **A history entry of its own, so that Back leaves the confirmation
+           * instead of surviving it.**
+           *
+           * Without this the `201` changes the whole screen and nothing else:
+           * the current entry is still the details URL, so Back rewinds to the
+           * picker while "You are booked" stays on screen, and the two disagree
+           * until something else re-renders.
+           *
+           * The entry carries the same URL and a marker in history *state*
+           * rather than a new query parameter. The parameters here get pasted
+           * into messages (`booking-params.ts`), and `?booked=1` in one would be
+           * a claim this app cannot honour on another device — the booking it
+           * names lives in this component's state and nowhere in the URL.
+           * Forward returns to it, which is the affordance a customer who went
+           * back too far actually needs.
+           */
+          navigate(location.pathname + location.search, { state: { booked: true } })
         },
-        onError: (caught) => handleFailure(caught, slot),
+        onError: (caught) => handleFailure(caught, slot, service.id),
       },
     )
   }
 
-  function handleFailure(caught: unknown, slot: string) {
+  function handleFailure(caught: unknown, slot: string, serviceId: string) {
     // Field-level messages first, so that a 422 lands under the input it is
     // about rather than only in the banner. What matches nothing comes back and
     // is shown, because React Hook Form accepts `setError` on an unregistered
     // path without complaint and the message would otherwise vanish.
     const unmatched = applyFieldErrors(caught, form)
     const described = describeBookingFailure(caught, business.timezone)
-    setFailure({ failure: described, slot, unmatched })
+    setFailure({ failure: described, slot, serviceId, unmatched })
 
     if (described.recover === 'slot') {
       // Back to the picker: clear the slot, and open the week the server named
@@ -276,20 +298,35 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
    * Whether the failure still describes the situation on screen.
    *
    * It survives being sent back a step — that is the point of it — and stops the
-   * moment the customer has chosen a *different* slot, because at that point the
-   * sentence is about a decision they have already replaced. Comparing against
-   * the slot it happened on is what expresses that without a second piece of
-   * state to keep in step.
+   * moment the customer has chosen a *different* one of the things it blamed.
+   * Comparing against the choices it happened on is what expresses that without
+   * a second piece of state to keep in step.
+   *
+   * Both choices, not just the slot. `SERVICE_INACTIVE` and
+   * `STAFF_NOT_ASSIGNED` recover by clearing the service *and* the slot, so a
+   * slot-only rule can never see the recovery it asked for: the customer picks
+   * another service, `slot` is still absent, and "that service is no longer
+   * bookable" stays pinned above the staff step and the picker for a service it
+   * was never about. Absent still counts as unchanged, which is what keeps the
+   * sentence on screen for the step it sent them back to.
    */
   const visibleFailure =
-    failure && (!params.slot || params.slot === failure.slot) ? failure : undefined
+    failure &&
+    (!params.serviceId || params.serviceId === failure.serviceId) &&
+    (!params.slot || params.slot === failure.slot)
+      ? failure
+      : undefined
 
   // ------------------------------------------------------------------
   //  Rendering
   // ------------------------------------------------------------------
 
-  if (booked) {
-    const checkoutUrl = booked.booking.checkoutUrl
+  // The confirmation belongs to the entry the `201` pushed. Popped off it — Back
+  // from the confirmation — this is false again and the flow renders the step the
+  // URL names, which is the entry the customer is now standing on.
+  const onConfirmationEntry = (location.state as { booked?: boolean } | null)?.booked === true
+
+  if (booked && onConfirmationEntry) {
     return (
       <Container width="copy" className="pb-20">
         <div className="pt-8 pb-6">
@@ -302,17 +339,22 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
         </div>
 
         {/*
-         * The branch is on the response and on nothing else (F5). A `PENDING`
-         * with a `checkoutUrl` is a deposit in flight; anything else is a
-         * finished booking. `depositRequired` from the landing payload does not
-         * appear here, because it is the raw business setting and the server
-         * ANDs it with `payments.enabled()` — which is off on the deployed demo,
-         * where every one of these is `CONFIRMED`.
+         * The branch is on the response and on nothing else (F5). `PENDING` is a
+         * deposit in flight; anything else is a finished booking.
+         * `depositRequired` from the landing payload does not appear here,
+         * because it is the raw business setting and the server ANDs it with
+         * `payments.enabled()` — which is off on the deployed demo, where every
+         * one of these is `CONFIRMED`.
+         *
+         * On the status alone, and not on `status && checkoutUrl`: a missing
+         * `checkoutUrl` must not fall through to "You are booked, nothing else
+         * to do" on a booking nobody has paid for. `DepositHandoff` says the
+         * true thing without one.
          */}
-        {booked.booking.status === 'PENDING' && checkoutUrl ? (
+        {booked.booking.status === 'PENDING' ? (
           <DepositHandoff
             booking={booked.booking}
-            checkoutUrl={checkoutUrl}
+            checkoutUrl={booked.booking.checkoutUrl}
             business={business}
             service={booked.service}
             staffName={booked.staffName}
@@ -344,16 +386,23 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
         </Link>
       </div>
 
-      {resumeToken && !booked ? (
-        <div className="border-border bg-muted text-foreground mb-6 flex flex-wrap items-center justify-between gap-3 rounded-sm border px-4 py-3 text-sm">
-          <span>You already started a booking in this tab.</span>
-          <Link
-            to={`/booking/${resumeToken}`}
-            className="text-primary underline underline-offset-4"
-          >
-            Open it
-          </Link>
-        </div>
+      {/*
+       * Two ways to arrive at this form holding a booking that already exists,
+       * and the same answer to both. Either the customer pressed Back off the
+       * confirmation this tab has just shown them, or they left for Stripe and
+       * came back with the Back button (`deposit-handoff.tsx` writes the token
+       * to `sessionStorage` immediately before that hand-off). Answering either
+       * with an empty form is how one person ends up with two appointments — and
+       * in the first case the link on offer here is the credential the
+       * confirmation screen told them to keep.
+       */}
+      {booked ? (
+        <ResumeNotice
+          token={booked.booking.cancellationToken}
+          message="You have already booked this slot in this tab."
+        />
+      ) : resumeToken ? (
+        <ResumeNotice token={resumeToken} message="You already started a booking in this tab." />
       ) : null}
 
       <BookingStepper
@@ -450,6 +499,17 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
         ) : null}
       </div>
     </Container>
+  )
+}
+
+function ResumeNotice({ token, message }: { token: string; message: string }) {
+  return (
+    <div className="border-border bg-muted text-foreground mb-6 flex flex-wrap items-center justify-between gap-3 rounded-sm border px-4 py-3 text-sm">
+      <span>{message}</span>
+      <Link to={`/booking/${token}`} className="text-primary underline underline-offset-4">
+        Open it
+      </Link>
+    </div>
   )
 }
 
