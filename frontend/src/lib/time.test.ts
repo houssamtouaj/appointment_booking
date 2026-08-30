@@ -4,13 +4,19 @@ import type { Slot } from '@/types'
 import {
   addDays,
   clockOf,
-  dayKeyOf,
+  dayLengthMinutes,
+  dayStartInstant,
   daysBetween,
+  daysOfWeek,
+  dayKeyOf,
   formatDuration,
   groupSlotsByDay,
+  hourMarks,
   isDayKey,
+  minutesIntoDay,
   partOfDay,
   splitByPartOfDay,
+  weekInstants,
   weekOf,
   zoneAbbreviation,
   zoneCity,
@@ -318,5 +324,134 @@ describe('durations', () => {
     expect(formatDuration(45)).toBe('45 min')
     expect(formatDuration(60)).toBe('1 hr')
     expect(formatDuration(90)).toBe('1 hr 30 min')
+  })
+})
+
+// ---------------------------------------------------------------------------
+//  The day as a scale — what wave 6 positions bookings against
+// ---------------------------------------------------------------------------
+
+const PARIS = 'Europe/Paris'
+
+describe('where a business day begins', () => {
+  it('is midnight in the business zone, not in UTC and not in the viewer’s', () => {
+    // 1 September is CEST, so Paris midnight is 22:00 the evening before.
+    expect(dayStartInstant('2026-09-01', PARIS)).toBe('2026-08-31T22:00:00.000Z')
+    // January is CET, an hour further west.
+    expect(dayStartInstant('2026-01-15', PARIS)).toBe('2026-01-14T23:00:00.000Z')
+  })
+
+  it('turns a displayed week into the from and the exclusive to the API reads', () => {
+    // The watch-out this helper exists for: `to` is EXCLUSIVE here and
+    // inclusive on the dashboard. It is the start of the day after the week's
+    // last, so two adjacent weeks neither overlap nor leave a gap.
+    const week = weekInstants({ from: '2026-08-31', to: '2026-09-06' }, PARIS)
+
+    expect(week.from).toBe('2026-08-30T22:00:00.000Z')
+    expect(week.to).toBe('2026-09-06T22:00:00.000Z')
+
+    const next = weekInstants({ from: '2026-09-07', to: '2026-09-13' }, PARIS)
+    expect(next.from).toBe(week.to)
+  })
+
+  it('starts the day at 01:00 in a zone that moves its clocks at midnight', () => {
+    // Santiago springs forward at 00:00 on 2026-09-06, so that date has no
+    // midnight at all. The day still has to start somewhere, and it starts at
+    // the first instant that exists on it.
+    const start = dayStartInstant('2026-09-06', 'America/Santiago')
+    expect(clockOf(start, 'America/Santiago')).toBe('01:00')
+    expect(dayKeyOf(start, 'America/Santiago')).toBe('2026-09-06')
+  })
+})
+
+describe('a day that is not 24 hours long', () => {
+  it('is 23 hours when the clocks go forward', () => {
+    expect(dayLengthMinutes('2026-03-29', PARIS)).toBe(23 * 60)
+  })
+
+  it('is 25 hours when they go back', () => {
+    expect(dayLengthMinutes('2026-10-25', PARIS)).toBe(25 * 60)
+  })
+
+  it('is 24 hours on every other day of the year', () => {
+    expect(dayLengthMinutes('2026-08-31', PARIS)).toBe(24 * 60)
+    expect(dayLengthMinutes('2026-01-15', PARIS)).toBe(24 * 60)
+  })
+})
+
+describe('placing a booking on a DST-transition day', () => {
+  // The wave gate item, and the watch-out it comes from: a fixed 24 x 60
+  // assumption pushes every afternoon booking on 29 March an hour out of place,
+  // which on a calendar is somebody arriving at the wrong time.
+  it('puts a 14:00 appointment 13 hours into a 23-hour day', () => {
+    // 2026-03-29 14:00 CEST is 12:00Z. The day began at 2026-03-28T23:00Z.
+    const minutes = minutesIntoDay('2026-03-29T12:00:00Z', '2026-03-29', PARIS)
+
+    expect(minutes).toBe(13 * 60)
+    // And that is 13/23 of the way down the column, not 14/24. The two differ
+    // by 25 minutes of grid, which is a booking sitting against the wrong row.
+    expect(minutes / dayLengthMinutes('2026-03-29', PARIS)).toBeCloseTo(13 / 23, 10)
+  })
+
+  it('puts a 14:00 appointment 15 hours into a 25-hour day', () => {
+    // 2026-10-25 14:00 CET is 13:00Z; the day began at 2026-10-24T22:00Z.
+    expect(minutesIntoDay('2026-10-25T13:00:00Z', '2026-10-25', PARIS)).toBe(15 * 60)
+  })
+
+  it('separates the two 02:30s on the night the clocks go back', () => {
+    // Same wall clock, two instants, ninety minutes apart on the grid — which
+    // is the only way both can be seen and clicked.
+    const first = minutesIntoDay('2026-10-25T00:30:00Z', '2026-10-25', PARIS)
+    const second = minutesIntoDay('2026-10-25T01:30:00Z', '2026-10-25', PARIS)
+
+    expect(clockOf('2026-10-25T00:30:00Z', PARIS)).toBe('02:30')
+    expect(clockOf('2026-10-25T01:30:00Z', PARIS)).toBe('02:30')
+    expect(second - first).toBe(60)
+  })
+
+  it('signs a booking that started the day before rather than dropping it', () => {
+    expect(minutesIntoDay('2026-08-31T21:30:00Z', '2026-09-01', PARIS)).toBe(-30)
+  })
+})
+
+describe('the hour lines of a day', () => {
+  it('gives an ordinary day twenty-four, labelled 00 to 23', () => {
+    const marks = hourMarks('2026-08-31', PARIS)
+
+    expect(marks).toHaveLength(24)
+    expect(marks[0]).toEqual({ minutes: 0, label: '00:00' })
+    expect(marks[23]).toEqual({ minutes: 23 * 60, label: '23:00' })
+  })
+
+  it('skips the hour that spring-forward deletes', () => {
+    // Twenty-three rows, and no row for 02:00 — because nobody lived through it.
+    const labels = hourMarks('2026-03-29', PARIS).map((mark) => mark.label)
+
+    expect(labels).toHaveLength(23)
+    expect(labels.slice(0, 5)).toEqual(['00:00', '01:00', '03:00', '04:00', '05:00'])
+    expect(labels).not.toContain('02:00')
+  })
+
+  it('labels the repeated hour twice when the clocks go back', () => {
+    // Twenty-five rows and two of them say 02:00. That is not a bug to smooth
+    // over: an appointment in the second 02:00 belongs against the second row.
+    const labels = hourMarks('2026-10-25', PARIS).map((mark) => mark.label)
+
+    expect(labels).toHaveLength(25)
+    expect(labels.slice(0, 5)).toEqual(['00:00', '01:00', '02:00', '02:00', '03:00'])
+  })
+})
+
+describe('the seven columns of a week', () => {
+  it('walks Monday to Sunday inclusive', () => {
+    expect(daysOfWeek({ from: '2026-08-31', to: '2026-09-06' })).toEqual([
+      '2026-08-31',
+      '2026-09-01',
+      '2026-09-02',
+      '2026-09-03',
+      '2026-09-04',
+      '2026-09-05',
+      '2026-09-06',
+    ])
   })
 })

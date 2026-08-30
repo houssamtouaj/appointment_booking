@@ -1,5 +1,3 @@
-import { getTimezoneOffset } from 'date-fns-tz'
-
 import type { DayOfWeek, Slot } from '@/types'
 
 /**
@@ -134,6 +132,35 @@ function wallClockOf(instant: string | Date, timeZone: string): WallClock {
   return fields
 }
 
+/**
+ * How far ahead of UTC `timeZone` is at this instant, in milliseconds.
+ *
+ * **Not `getTimezoneOffset` from `date-fns-tz`, which is wrong near a
+ * transition.** Verified rather than suspected: for `America/Santiago` at
+ * `2026-09-06T03:00:00Z` it answers −3 hours, while `Intl` — and the tz database
+ * — put the local clock at 23:00 on the 5th, which is −4. It reports the
+ * post-transition offset for the last hours before the transition, so every
+ * instant in that window resolves an hour out. The two days a year that matters
+ * are exactly the two days this section exists for.
+ *
+ * Derived from the same formatter every other read in this file goes through,
+ * so there is one source of truth about what a zone is doing and it is the one
+ * the browser will also use to render the result. Minute precision is not a
+ * limitation: UTC offsets have always been whole minutes, so rounding the
+ * instant to the minute before subtracting is exact rather than approximate.
+ */
+function offsetAtMs(at: number, timeZone: string): number {
+  const { year, month, day, hour, minute } = wallClockOf(new Date(at), timeZone)
+  const asIfUtc = Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+  )
+  return asIfUtc - Math.floor(at / 60_000) * 60_000
+}
+
 /** The calendar day this instant falls on **in `timeZone`**. The grouping key. */
 export function dayKeyOf(instant: string | Date, timeZone: string): DayKey {
   const { year, month, day } = wallClockOf(instant, timeZone)
@@ -226,6 +253,183 @@ export function weekOf(dayKey: DayKey): DayRange {
   const sinceMonday = (weekday + 6) % 7
   const from = addDays(dayKey, -sinceMonday)
   return { from, to: addDays(from, 6) }
+}
+
+// ---------------------------------------------------------------------------
+//  A calendar day as a scale — the geometry wave 6 positions bookings against
+// ---------------------------------------------------------------------------
+
+const DAY_MS = 86_400_000
+
+/**
+ * The instant a calendar date begins **in the business's zone**.
+ *
+ * Midnight is not a fixed distance from UTC and, twice a year, is not a moment
+ * at all — so this resolves it rather than computing it. Two candidates: the
+ * wall clock read with the offset in force the day before, and with the offset
+ * in force the day after. Sampling a whole day either side is what guarantees a
+ * single transition is bracketed rather than straddled.
+ *
+ * A candidate is *valid* when reading it back in the zone gives the midnight we
+ * asked for, and the three-line decision below is the whole of DST:
+ *
+ *   - **Ordinary day** — the two candidates are the same instant and it is
+ *     valid. The common path, and it costs two offset lookups.
+ *   - **Ambiguous midnight** — a zone that falls back at 00:00 lives through
+ *     midnight twice, and both candidates are valid. The earlier one is taken:
+ *     the day begins the first time its first minute happens, and taking the
+ *     later would silently discard the hour between them.
+ *   - **No midnight at all** — Santiago springs forward at 00:00, so on one date
+ *     a year neither candidate is valid. The later is taken, which is the
+ *     transition instant itself: the day starts at 01:00 local, because that is
+ *     the first moment that exists on it.
+ *
+ * `fromZonedTime` from `date-fns-tz` is the obvious alternative and is the same
+ * trap `toZonedTime` is (see this file's header): it takes wall-clock fields as
+ * a `Date` in the **system** zone, so a viewer whose own zone has a gap at that
+ * local time hands it an instant that does not exist and gets an answer an hour
+ * out. Arithmetic on offsets never builds that intermediate `Date`, so the
+ * viewer's zone cannot participate in the answer.
+ */
+function zonedWallClockMs(dayKey: DayKey, minutesOfDay: number, timeZone: string): number {
+  const zone = usableZone(timeZone)
+  const naive = Date.parse(`${dayKey}T00:00:00Z`) + minutesOfDay * 60_000
+
+  const candidates = [
+    naive - offsetAtMs(naive - DAY_MS, zone),
+    naive - offsetAtMs(naive + DAY_MS, zone),
+  ]
+  const earlier = Math.min(...candidates)
+  const later = Math.max(...candidates)
+
+  // Reads back as the wall clock we asked for.
+  const spellsIt = (at: number) => at + offsetAtMs(at, zone) === naive
+
+  if (spellsIt(earlier)) return earlier
+  return later
+}
+
+/** Midnight, which is the case every caller but the opening hours wants. */
+function startOfDayMs(dayKey: DayKey, timeZone: string): number {
+  return zonedWallClockMs(dayKey, 0, timeZone)
+}
+
+/**
+ * A `LocalTime` from the API — `"08:30:00"` — as minutes elapsed since this
+ * calendar day began in `timeZone`.
+ *
+ * Which is what the grid's working-hours shading needs, and is not the same as
+ * `8 * 60 + 30`. On the day the clocks go forward, 08:30 is seven and a half
+ * hours into a twenty-three hour day, and shading drawn from the wall clock
+ * would sit an hour below the appointments it is meant to sit behind. Two days a
+ * year, on decoration — but the whole file exists so that "two days a year" is
+ * never an argument for getting something wrong.
+ *
+ * The opening hours are a weekly pattern with no date attached (see
+ * `schemas/public.ts`), so the date has to be supplied here; that is the one
+ * place a `LocalTime` is allowed to meet a calendar day.
+ */
+export function localTimeMinutesIntoDay(
+  dayKey: DayKey,
+  localTime: string,
+  timeZone: string,
+): number {
+  const [hours = '0', minutes = '0'] = localTime.split(':')
+  const wallMinutes = Number(hours) * 60 + Number(minutes)
+  return (zonedWallClockMs(dayKey, wallMinutes, timeZone) - startOfDayMs(dayKey, timeZone)) / 60_000
+}
+
+/** The ISO instant a business day begins at. What `GET /api/bookings?from=` wants. */
+export function dayStartInstant(dayKey: DayKey, timeZone: string): string {
+  return new Date(startOfDayMs(dayKey, timeZone)).toISOString()
+}
+
+/**
+ * One displayed week as the two instants `GET /api/bookings` reads.
+ *
+ * **`to` is exclusive**, and it is the opposite of `GET /api/dashboard/stats`,
+ * whose `from`/`to` are dates and both inclusive. Getting the two the same way
+ * round is a silently wrong week rather than an error — a day double-counted or
+ * a day missing — so both screens convert here, once, at the edge (F8), and
+ * neither builds an instant of its own.
+ *
+ * `to` is the start of the day *after* the range's last day, which is the same
+ * moment as the end of the last day and is one fewer thing to get wrong than
+ * "23:59:59.999". Two adjacent weeks asked for this way neither overlap nor
+ * leave a gap, which is what the backend's own javadoc promises.
+ */
+export function weekInstants(range: DayRange, timeZone: string): { from: string; to: string } {
+  return {
+    from: dayStartInstant(range.from, timeZone),
+    to: dayStartInstant(addDays(range.to, 1), timeZone),
+  }
+}
+
+/**
+ * How long this calendar date actually is, in minutes.
+ *
+ * 1440 on 363 days a year, 1380 and 1500 on the other two. The grid's row scale
+ * is built from this rather than from `24 * 60`, which is the difference between
+ * a DST day that renders correctly and one where every afternoon appointment is
+ * an hour out — and being an hour out on a calendar is not a cosmetic bug, it is
+ * a person turning up at the wrong time.
+ */
+export function dayLengthMinutes(dayKey: DayKey, timeZone: string): number {
+  const start = startOfDayMs(dayKey, timeZone)
+  const end = startOfDayMs(addDays(dayKey, 1), timeZone)
+  return Math.round((end - start) / 60_000)
+}
+
+/**
+ * Minutes **elapsed** since the day began — which is not the same as the wall
+ * clock, and the difference is the point.
+ *
+ * On a spring-forward day 14:00 is 13 hours into the day, and a grid whose rows
+ * are elapsed minutes puts it against a row labelled 14:00 because
+ * {@link hourMarks} labels its rows the same way. Positioning by wall clock
+ * instead would need a 24-hour scale on a 23-hour day, and the hour that does
+ * not exist would take an hour of appointments with it.
+ *
+ * Negative before the day starts and past the length after it ends: a booking
+ * can straddle midnight, and the caller clamps rather than this pretending it
+ * cannot happen.
+ */
+export function minutesIntoDay(instant: string | Date, dayKey: DayKey, timeZone: string): number {
+  const at = instant instanceof Date ? instant.getTime() : Date.parse(instant)
+  return (at - startOfDayMs(dayKey, timeZone)) / 60_000
+}
+
+/** One labelled row line: how far down it sits, and what the clock says there. */
+export type HourMark = { minutes: number; label: string }
+
+/**
+ * The hour lines of one day, walked in elapsed time and labelled from the clock.
+ *
+ * Which is why a DST day reads correctly rather than merely fitting. Walking
+ * elapsed hours through 26 October in Paris produces the labels 00, 01, 02,
+ * **02**, 03 — twenty-five rows, and the repeat is not a bug to be smoothed
+ * over: 02:30 genuinely happens twice that morning, and an appointment in the
+ * second one belongs against the second row. Through 29 March it produces 00,
+ * 01, 03, 04 — twenty-three rows, and no row for an hour nobody lived through.
+ */
+export function hourMarks(dayKey: DayKey, timeZone: string): HourMark[] {
+  const start = startOfDayMs(dayKey, timeZone)
+  const length = dayLengthMinutes(dayKey, timeZone)
+  const marks: HourMark[] = []
+
+  for (let minutes = 0; minutes < length; minutes += 60) {
+    marks.push({ minutes, label: clockOf(new Date(start + minutes * 60_000), timeZone) })
+  }
+  return marks
+}
+
+/** The seven days of a week, as `DayKey`s. The columns of the week grid. */
+export function daysOfWeek(range: DayRange): DayKey[] {
+  const days: DayKey[] = []
+  for (let offset = 0; offset <= daysBetween(range.from, range.to); offset += 1) {
+    days.push(addDays(range.from, offset))
+  }
+  return days
 }
 
 // ---------------------------------------------------------------------------
@@ -399,7 +603,12 @@ export function viewerTimeZone(): string {
 export function zonesAgree(a: string, b: string, at: Date = new Date()): boolean {
   const left = usableZone(a)
   const right = usableZone(b)
-  return left === right || getTimezoneOffset(left, at) === getTimezoneOffset(right, at)
+  // Through {@link offsetAtMs} rather than `date-fns-tz`, which answers the
+  // post-transition offset for the hours before a transition — see that
+  // function. Wave 3 used the library version and was right except within a
+  // couple of hours of a shift, where the banner it drives would claim two
+  // zones agreed when they did not.
+  return left === right || offsetAtMs(at.getTime(), left) === offsetAtMs(at.getTime(), right)
 }
 
 /**
