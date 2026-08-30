@@ -55,7 +55,16 @@ export function RequireAuth() {
  */
 export function RequireOwner() {
   const { user } = useAuth()
-  const denied = user !== null && user.role !== 'OWNER'
+
+  // Fail closed. `RequireAuth` above means a null user here should be
+  // unreachable, and "should be unreachable" is not a thing to render an
+  // owner-only screen on the strength of: `user?.role !== 'OWNER'` refuses the
+  // no-session case as well, so a future `setUser(null)` that does not land in
+  // the same batch as its `setStatus` cannot flash `/settings` at somebody.
+  const denied = user?.role !== 'OWNER'
+  // ...but only a *staff* member has something to be told. There is no message
+  // that is true when the session itself is gone.
+  const explain = user !== null && denied
 
   // In an effect and not in the render body: a toast is a side effect on a store
   // outside React, and firing one during render is a state update in another
@@ -68,12 +77,12 @@ export function RequireOwner() {
   // theorised. A fixed id also collapses the honest repeat: three owner-only
   // URLs in a row is one sentence worth saying, not three.
   useEffect(() => {
-    if (denied) {
+    if (explain) {
       toast.error('That page is for owners. Your account has staff access.', {
         id: 'owner-only',
       })
     }
-  }, [denied])
+  }, [explain])
 
   if (denied) return <Navigate to="/dashboard" replace />
 

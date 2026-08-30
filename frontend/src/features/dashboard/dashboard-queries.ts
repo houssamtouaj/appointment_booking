@@ -42,10 +42,17 @@ export function useDashboardWeek(timeZone: string): DashboardWeek {
   const [params, setParams] = useSearchParams()
   const requested = params.get(WEEK_PARAM)
 
-  // `todayIn` reads the clock, so it is memoised on the zone rather than
-  // recomputed per render — not for speed, but so that `current` is a stable
-  // reference and cannot change identity underneath the query key.
-  const current = useMemo(() => weekOf(todayIn(timeZone)), [timeZone])
+  // Memoised on the *day*, not on the zone. `todayIn` reads the clock, and
+  // memoising on the zone alone freezes "today" at mount — which is wrong on
+  // precisely the screen this hook is for, the one an owner leaves open all
+  // morning: come Monday the "This week" button would walk them back into last
+  // week and the picker would insist they were already in it. Keying on the
+  // day key keeps `current` a stable reference for as long as it is still
+  // today, which is all the query key needs, and lets it move when the date
+  // does. `todayIn` is a lookup in a cached formatter, so asking every render
+  // costs nothing.
+  const today = todayIn(timeZone)
+  const current = useMemo(() => weekOf(today), [today])
 
   const range = useMemo(
     () => (requested && isDayKey(requested) ? weekOf(requested) : current),

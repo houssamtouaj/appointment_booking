@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
@@ -215,6 +215,24 @@ describe('the shell', () => {
     // Derived from the route rather than closed in an effect, so this also holds
     // for a redirect and for the back button.
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('leaves the drawer shut when the route comes back to where it was opened', async () => {
+    const user = userEvent.setup()
+    const router = await renderShell(OWNER)
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    // Not a tap on a nav row — a history move with the drawer still standing,
+    // which is what the back button does to it on a phone.
+    await act(() => router.navigate('/calendar'))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    // Coming back must not bring the sheet with it. "Still on the page it was
+    // opened on" reads correctly and re-opens a drawer nobody asked for.
+    await act(() => router.navigate('/dashboard'))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('shows no admin chrome to somebody on their way to the login screen', async () => {

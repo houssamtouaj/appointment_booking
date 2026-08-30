@@ -23,11 +23,28 @@ import { extendTailwindMerge } from 'tailwind-merge'
  * Declaring the scale here fixes it once for every caller. Anything added to the
  * `--text-*` block in `theme.css` whose suffix is not a t-shirt size has to be
  * added below in the same commit.
+ *
+ * **The same guess is made for every other t-shirt scale**, so the rest of the
+ * theme's role-named tokens are declared here too:
+ *
+ * - `shadow-e1|e2|e3` fails exactly the way `text-display-md` did — `e2` is not
+ *   a t-shirt size, so it is filed as a shadow *colour* and
+ *   `cn('shadow-e2 shadow-primary')` returns `shadow-primary` alone, dropping
+ *   the elevation with nothing reporting it. Latent only because the two
+ *   callers today pass plain strings, which is precisely the state the display
+ *   sizes were in until a component needed a conditional one.
+ * - `tracking-display|eyebrow` and `max-w-copy` fail the other way: no group at
+ *   all, so `cn` keeps both sides of a conflict and the CSS source order
+ *   decides rather than the last class, which is not what this function
+ *   promises.
  */
 const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {
       'font-size': [{ text: ['display-sm', 'display-md', 'display-lg'] }],
+      shadow: [{ shadow: ['e1', 'e2', 'e3'] }],
+      tracking: [{ tracking: ['display', 'eyebrow'] }],
+      'max-w': [{ 'max-w': ['copy'] }],
     },
   },
 })

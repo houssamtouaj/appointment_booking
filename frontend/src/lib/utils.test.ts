@@ -37,4 +37,21 @@ describe('cn', () => {
   it('still lets one colour win over another', () => {
     expect(cn('text-muted-foreground text-foreground')).toBe('text-foreground')
   })
+
+  it('keeps an elevation alongside a shadow colour', () => {
+    // `e2` is not a t-shirt size either, so out of the box this is filed as a
+    // shadow *colour* and deleted by the real one beside it — the identical
+    // failure the display sizes had, one property along.
+    expect(cn('shadow-e2 shadow-primary')).toContain('shadow-e2')
+    expect(cn('shadow-md shadow-e2')).toBe('shadow-e2')
+  })
+
+  it.each([
+    ['tracking-wide tracking-display', 'tracking-display'],
+    ['max-w-md max-w-copy', 'max-w-copy'],
+  ])('resolves %s rather than emitting both', (input, expected) => {
+    // These fail the other way round: no group at all, so both survive and the
+    // stylesheet's order decides instead of the last class.
+    expect(cn(input)).toBe(expected)
+  })
 })

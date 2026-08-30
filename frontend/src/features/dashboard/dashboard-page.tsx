@@ -64,10 +64,17 @@ function Dashboard({ user }: { user: MeResponse }) {
         actions={<WeekPicker week={week} />}
       />
 
-      {stats.error ? (
+      {stats.error && stats.data === undefined ? (
         // One error, not two. `upcoming` arrives inside this same response, so a
         // failure here is a failure of both surfaces and saying so twice would
         // just be the same sentence in two boxes.
+        //
+        // `data === undefined` and not `stats.error` alone: a query keeps its
+        // last response when a later fetch fails, and this screen refetches on
+        // window focus and on reconnect. Without the guard, an owner who leaves
+        // the dashboard open all morning has the whole thing replaced by an
+        // error box the first time a focus refetch times out — over figures
+        // that are on screen, correct, and stamped with the week they are for.
         <ErrorState
           title="This week’s figures could not be loaded"
           description={describeError(stats.error)}

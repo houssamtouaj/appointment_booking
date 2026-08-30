@@ -52,13 +52,11 @@ export function AdminLayout() {
               Slotflow
             </Link>
 
-            <p className="text-muted-foreground hidden min-w-0 truncate text-sm lg:block">
-              {user ? (
-                user.business.name
-              ) : (
-                <Skeleton className="inline-block h-3.5 w-32 align-middle" />
-              )}
-            </p>
+            {/* A div, not a <p>: the loading state puts a Skeleton — itself a
+                div — in this slot, and a <p> may not contain one. */}
+            <div className="text-muted-foreground hidden min-w-0 truncate text-sm lg:block">
+              {user ? user.business.name : <Skeleton className="h-3.5 w-32" />}
+            </div>
 
             <div className="ml-auto flex items-center gap-1">
               {user ? <AccountMenu user={user} /> : <Skeleton className="size-7 rounded-full" />}
@@ -115,24 +113,34 @@ function Sidebar({ user }: { user: MeResponse | null }) {
 /**
  * The drawer, at the same width as the rail it replaces.
  *
- * **Open is derived from the route, not synchronised to it.** The obvious
- * version keeps a boolean and closes it in an effect on `location.pathname`,
- * which is a `setState` inside an effect — a cascading render, and the thing
- * `react-hooks/set-state-in-effect` is right to refuse. Storing *where* it was
- * opened instead makes "still on that page" the whole definition of open, so
- * every navigation closes it for free: a link, a redirect, and the back button,
+ * **Closed by the navigation itself, not by an effect watching for one.** The
+ * obvious version closes it in an effect on the location, which is a `setState`
+ * inside an effect — a cascading render, and the thing
+ * `react-hooks/set-state-in-effect` is right to refuse. Adjusting the state
+ * during render instead is the sanctioned form, and it closes the drawer for
+ * every kind of navigation for free: a link, a redirect, and the back button,
  * which the effect version handles only by accident.
  *
- * `onNavigate` is still passed down, and covers the one case the derivation
- * cannot: tapping the row for the page you are already on, where the pathname
- * does not change and a drawer left standing would look broken.
+ * It keys on `location.key` and not on the pathname, because a pathname is not
+ * unique to a moment in history. Deriving `open` as "still on the page it was
+ * opened on" reads correctly and re-opens the drawer by itself the next time
+ * that path comes back — dismiss it with the Android back button on
+ * `/dashboard`, then return to `/dashboard`, and a sheet nobody asked for
+ * slides in. A history entry is visited once, so it cannot do that.
+ *
+ * `onNavigate` is still passed down, and covers the one case this cannot:
+ * tapping the row for the page you are already on, where React Router pushes
+ * nothing and a drawer left standing would look broken.
  */
 function MobileNav({ user }: { user: MeResponse }) {
   const location = useLocation()
-  const [openedAt, setOpenedAt] = useState<string | null>(null)
-  const open = openedAt === location.pathname
+  const [open, setOpen] = useState(false)
+  const [entry, setEntry] = useState(location.key)
 
-  const setOpen = (next: boolean) => setOpenedAt(next ? location.pathname : null)
+  if (entry !== location.key) {
+    setEntry(location.key)
+    if (open) setOpen(false)
+  }
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>

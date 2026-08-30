@@ -43,7 +43,17 @@ export type Lookups = {
    * list lands as a flash of ids.
    */
   isLoading: boolean
-  /** The first failure of either, for the surface that cannot resolve names without it. */
+  /**
+   * The first failure of either, **and only while it leaves the surface unable
+   * to resolve names**.
+   *
+   * A query that has answered once keeps its rows when a later fetch fails, so
+   * `useQuery().error` outlives the data being useful: a refetch on reconnect
+   * that times out would otherwise replace a list of correctly-named bookings
+   * with an error box, over names that are still in the cache and still right.
+   * Reporting nothing in that case is what makes this "the surface cannot
+   * render" rather than "something went wrong somewhere".
+   */
   error: unknown
 }
 
@@ -63,11 +73,13 @@ export function useLookups(): Lookups {
   const serviceById = useMemo(() => byId(services.data), [services.data])
   const staffById = useMemo(() => byId(staff.data), [staff.data])
 
+  const resolved = services.data !== undefined && staff.data !== undefined
+
   return {
     serviceById,
     staffById,
     isLoading: services.isPending || staff.isPending,
-    error: services.error ?? staff.error,
+    error: resolved ? null : (services.error ?? staff.error),
   }
 }
 
