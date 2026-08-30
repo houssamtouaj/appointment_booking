@@ -115,13 +115,14 @@ const adapter: AxiosAdapter = (config) => {
 function renderAt(path: string) {
   client.defaults.adapter = adapter
   const router = createMemoryRouter(routes, { initialEntries: [path] })
-  return render(
+  const view = render(
     <QueryClientProvider client={createQueryClient()}>
       <AuthProvider>
         <RouterProvider router={router} />
       </AuthProvider>
     </QueryClientProvider>,
   )
+  return { ...view, router }
 }
 
 beforeEach(() => {
@@ -310,6 +311,121 @@ describe('polling for a webhook that has not landed', () => {
     const once = reads
     await tick(60_000)
     expect(reads).toBe(once)
+  })
+})
+
+describe('a hold that has run out', () => {
+  async function tick(ms: number) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms)
+    })
+  }
+
+  const expired = { expiresAt: new Date(Date.now() - 60_000).toISOString().replace(/\.\d+Z$/, 'Z') }
+
+  it('does not claim the slot is still held, or offer a way to pay for it', async () => {
+    // `PENDING` past its deadline is a real state: the sweeper cancels an unpaid
+    // hold at the thirty-minute mark, so until it runs the API still answers
+    // PENDING for a slot that has gone back into the calendar.
+    get = () => pending(expired)
+    renderAt(`/booking/${TOKEN}?checkout=cancelled`)
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /this hold has expired/i }),
+    ).toBeVisible()
+    expect(screen.queryByText(/still held/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/nobody else can take it/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /pay the deposit/i })).not.toBeInTheDocument()
+  })
+
+  it('says so while the page is open, not only on the load after it', async () => {
+    vi.useFakeTimers()
+    // Read once: the page polls, and a deadline recomputed on every answer is a
+    // deadline that never arrives.
+    const deadline = new Date(Date.now() + 5_000).toISOString().replace(/\.\d+Z$/, 'Z')
+    get = () => pending({ expiresAt: deadline })
+    renderAt(`/booking/${TOKEN}`)
+
+    await tick(0)
+    expect(screen.getByRole('link', { name: /pay the deposit/i })).toBeVisible()
+
+    // This is the page somebody leaves open while they go and find their card.
+    await tick(6_000)
+    expect(screen.getByRole('heading', { level: 1, name: /this hold has expired/i })).toBeVisible()
+    expect(screen.queryByRole('link', { name: /pay the deposit/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('a refresh that fails', () => {
+  async function tick(ms: number) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms)
+    })
+  }
+
+  it('keeps the booking on screen rather than replacing it with an error', async () => {
+    vi.useFakeTimers()
+    let broken = false
+    // A 429 rather than a 5xx so the failure is the query's answer immediately:
+    // `createQueryClient` retries a 5xx twice, and this test is about what the
+    // page does with the error, not about when it arrives.
+    get = (config) => (broken ? problem(429, 'RATE_LIMITED')(config) : pending())
+    renderAt(`/booking/${TOKEN}`)
+
+    await tick(0)
+    expect(
+      screen.getByRole('heading', { level: 1, name: /waiting for your deposit/i }),
+    ).toBeVisible()
+
+    broken = true
+    await tick(4_000)
+
+    // The booking is still the answer this page has. Replacing all of it —
+    // status, times, guest, cancel button, and the link that is the customer's
+    // only credential — because one poll failed is a page that loses everything
+    // to a blip.
+    expect(
+      screen.getByRole('heading', { level: 1, name: /waiting for your deposit/i }),
+    ).toBeVisible()
+    expect(screen.queryByText(/could not be loaded/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/could not check for an update/i)).toBeVisible()
+  })
+})
+
+describe('a second booking in the same tab', () => {
+  async function tick(ms: number) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms)
+    })
+  }
+
+  const OTHER = 'd1e2f3a4-5555-4666-8777-888899990000'
+
+  it('gets its own ninety seconds, not what is left of the first booking’s', async () => {
+    vi.useFakeTimers()
+    get = () => pending()
+    const { router } = renderAt(`/booking/${TOKEN}`)
+
+    await tick(0)
+    await tick(95_000)
+    expect(screen.getByRole('button', { name: /check again/i })).toBeVisible()
+
+    // The manage page is one route element, so this re-renders the hook rather
+    // than remounting it. Without a reset the second booking arrives with the
+    // first one's window already closed: no polling at all for a payment a
+    // webhook may confirm a second later.
+    get = () => pending({ cancellationToken: OTHER })
+    await act(async () => {
+      await router.navigate(`/booking/${OTHER}`)
+    })
+    await tick(0)
+
+    expect(screen.queryByRole('button', { name: /check again/i })).toBeNull()
+    expect(screen.getByText(/checking for your payment/i)).toBeVisible()
+
+    const afterArriving = reads
+    await tick(6_000)
+    expect(reads).toBeGreaterThan(afterArriving)
   })
 })
 

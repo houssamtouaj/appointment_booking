@@ -184,7 +184,15 @@ test('a stranger books a slot, is confirmed, and cancels it again', async ({ pag
 
   // The start reached the URL exactly as the API sent it — no reformatting, no
   // rebuilding from a wall clock.
-  expect(new URL(page.url()).searchParams.get('slot')).toBe(target.start)
+  //
+  // Polled, like the week navigation above and for the same reason: the URL
+  // change is a React state update, and a plain `expect` on `page.url()` reads
+  // whatever the driver has a moment after the click rather than waiting for it.
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('slot'), {
+      message: 'the chosen slot did not reach the URL',
+    })
+    .toBe(target.start)
 
   // ---------------------------------------------------------------------
   //  Details, and the write

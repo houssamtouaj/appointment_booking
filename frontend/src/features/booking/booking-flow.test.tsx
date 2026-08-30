@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
@@ -683,6 +683,51 @@ describe('a booking that works', () => {
     expect(screen.getByRole('button', { name: /Continue to secure checkout/ })).toBeVisible()
   })
 
+  it('never says "you are booked" about a PENDING booking with nowhere to pay', async () => {
+    const user = userEvent.setup()
+    // The branch that should not happen — the API rolls a booking back when it
+    // cannot open a Checkout session — and the one where getting it wrong is
+    // worst: an unpaid hold rendered as a finished appointment.
+    handlers.booking = () => ({
+      ...confirmedBooking(slot.start),
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString().replace(/\.\d+Z$/, 'Z'),
+    })
+    renderAt(detailsPath)
+    await book(user)
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'One more step: the deposit' }),
+    ).toBeVisible()
+    expect(screen.queryByText(/nothing else to do/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /open your booking/i })).toHaveAttribute(
+      'href',
+      `/booking/${TOKEN}`,
+    )
+  })
+
+  it('leaves the confirmation when the customer goes back, and keeps the link', async () => {
+    const user = userEvent.setup()
+    handlers.booking = () => confirmedBooking(slot.start)
+    const router = renderAt(detailsPath)
+    await book(user)
+    await screen.findByRole('heading', { level: 1, name: 'You are booked' })
+
+    await act(async () => {
+      await router.navigate(-1)
+    })
+
+    // The URL is the details step's again, so the screen has to be too —
+    // otherwise Back changes one and not the other.
+    expect(screen.queryByRole('heading', { level: 1, name: 'You are booked' })).toBeNull()
+    // And the credential the confirmation told them to keep is still one click
+    // away rather than gone with the screen.
+    expect(screen.getByRole('link', { name: 'Open it' })).toHaveAttribute(
+      'href',
+      `/booking/${TOKEN}`,
+    )
+  })
+
   it('never renders a countdown for a booking with no expiresAt', async () => {
     const user = userEvent.setup()
     handlers.booking = () => confirmedBooking(slot.start)
@@ -770,7 +815,29 @@ describe('the ways a booking does not work', () => {
     await waitFor(() =>
       expect(new URLSearchParams(router.state.location.search).has('service')).toBe(false),
     )
-    expect(screen.getByRole('heading', { level: 1, name: 'What are you booking?' })).toBeVisible()
+    // Awaited rather than read synchronously off the line above: the router's
+    // own state is updated before React has committed the render that follows
+    // it, so a plain `getBy` here asserts against the step the customer has
+    // just left whenever the machine is busy enough.
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'What are you booking?' }),
+    ).toBeVisible()
+  })
+
+  it('drops the SERVICE_INACTIVE banner once another service is chosen', async () => {
+    const user = userEvent.setup()
+    handlers.booking = problemWith(422, 'SERVICE_INACTIVE')
+    renderAt(detailsPath)
+    await attempt(user)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('That service is no longer bookable')
+    // The recovery this failure asked for. It cleared the slot as well as the
+    // service, so a rule that watched only the slot would never see it happen —
+    // and the sentence would stay pinned above the steps of a service it was
+    // never about.
+    await user.click(await screen.findByRole('link', { name: new RegExp(COUPE.name) }))
+
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
   })
 
   it('429 keeps the customer where they are, with real copy', async () => {
