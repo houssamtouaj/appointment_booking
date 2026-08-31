@@ -134,10 +134,15 @@ export function BookableChip({
               </ul>
             </>
           ) : (
-            // No active colleague left to offer. The fix is on the other screen,
-            // and an empty list with no explanation would read as a broken menu.
+            // No active colleague left to offer, and there is only one way that
+            // happens here: this branch renders when the service is live and the
+            // server says `bookable: false`, which means no *active* colleague is
+            // assigned to it — so an empty candidate list is the whole active
+            // team being empty, never "they are all already on it". The fix is on
+            // the other screen, and an empty list with no explanation would read
+            // as a broken menu.
             <p className="text-muted-foreground mt-4 text-xs">
-              Everyone active is already assigned to it.{' '}
+              Nobody on your team is active, so there is no one to assign.{' '}
               <Link to="/team" className="text-primary underline underline-offset-4">
                 Reactivate a colleague
               </Link>{' '}

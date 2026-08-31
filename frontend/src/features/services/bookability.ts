@@ -81,15 +81,20 @@ function unbookableReason(service: Service, lookups: Lookups): string {
   }
 
   const assigned = performersOf(service, lookups)
-  // The lookups have not answered yet, or answered without somebody this service
-  // names. Neither is a state to invent a cause from, so this says what is
-  // certainly true and no more.
-  if (assigned.length === 0) {
+  const departed = assigned.filter((person) => !person.active)
+
+  // Anything short of "every id resolved, and every one of them is deactivated"
+  // is not a cause this can name. The lookups have not answered yet, or answered
+  // without somebody this service names, or still show an assignee as active —
+  // and naming a person as departed on a stale cache prints a sentence about a
+  // colleague that is simply untrue. So this says what is certainly true and no
+  // more.
+  if (assigned.length !== service.staffIds.length || departed.length !== assigned.length) {
     return 'It offers no times on your booking page. Assign a colleague who is still active.'
   }
 
-  const names = assigned.map((person) => person.fullName).join(', ')
-  return assigned.length === 1
+  const names = departed.map((person) => person.fullName).join(', ')
+  return departed.length === 1
     ? `${names} is the only person assigned to it, and they have been deactivated.`
     : `Everyone assigned to it has been deactivated: ${names}.`
 }

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { TriangleAlert } from 'lucide-react'
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 
@@ -119,6 +119,26 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
    * service is always created active, so creating counts.
    */
   const wouldBeSilentlyUnbookable = staffIds.length === 0 && (!editing || service.active)
+  const showStaffWarning = warnedAboutStaff && wouldBeSilentlyUnbookable
+
+  /**
+   * Bring the panel into view when it appears.
+   *
+   * The Save button lives in the dialog's footer and the panel is at the bottom
+   * of a body that scrolls independently of it, so on a phone — or on any
+   * viewport shorter than eight fields — the first press would set this state
+   * and change nothing the person can see. A submit button that appears to do
+   * nothing is the one outcome this warning must not have.
+   *
+   * Optional-called because jsdom has no layout engine and does not implement
+   * `scrollIntoView`; there is nothing for it to do under test, and nothing here
+   * that should fail because of that.
+   */
+  const staffWarning = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!showStaffWarning) return
+    staffWarning.current?.scrollIntoView?.({ block: 'nearest' })
+  }, [showStaffWarning])
 
   function save(formValues: ServiceFormValues, options?: { acceptNoStaff?: boolean }) {
     if (wouldBeSilentlyUnbookable && !options?.acceptNoStaff) {
@@ -350,8 +370,9 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
           }
         />
 
-        {warnedAboutStaff && wouldBeSilentlyUnbookable ? (
+        {showStaffWarning ? (
           <div
+            ref={staffWarning}
             role="alert"
             className="border-warning/50 bg-warning-wash text-foreground rounded-sm border px-3 py-3 text-sm"
           >
