@@ -189,7 +189,7 @@ function acrossDays(
     // Compared as clock-of-day rather than as instants: the appointments being
     // compared are on different dates, so the raw difference is dominated by how
     // many days apart they are and every walk would land on index 0.
-    const distance = Math.abs(minutesOfDay(Date.parse(booking.startsAt)) - minutesOfDay(at))
+    const distance = clockDistance(minutesOfDay(Date.parse(booking.startsAt)), minutesOfDay(at))
     if (distance < best) {
       best = distance
       nearest = index
@@ -208,4 +208,22 @@ const DAY_MS = 86_400_000
  */
 function minutesOfDay(at: number): number {
   return (((at % DAY_MS) + DAY_MS) % DAY_MS) / 60_000
+}
+
+const MINUTES_PER_DAY = 1440
+
+/**
+ * How far apart two clock readings are, **around the dial**.
+ *
+ * The wrap is not a nicety. The dial these are read off is UTC's, not the
+ * business's, so in any zone west of Greenwich the working afternoon straddles
+ * UTC midnight — in `America/Los_Angeles` a 15:00 appointment is 1380 and a
+ * 16:00 one is 0. A plain subtraction calls those two 23 hours apart, so
+ * stepping sideways off a 15:00 booking would skip the 16:00 one beside it and
+ * land on the morning instead. Measuring the short way round makes the answer
+ * independent of where the dial happens to start.
+ */
+function clockDistance(a: number, b: number): number {
+  const apart = Math.abs(a - b)
+  return Math.min(apart, MINUTES_PER_DAY - apart)
 }

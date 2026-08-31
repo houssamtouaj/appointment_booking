@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -25,15 +26,22 @@ const VIEW_LABEL: Record<CalendarView, string> = {
 
 type ToolbarProps = {
   params: CalendarParams
+  /**
+   * The view actually on screen, which is **not** always `params.view`: below
+   * 768px a chosen week is drawn as a day. The arrows have to step whatever is
+   * being looked at, or a phone gets a "Next week" button above a single day's
+   * columns.
+   */
+  view: CalendarView
   lookups: Lookups
   /** True while the viewport is too narrow for seven columns — the week button says so. */
   weekUnavailable: boolean
 }
 
-export function CalendarToolbar({ params, lookups, weekUnavailable }: ToolbarProps) {
+export function CalendarToolbar({ params, view, lookups, weekUnavailable }: ToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <StepControl params={params} />
+      <StepControl params={params} view={view} />
       {params.isCurrentWeek ? null : (
         <Button variant="outline" size="sm" onClick={() => params.setDate(params.currentWeek.from)}>
           Today
@@ -54,8 +62,10 @@ export function CalendarToolbar({ params, lookups, weekUnavailable }: ToolbarPro
  * screen that says which dates these appointments are, and it sets in the mono
  * face so the digits do not jump as the week changes underneath them.
  */
-function StepControl({ params }: { params: CalendarParams }) {
-  const byDay = params.view === 'day'
+function StepControl({ params, view }: { params: CalendarParams; view: CalendarView }) {
+  // The *effective* view, not the chosen one. A phone showing the day grid under
+  // a URL that still says `view=week` must still step by a day.
+  const byDay = view === 'day'
   const step = (direction: number) =>
     params.setDate(
       byDay
@@ -97,8 +107,14 @@ function StepControl({ params }: { params: CalendarParams }) {
  * Week / Day / List — one screen, three presentations, not three routes.
  *
  * A radio group rather than three buttons or a `<select>`: these are mutually
- * exclusive views of one thing, which is what `radiogroup` means, and it gets
- * arrow-key navigation from the platform for free.
+ * exclusive views of one thing, which is what `radiogroup` means.
+ *
+ * **The keyboard model is written here rather than inherited.** Native `<input
+ * type="radio">`s get roving focus and arrow-key selection from the platform;
+ * the ARIA *role* on a `<button>` gets none of it, and a radiogroup where the
+ * arrows do nothing and every option is its own tab stop is a role that promises
+ * behaviour it does not have. So: one tab stop on the checked option, arrows
+ * move and select, disabled options are stepped over.
  *
  * **The week option disables itself below 768px** rather than disappearing. A
  * control that vanishes at a breakpoint leaves a person who was using it
@@ -113,8 +129,26 @@ function ViewSwitch({
   params: CalendarParams
   weekUnavailable: boolean
 }) {
+  const group = useRef<HTMLDivElement>(null)
+  const available = VIEWS.filter((view) => !(view === 'week' && weekUnavailable))
+  // The single tab stop. The checked option normally, but a week chosen on a
+  // laptop and reopened on a phone is checked *and* disabled — and a group whose
+  // only tab stop is disabled drops out of the tab order entirely.
+  const stop = available.includes(params.view) ? params.view : available[0]
+
+  function move(from: CalendarView, step: number) {
+    if (available.length === 0) return
+    const at = available.indexOf(from)
+    const next = available[(at + step + available.length) % available.length]
+    if (!next || next === from) return
+
+    params.setView(next)
+    group.current?.querySelector<HTMLButtonElement>(`[data-view="${next}"]`)?.focus()
+  }
+
   return (
     <div
+      ref={group}
       role="radiogroup"
       aria-label="Calendar view"
       className="border-border bg-card flex items-center rounded-sm border p-0.5"
@@ -128,10 +162,23 @@ function ViewSwitch({
             key={view}
             type="button"
             role="radio"
+            data-view={view}
             aria-checked={selected}
             disabled={disabled}
+            tabIndex={view === stop ? 0 : -1}
             title={disabled ? 'The week grid needs a wider screen' : undefined}
             onClick={() => params.setView(view)}
+            onKeyDown={(event) => {
+              const step =
+                event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                  ? 1
+                  : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                    ? -1
+                    : 0
+              if (step === 0) return
+              event.preventDefault()
+              move(view, step)
+            }}
             className={cn(
               'rounded-xs px-3 py-1 text-xs font-medium transition-colors',
               selected

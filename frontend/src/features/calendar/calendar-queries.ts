@@ -89,6 +89,7 @@ export function useBookingList(
   filters: CalendarFilters,
   page: number,
   size: number,
+  options?: { enabled?: boolean },
 ) {
   const query = { ...queryFor(week, timeZone, filters), page, size }
 
@@ -96,6 +97,10 @@ export function useBookingList(
     queryKey: bookingKeys.list(query),
     queryFn: ({ signal }) => fetchBookingPage(query, signal),
     refetchOnWindowFocus: true,
+    // Guarded from the other side too. Only one of the three views is ever on
+    // screen, and without this a week grid also fetches a page of list rows
+    // nothing will render — a second request per week paged through.
+    enabled: options?.enabled !== false,
   })
 }
 

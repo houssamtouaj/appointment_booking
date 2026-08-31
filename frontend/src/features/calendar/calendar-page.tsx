@@ -80,7 +80,9 @@ function Calendar({ user }: { user: MeResponse }) {
   // ever in flight. `enabled` is what keeps a week of 100 bookings from being
   // fetched behind a list that only wants 25 of them.
   const week = useWeekBookings(params.week, timeZone, filters, { enabled: view !== 'list' })
-  const list = useBookingList(params.week, timeZone, filters, params.page, LIST_PAGE_SIZE)
+  const list = useBookingList(params.week, timeZone, filters, params.page, LIST_PAGE_SIZE, {
+    enabled: view === 'list',
+  })
 
   const nearest = useNearestWeekSearch(params.week, timeZone, filters, params.setDate)
 
@@ -95,7 +97,12 @@ function Calendar({ user }: { user: MeResponse }) {
   // The names are as much a dependency of a legible grid as the rows are: a
   // tile that renders an id for a moment and then swaps it for a name is a
   // flash of the database at a person.
-  const filling = week.isPending || lookups.isLoading
+  //
+  // Whichever of the two reads this view is actually on: the other one is
+  // disabled, and a disabled query is permanently `pending`.
+  const filling = (view === 'list' ? list.isPending : week.isPending) || lookups.isLoading
+  /** The rows this view is drawing, whichever query they came from. */
+  const rows = view === 'list' ? list.data?.content : bookings
   // The day view is a filter over the week, not a second fetch — so whether this
   // particular day is empty is already known here, without asking anything.
   const hasBookingsOnDate = (bookings ?? []).some(
@@ -103,6 +110,17 @@ function Calendar({ user }: { user: MeResponse }) {
   )
   const failure = view === 'list' ? list.error : week.error
   const stillHasData = view === 'list' ? list.data !== undefined : bookings !== undefined
+  /**
+   * Nothing to show, in any of the three views.
+   *
+   * The list gets the empty state too, and it is the one that most needs it: an
+   * `<ol>` with no `<li>`s in it renders as a bordered strip of nothing, which
+   * is indistinguishable from a list that failed to load. Page 2 of a list is
+   * excluded — an empty page past the end is "you have gone too far", which the
+   * pager already says with a Previous button, not "nothing is booked".
+   */
+  const emptyResult =
+    rows !== undefined && rows.length === 0 && !filling && (view !== 'list' || params.page === 0)
 
   return (
     <Container className="pb-12">
@@ -111,7 +129,12 @@ function Calendar({ user }: { user: MeResponse }) {
         title="Calendar"
         description={`Every appointment at ${user.business.name}, in ${zoneCity(timeZone)} time.`}
         actions={
-          <CalendarToolbar params={params} lookups={lookups} weekUnavailable={!wideEnough} />
+          <CalendarToolbar
+            params={params}
+            view={view}
+            lookups={lookups}
+            weekUnavailable={!wideEnough}
+          />
         }
       />
 
@@ -145,6 +168,15 @@ function Calendar({ user }: { user: MeResponse }) {
               : () => void (view === 'list' ? list.refetch() : week.refetch())
           }
         />
+      ) : emptyResult ? (
+        <EmptyWeek
+          filtered={Boolean(params.staffId || params.status)}
+          onClearFilters={() => params.setFilters({})}
+          onFindNearest={() => nearest.mutate()}
+          searching={nearest.isPending}
+          searchedAndFoundNothing={nearest.isSuccess && nearest.data === null}
+          slug={user.business.slug}
+        />
       ) : view === 'list' ? (
         <BookingList
           page={list.data}
@@ -154,15 +186,6 @@ function Calendar({ user }: { user: MeResponse }) {
           onPage={params.setPage}
           selectedId={params.bookingId}
           onOpen={params.openBooking}
-        />
-      ) : bookings && bookings.length === 0 && !filling ? (
-        <EmptyWeek
-          filtered={Boolean(params.staffId || params.status)}
-          onClearFilters={() => params.setFilters({})}
-          onFindNearest={() => nearest.mutate()}
-          searching={nearest.isPending}
-          searchedAndFoundNothing={nearest.isSuccess && nearest.data === null}
-          slug={user.business.slug}
         />
       ) : view === 'day' && !filling && !hasBookingsOnDate ? (
         <EmptyDay

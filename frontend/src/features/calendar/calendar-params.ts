@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { bookingStatusSchema } from '@/api/schemas/booking'
+import { uuid } from '@/api/schemas/common'
 import { isDayKey, todayIn, weekOf, type DayKey, type DayRange } from '@/lib/time'
 import type { BookingStatus } from '@/types'
 
@@ -90,6 +91,12 @@ export function useCalendarParams(timeZone: string): CalendarParams {
   // reach the API as a filter it answers 400 for, turning a typo in a URL into
   // an error screen instead of an ignored parameter.
   const status = bookingStatusSchema.safeParse(rawStatus).data
+  // The same argument, and the same failure: `?staff=marc` is not a UUID, the
+  // endpoint answers 400 for it, and a mistyped link would open on an error
+  // screen rather than on the unfiltered week. Checked for shape only — whether
+  // that id is a colleague of this tenant is the server's question, not one to
+  // answer from a lookup table that may not have loaded yet.
+  const staffId = uuid.safeParse(params.get(STAFF_PARAM)).data
 
   const rawPage = Number(params.get(PAGE_PARAM))
   const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 0
@@ -170,7 +177,7 @@ export function useCalendarParams(timeZone: string): CalendarParams {
     week,
     currentWeek,
     isCurrentWeek: week.from === currentWeek.from,
-    staffId: params.get(STAFF_PARAM) ?? undefined,
+    staffId,
     status,
     bookingId: params.get(BOOKING_PARAM) ?? undefined,
     page,
