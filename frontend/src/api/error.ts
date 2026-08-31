@@ -113,6 +113,35 @@ export function problemInstant(error: unknown, name: string): string | undefined
   return Number.isNaN(Date.parse(value)) ? undefined : value
 }
 
+/**
+ * An extension member that should be a string, or `undefined`.
+ *
+ * The plain-prose half of {@link problemInstant}'s argument: a
+ * `TIMEZONE_SHIFT_UNCONFIRMED` carries `currentTimezone` and `requestedTimezone`,
+ * and the dialog that names both of them must not be able to render the word
+ * `undefined` at an owner about to move every future slot. Empty strings are
+ * rejected along with absent ones — a zone with no name is not a zone.
+ */
+export function problemText(error: unknown, name: string): string | undefined {
+  const value = problemMember(error, name)
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+/**
+ * An extension member that should be a number, or `undefined`.
+ *
+ * `affectedBookings` is the one this exists for, and the distinction it has to
+ * keep is between **zero and unknown**: the timezone 409 arrives even when no
+ * bookings are involved, so "0 bookings are affected" is a true sentence worth
+ * saying and "we could not tell you how many" is a different one. A falsy check
+ * would collapse the two, which is why this narrows on the type rather than on
+ * the value.
+ */
+export function problemCount(error: unknown, name: string): number | undefined {
+  const value = problemMember(error, name)
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
 /** The detail shown when the request never reached the API and there is no body to quote. */
 const NETWORK_DETAIL = 'Could not reach the server. Check your connection and try again.'
 

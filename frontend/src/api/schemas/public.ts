@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { currencyCode, isoInstant, uuid, zoneId } from '@/api/schemas/common'
+import { currencyCode, isoInstant, localTime, uuid, zoneId } from '@/api/schemas/common'
 
 /**
  * The four public endpoints — everything a stranger sees before they have an
@@ -32,16 +32,6 @@ export const dayOfWeekSchema = z.enum([
 ])
 
 export type DayOfWeek = z.infer<typeof dayOfWeekSchema>
-
-/**
- * A `java.time.LocalTime`, `"08:30:00"`.
- *
- * Kept as the string the API sent rather than parsed into a `Date`. It is a wall
- * clock with no date and no zone attached — the salon opens at 08:30 every
- * Monday, not at an instant — and giving it a date is how it acquires an offset
- * it never had and shifts by an hour twice a year.
- */
-export const localTime = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'expected HH:mm:ss')
 
 /**
  * One opening-hours row.

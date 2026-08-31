@@ -1,5 +1,5 @@
 import { client } from '@/api/client'
-import { policySchema, type Policy } from '@/api/schemas/policy'
+import { policySchema, type Policy, type PolicyRequest } from '@/api/schemas/policy'
 
 /**
  * `GET /api/policy` — read by the calendar for one number, and by wave 8's
@@ -24,5 +24,18 @@ export const policyKeys = {
 
 export async function fetchPolicy(signal?: AbortSignal): Promise<Policy> {
   const response = await client.get(POLICY_PATH, { signal })
+  return policySchema.parse(response.data)
+}
+
+/**
+ * `PUT /api/policy` — owner only, and a full replace of all four numbers.
+ *
+ * Nothing already booked moves. Changing the granularity can leave existing
+ * appointments sitting off the new grid, which is correct and which the API
+ * allows; a client-side warning implying the calendar is about to be rewritten
+ * would be inventing a consequence that does not happen.
+ */
+export async function updatePolicy(request: PolicyRequest): Promise<Policy> {
+  const response = await client.put(POLICY_PATH, request)
   return policySchema.parse(response.data)
 }

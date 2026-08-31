@@ -8,6 +8,13 @@ import {
   resetPasswordRequestSchema,
 } from '@/api/schemas/auth'
 import {
+  overrideRequestSchema,
+  overrideSchema,
+  workingHoursRangeSchema,
+  workingHoursRequestSchema,
+  workingHoursSchema,
+} from '@/api/schemas/availability'
+import {
   bookingRequestSchema,
   guestContactSchema,
   publicBookingSchema,
@@ -17,6 +24,7 @@ import {
   bookingPageSchema,
   bookingStatusRequestSchema,
 } from '@/api/schemas/booking-admin'
+import { businessRequestSchema, businessSchema } from '@/api/schemas/business'
 import {
   serviceRequestSchema,
   serviceSchema,
@@ -25,7 +33,7 @@ import {
 } from '@/api/schemas/catalog'
 import { bookingSummarySchema, dashboardStatsSchema } from '@/api/schemas/dashboard'
 import { acceptInvitationRequestSchema, invitationPreviewSchema } from '@/api/schemas/invitation'
-import { policySchema } from '@/api/schemas/policy'
+import { policyRequestSchema, policySchema } from '@/api/schemas/policy'
 import {
   deactivationWarningSchema,
   inviteStaffRequestSchema,
@@ -150,4 +158,25 @@ export const CONTRACT_SCHEMAS: Record<string, ContractSchema> = {
   // inferred from springdoc's behaviour rather than read off a controller, and
   // `npm run contract:check` against a running stack is what confirms it.
   DeactivationWarning: deactivationWarningSchema,
+
+  // --- Availability configuration and settings (wave 8) -----------------
+  // `WorkingHoursRange` is one component for two directions: the server uses
+  // the same record in the request and the response, deliberately, because a
+  // range has no server-side fields at all. So one key covers both, and a row
+  // id appearing on it would be a contract change worth failing over.
+  WorkingHoursRange: workingHoursRangeSchema,
+  WorkingHoursResponse: workingHoursSchema,
+  WorkingHoursRequest: workingHoursRequestSchema,
+  // `exceptions` on the wire, `Override` in the code — the backend named the
+  // class away from `AvailabilityException` (D8) and kept the path, so the
+  // component names follow the class rather than the URL.
+  OverrideResponse: overrideSchema,
+  OverrideRequest: overrideRequestSchema,
+  BusinessResponse: businessSchema,
+  // The one request body in the registry with a field the response does not
+  // have: `confirmShift`. The check is a name diff in both directions, so
+  // dropping it server-side would surface here rather than as a timezone
+  // change that silently stops asking.
+  BusinessRequest: businessRequestSchema,
+  PolicyRequest: policyRequestSchema,
 }

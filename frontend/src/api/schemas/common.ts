@@ -53,3 +53,26 @@ export const currencyCode = z.string().regex(/^[A-Z]{3}$/, 'must be a three-lett
 
 /** An ISO-8601 instant, as Jackson writes `Instant`. */
 export const isoInstant = z.iso.datetime({ offset: true })
+
+/**
+ * A `java.time.LocalTime`, `"08:30:00"` — or `"08:30"`, which is what Jackson
+ * actually writes when the seconds are zero.
+ *
+ * Kept as the string the API sent rather than parsed into a `Date`. It is a wall
+ * clock with no date and no zone attached — the salon opens at 08:30 every
+ * Monday, not at an instant — and giving it a date is how it acquires an offset
+ * it never had and shifts by an hour twice a year.
+ *
+ * Declared here rather than beside the first resource that used it, because from
+ * wave 8 it is on three: the public page's opening hours, a weekly working-hours
+ * range, and the times on a one-off override.
+ */
+export const localTime = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'expected HH:mm:ss')
+
+/**
+ * A `java.time.LocalDate`, `"2026-12-25"`. A calendar date in the business
+ * timezone, and — like {@link localTime} — never an instant: "closed on Christmas
+ * Day" is a fact about a date, and framing it in a zone is how it becomes the
+ * 24th for somebody.
+ */
+export const localDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected yyyy-MM-dd')

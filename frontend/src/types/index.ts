@@ -23,6 +23,15 @@ export type {
 } from '@/api/schemas/auth'
 
 export type {
+  Override,
+  OverrideRequest,
+  OverrideType,
+  WorkingHours,
+  WorkingHoursRange,
+  WorkingHoursRequest,
+} from '@/api/schemas/availability'
+
+export type {
   BookingRequest,
   BookingStatus,
   GuestContact,
@@ -36,6 +45,8 @@ export type {
   BookingStatusRequest,
   StaffTransition,
 } from '@/api/schemas/booking-admin'
+
+export type { Business, BusinessRequest } from '@/api/schemas/business'
 
 export type {
   Service,
@@ -57,7 +68,7 @@ export type {
   Slot,
 } from '@/api/schemas/public'
 
-export type { Policy } from '@/api/schemas/policy'
+export type { Policy, PolicyRequest, SlotGranularity } from '@/api/schemas/policy'
 
 export type { ErrorCode, ProblemDetail, ValidationError } from '@/api/schemas/problem'
 
