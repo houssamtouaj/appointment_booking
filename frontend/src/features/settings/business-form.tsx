@@ -68,7 +68,14 @@ export function BusinessForm({ business }: { business: Business }) {
   })
 
   const depositRequired = useWatch({ control: form.control, name: 'depositRequired' })
-  const depositPercent = Number(useWatch({ control: form.control, name: 'depositPercent' }))
+  const depositEntry = useWatch({ control: form.control, name: 'depositPercent' })
+  /**
+   * Zero, **as opposed to nothing yet**. A cleared number input holds `''` and
+   * `Number('')` is `0`, so reading it as a number would put the "a percentage
+   * of zero means no deposit" warning on screen the moment somebody selects the
+   * field to retype it — an accusation about a value they have not entered.
+   */
+  const depositIsZero = `${depositEntry ?? ''}`.trim() !== '' && Number(depositEntry) === 0
 
   /**
    * The one request builder, and the **only** place `confirmShift` is ever set.
@@ -237,7 +244,7 @@ export function BusinessForm({ business }: { business: Business }) {
 
           {/* Two honest notes the screen owes the reader, and neither is
               hypothetical on this deployment. */}
-          {depositRequired && depositPercent === 0 ? (
+          {depositRequired && depositIsZero ? (
             <p className="border-warning/50 bg-warning-wash text-foreground rounded-sm border px-3 py-2 text-sm">
               A percentage of zero means <strong className="font-medium">no deposit</strong>,
               whatever the checkbox says. That is what the booking page reports too.

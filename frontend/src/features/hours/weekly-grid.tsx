@@ -73,6 +73,21 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
     .filter((day) => draft.find((row) => row.dayOfWeek === day.dayOfWeek)?.ranges.length === 0)
     .map((day) => day.dayOfWeek)
 
+  /**
+   * Every edit to the grid goes through here, so the server's mark cannot
+   * outlive the row it named.
+   *
+   * `refusedDay` is a fact about a body that was *sent* — the weekday a `422`
+   * found an overlap on. The moment somebody changes the grid it is a mark on a
+   * week the server has never seen: the row stays red and keeps claiming "these
+   * hours overlap something else in the week" after the collision has been
+   * fixed, with nothing but another save able to clear it.
+   */
+  function edit(next: HoursDraft) {
+    setDraft(next)
+    setRefusedDay(null)
+  }
+
   function save() {
     setConfirming(null)
     setRefusedDay(null)
@@ -123,7 +138,7 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
             variant="outline"
             size="sm"
             disabled={replace.isPending}
-            onClick={() => setDraft(copyDay(draft, 'MONDAY', 'weekdays'))}
+            onClick={() => edit(copyDay(draft, 'MONDAY', 'weekdays'))}
           >
             Copy Monday to weekdays
           </Button>
@@ -131,7 +146,7 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
             variant="outline"
             size="sm"
             disabled={replace.isPending}
-            onClick={() => setDraft(copyDay(draft, 'MONDAY', 'all'))}
+            onClick={() => edit(copyDay(draft, 'MONDAY', 'all'))}
           >
             Copy Monday to all days
           </Button>
@@ -153,12 +168,10 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
             overlapping={marked.has(day.dayOfWeek)}
             full={total >= MAX_RANGES}
             disabled={replace.isPending}
-            onToggle={() => setDraft(toggleDay(draft, day.dayOfWeek))}
-            onAdd={() => setDraft(addRange(draft, day.dayOfWeek))}
-            onRemove={(key) => setDraft(removeRange(draft, day.dayOfWeek, key))}
-            onChange={(key, edge, value) =>
-              setDraft(setRange(draft, day.dayOfWeek, key, edge, value))
-            }
+            onToggle={() => edit(toggleDay(draft, day.dayOfWeek))}
+            onAdd={() => edit(addRange(draft, day.dayOfWeek))}
+            onRemove={(key) => edit(removeRange(draft, day.dayOfWeek, key))}
+            onChange={(key, edge, value) => edit(setRange(draft, day.dayOfWeek, key, edge, value))}
           />
         ))}
       </ul>
@@ -175,7 +188,7 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
           <Button
             variant="outline"
             disabled={!dirty || replace.isPending}
-            onClick={() => setDraft(baseline)}
+            onClick={() => edit(baseline)}
           >
             Discard changes
           </Button>
@@ -189,12 +202,7 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
       </div>
 
       {confirming ? (
-        <RemovalConfirm
-          days={confirming}
-          saving={replace.isPending}
-          onConfirm={save}
-          onCancel={() => setConfirming(null)}
-        />
+        <RemovalConfirm days={confirming} onConfirm={save} onCancel={() => setConfirming(null)} />
       ) : null}
 
       {guard.blocked ? (

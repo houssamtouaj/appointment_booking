@@ -19,7 +19,17 @@ import type { DayKey, DayRange } from '@/lib/time'
 /** `2026-09`. */
 export type MonthKey = string
 
-const MONTH_PATTERN = /^\d{4}-\d{2}$/
+/**
+ * `2026-09`, and **the month has to be one of twelve**.
+ *
+ * `\d{2}` alone accepts `2026-13` and `2026-00`, which is not a hypothetical
+ * shape: this reads a query string somebody can edit or link to. Either one
+ * makes `monthRange` build `2026-13-01`, which the endpoint refuses with the 400
+ * this file exists to make unrepresentable, and `formatMonth` render the words
+ * "Invalid Date" into the picker and the empty state. Rejecting them here falls
+ * back to the current month instead.
+ */
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
 
 export function isMonthKey(raw: string | null): raw is MonthKey {
   return raw !== null && MONTH_PATTERN.test(raw)

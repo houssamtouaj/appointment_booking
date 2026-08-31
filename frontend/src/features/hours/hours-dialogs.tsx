@@ -33,12 +33,10 @@ const PANEL = [
  */
 export function RemovalConfirm({
   days,
-  saving,
   onConfirm,
   onCancel,
 }: {
   days: readonly DayOfWeek[]
-  saving: boolean
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -65,8 +63,11 @@ export function RemovalConfirm({
             <AlertDialog.Cancel asChild>
               <Button variant="outline">Go back</Button>
             </AlertDialog.Cancel>
-            <Button variant="danger" disabled={saving} onClick={onConfirm}>
-              {saving ? 'Saving…' : 'Save and remove'}
+            {/* No pending state of its own: confirming closes this dialog and
+                hands the wait to the Save button underneath, which is the one
+                place the request's progress is reported. */}
+            <Button variant="danger" onClick={onConfirm}>
+              Save and remove
             </Button>
           </div>
         </AlertDialog.Content>

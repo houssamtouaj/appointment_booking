@@ -72,12 +72,12 @@ export function PolicyForm({ policy }: { policy: Policy }) {
   // Read live so the preview moves with the inputs rather than with the last
   // save — the sentence is there to be checked *before* the button.
   const draft = {
-    minLeadTimeHours: Number(useWatch({ control: form.control, name: 'minLeadTimeHours' })),
-    maxAdvanceDays: Number(useWatch({ control: form.control, name: 'maxAdvanceDays' })),
-    cancellationCutoffHours: Number(
+    minLeadTimeHours: entered(useWatch({ control: form.control, name: 'minLeadTimeHours' })),
+    maxAdvanceDays: entered(useWatch({ control: form.control, name: 'maxAdvanceDays' })),
+    cancellationCutoffHours: entered(
       useWatch({ control: form.control, name: 'cancellationCutoffHours' }),
     ),
-    slotGranularityMinutes: Number(
+    slotGranularityMinutes: entered(
       useWatch({ control: form.control, name: 'slotGranularityMinutes' }),
     ),
   }
@@ -225,4 +225,20 @@ export function PolicyForm({ policy }: { policy: Policy }) {
       </form>
     </section>
   )
+}
+
+/**
+ * What one input actually holds, as a number — **with an emptied field as `NaN`
+ * rather than as zero.**
+ *
+ * `Number('')` is `0`, and a number input that somebody has cleared holds `''`.
+ * Reading it as zero made the preview state a rule the form does not hold and
+ * the API would refuse: clear the booking window and the sentence read
+ * "customers can book … up to 0 days out" instead of asking for the missing
+ * number, because the "fill in all four" branch below could never be reached.
+ */
+function entered(value: unknown): number {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string' && value.trim() !== '') return Number(value)
+  return Number.NaN
 }
