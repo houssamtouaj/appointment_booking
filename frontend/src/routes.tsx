@@ -5,6 +5,7 @@ import { RootLayout } from '@/components/root-layout'
 import { AdminLayout } from '@/features/admin/admin-layout'
 import { CalendarPage } from '@/features/calendar/calendar-page'
 import { DashboardPage } from '@/features/dashboard/dashboard-page'
+import { HoursPage } from '@/features/hours/hours-page'
 import { BookingFlowPage } from '@/features/booking/booking-flow-page'
 import { BusinessLandingPage } from '@/features/booking/business-landing-page'
 import { ManageBookingPage } from '@/features/booking/manage-booking-page'
@@ -114,15 +115,17 @@ export const routes: RouteObject[] = [
                 // `/team` that is **not** owner-only: their nav links straight
                 // here (`features/admin/nav.ts`), so it is the screen `/team`
                 // is replaced by for them rather than a child of it.
+                //
+                // It is also the one admin route with no role guard at all, and
+                // that is wave 8's decision rather than an omission. The rule is
+                // "an owner, or the person themselves", which depends on the id
+                // in the path — no layout route can express it, and the backend
+                // could not use an annotation for it either
+                // (`WorkingHoursService.requireOwnerOrSelf`). `HoursPage` makes
+                // the same check in the same shape and redirects a staff member
+                // who typed a colleague's id back to their own hours.
                 path: 'team/:id/hours',
-                element: (
-                  <Placeholder
-                    eyebrow="Admin"
-                    title="Working hours"
-                    wave="Wave 8"
-                    description="A seven-row weekly grid, plus the exceptions calendar."
-                  />
-                ),
+                element: <HoursPage />,
               },
               {
                 // The owner-only branch (F19).
