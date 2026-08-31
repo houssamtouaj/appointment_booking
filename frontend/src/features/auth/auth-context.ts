@@ -26,6 +26,22 @@ export type AuthContextValue = {
    */
   adoptSession: (auth: AuthResponse) => void
   /**
+   * Re-read `GET /api/auth/me` and adopt the answer.
+   *
+   * Exactly one screen needs this, and it is why it exists rather than a
+   * general-purpose refresh: `MeResponse.business` carries the tenant's name,
+   * timezone and currency, and the settings form is the one place they change.
+   * Those three are not query state — they are held here, seeded once by the
+   * bootstrap — so `invalidateQueries` cannot reach them, and without this the
+   * admin shell keeps the old business name and, worse, every screen keeps
+   * drawing in the old timezone until a reload.
+   *
+   * Swallows its own failure. The save has already succeeded by the time this
+   * runs; a second toast about a follow-up read would report a problem the
+   * person cannot act on and did not cause.
+   */
+  refreshUser: () => Promise<void>
+  /**
    * Revoke server-side, drop the token, and **empty the query cache**. The last
    * of those is not optional: leaving one tenant's dashboard in memory across a
    * sign-out is how the next login flashes the previous user's numbers before

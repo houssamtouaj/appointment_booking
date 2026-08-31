@@ -16,10 +16,10 @@ import { RegisterPage } from '@/features/auth/register-page'
 import { ResetPasswordPage } from '@/features/auth/reset-password-page'
 import { RequireAuth, RequireOwner } from '@/features/auth/route-guards'
 import { ServicesPage } from '@/features/services/services-page'
+import { SettingsPage } from '@/features/settings/settings-page'
 import { TeamPage } from '@/features/staff/team-page'
 import { DEMO_SLUG } from '@/lib/env'
 import { NotFoundPage } from '@/pages/not-found'
-import { Placeholder } from '@/pages/placeholder'
 
 /**
  * The whole route table, stubbed. Written in full in wave 1 on purpose: with it
@@ -37,6 +37,11 @@ import { Placeholder } from '@/pages/placeholder'
  *   `/accept-invitation/:token` are named by the backend. `FrontendLinks` builds
  *   them into outbound mail, so a link sitting in an inbox from three weeks ago
  *   still has to resolve. Renaming one breaks messages already sent.
+ *
+ * **From wave 8 there are no stubs left.** `pages/placeholder.tsx` is gone with
+ * this commit: it existed so that wave 1 could write the whole table before any
+ * screen behind it, and every route now resolves to something real. Its
+ * deletion is the honest marker that the table is complete rather than a tidy-up.
  *
  * Wave 5 split the chrome in two. `RootLayout` is now the frame — skip link,
  * toaster, debug panel — and the two branches below choose their own header:
@@ -154,17 +159,7 @@ export const routes: RouteObject[] = [
                 children: [
                   { path: 'services', element: <ServicesPage /> },
                   { path: 'team', element: <TeamPage /> },
-                  {
-                    path: 'settings',
-                    element: (
-                      <Placeholder
-                        eyebrow="Admin"
-                        title="Settings"
-                        wave="Wave 8"
-                        description="Timezone, deposit rules and booking policy."
-                      />
-                    ),
-                  },
+                  { path: 'settings', element: <SettingsPage /> },
                 ],
               },
             ],

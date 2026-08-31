@@ -1,7 +1,24 @@
 import '@testing-library/jest-dom/vitest'
 
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
+
+/**
+ * Five seconds for `findBy*` and `waitFor`, not Testing Library's one.
+ *
+ * This is a separate budget from Vitest's `testTimeout` (vite.config.ts) and
+ * neither covers the other: `testTimeout` is how long a case may run, and this
+ * is how long one query may wait before giving up and reporting "unable to find"
+ * — which is a *failure*, with a DOM dump, not a timeout. Under contention that
+ * is the more misleading of the two, because it accuses the component of never
+ * rendering when it simply had not rendered yet.
+ *
+ * One second is generous for a query in a file with a core to itself, and tight
+ * when eight workers are each driving a jsdom document through a mounted router,
+ * a bootstrap round trip and a mutation. Waiting longer costs nothing on a green
+ * run: these helpers poll and return the moment the element appears.
+ */
+configure({ asyncUtilTimeout: 5_000 })
 
 // Testing Library auto-cleans only when it can detect the test framework's globals
 // at import time. Vitest's `globals: true` makes that work today, but wiring it

@@ -51,6 +51,25 @@ export default defineConfig(({ mode }) => {
       // Vitest's default `include` matches `*.spec.ts` as happily as `*.test.ts`. Collected
       // here they fail on the import of @playwright/test rather than on anything true.
       exclude: ['node_modules/**', 'dist/**', 'e2e/**'],
+      // Fifteen seconds, not Vitest's five, and it is about the machine rather
+      // than about any test being slow.
+      //
+      // Almost every file here mounts the whole router inside `AuthProvider`
+      // against a stubbed adapter, so a case is a jsdom document, a bootstrap
+      // round trip and a dozen React renders. That is comfortably under a second
+      // when a worker has a core to itself — and several times that when eight
+      // workers are each building a jsdom environment at once, which is what a
+      // laptop under load or a shared CI runner actually does. The suite was
+      // passing at five seconds only because it was small enough to finish
+      // before the contention peaked; wave 8 pushed it over, and the failures
+      // were timeouts in files nothing had touched.
+      //
+      // Three files already set this locally with `vi.setConfig`. Here is where
+      // it belongs: raising the ceiling costs nothing on a green run, and a
+      // timeout is only ever information when it means "this hung", not "this
+      // waited its turn".
+      testTimeout: 15_000,
+      hookTimeout: 15_000,
     },
   }
 })

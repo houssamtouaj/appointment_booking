@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
-import { authKeys, logout } from '@/api/auth'
+import { authKeys, fetchMe, logout } from '@/api/auth'
 import { startBootstrap } from '@/api/bootstrap'
 import { onSessionEnded, signOutMessage } from '@/api/session'
 import { AuthContext, type AuthContextValue, type AuthStatus } from '@/features/auth/auth-context'
@@ -74,6 +74,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [queryClient],
   )
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const me = await fetchMe()
+      queryClient.setQueryData(authKeys.me, me)
+      setUser(me)
+    } catch {
+      // Deliberately silent — see `refreshUser`'s contract in `auth-context.ts`.
+      // The state that matters was already written by the request that
+      // succeeded; this is a courtesy read, and a failed courtesy is not news.
+    }
+  }, [queryClient])
+
   const signOut = useCallback(async () => {
     try {
       await logout()
@@ -84,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [queryClient])
 
-  const value: AuthContextValue = { status, user, adoptSession, signOut }
+  const value: AuthContextValue = { status, user, adoptSession, refreshUser, signOut }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
