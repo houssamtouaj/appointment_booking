@@ -112,3 +112,110 @@ function formatterFor(currency: string, digits: number, locale?: string): Intl.N
   formatters.set(key, formatter)
   return formatter
 }
+
+// ---------------------------------------------------------------------------
+//  The other direction: what a person typed, as the integer the API wants
+// ---------------------------------------------------------------------------
+
+/**
+ * How many decimal places a price may be entered with. Exported because the
+ * catalogue form needs it for the input's `step` and for its placeholder, and
+ * because a second copy of the `?? 2` fallback is a second thing to get wrong.
+ */
+export function currencyDigits(currency: string): number {
+  return minorUnitDigits(currency)
+}
+
+/**
+ * `12000` as `"120.00"` — the string that goes *into* the price input when an
+ * existing service is opened for editing.
+ *
+ * Not `formatMoney`: an input's value has to be a bare decimal with a `.`
+ * separator whatever the reader's locale is, because that is the only thing
+ * `<input type="number">` accepts and the only thing {@link toMinorUnits} reads
+ * back. The currency symbol belongs beside the field, not inside it.
+ */
+export function toAmountInput(minorUnits: number, currency: string): string {
+  return toDecimalString(minorUnits, minorUnitDigits(currency))
+}
+
+/**
+ * What the price field will accept at all. Digits, one separator, digits.
+ *
+ * A regex rather than `Number.isFinite(Number(text))`, because the strings that
+ * pass the latter and must not pass here are exactly the ones that would reach
+ * the arithmetic below as something it cannot read exactly: `1e3`, `0x10`,
+ * `Infinity`, and the empty string — `Number('')` is `0`, so a blank price field
+ * validated that way is a free service rather than a missing answer.
+ *
+ * A comma is accepted as well as a dot. `<input type="number">` never produces
+ * one — the spec makes its `value` a valid floating-point number or the empty
+ * string, always with a `.` — but a person pasting `12,10` out of a spreadsheet
+ * is a real event, and refusing it would be a validation message about
+ * punctuation.
+ */
+const AMOUNT_PATTERN = /^\d*(?:[.,]\d*)?$/
+
+/** True when {@link toMinorUnits} can read this text. `''` and `'.'` cannot. */
+export function isAmountInput(text: string): boolean {
+  const trimmed = text.trim()
+  if (!AMOUNT_PATTERN.test(trimmed)) return false
+  // At least one digit somewhere. '.' and ',' pass the pattern and are not
+  // numbers, and `''` is the untouched field rather than zero.
+  return /\d/.test(trimmed)
+}
+
+/**
+ * `"12.10"` in EUR is `1210`. **No `double` is created on the way**, which is
+ * the whole reason this is eleven lines rather than `Math.round(n * 100)`.
+ *
+ * The wave plan motivates this with `12.10 * 100`, and that example is half
+ * right in a way worth recording: the double nearest 12.10 is
+ * 12.099999999999999645, but multiplying it by 100 rounds back to exactly 1210,
+ * so `Math.round` is not even needed there. The bug is real all the same and
+ * `Math.round` does **not** rescue it — 572 of the 10 000 two-decimal half-cent
+ * prices land the wrong side, `0.145 → 14` and `1.005 → 100` among them, each
+ * one a cent cheaper than the price that was typed and arrived at by a route
+ * nobody reading `n * 100` would suspect. Moving the decimal point in a *string*
+ * has no such cases, because there is no representation error to accumulate.
+ * `money.test.ts` proves both halves rather than trusting this paragraph.
+ *
+ * Rounding is **half away from zero** on the exact digits, applied only when
+ * somebody has typed more precision than the currency has. That matches what a
+ * person reading their own input expects (`.005` rounds up) and it matches
+ * `BigDecimal.setScale(digits, HALF_UP)`, which is what the backend would do if
+ * it ever took a decimal — it does not; it takes these minor units.
+ *
+ * The digit count is the **currency's**, not two: a JPY price of `4500` is 4500
+ * minor units and not 450000, for the same reason `formatMoney` divides by the
+ * currency's own scale.
+ *
+ * @throws Error when the text is not something {@link isAmountInput} accepts.
+ *   The form validates first, so this is the programmer-error path rather than
+ *   the user-error one, and it throws rather than returning `NaN` — a `NaN`
+ *   would serialise to `null` in JSON and come back as a 422 about a field the
+ *   person filled in correctly.
+ */
+export function toMinorUnits(amount: string, currency: string): number {
+  if (!isAmountInput(amount)) {
+    throw new Error(`not an amount: ${JSON.stringify(amount)}`)
+  }
+
+  const digits = minorUnitDigits(currency)
+  const [whole, fraction = ''] = amount.trim().replace(',', '.').split('.')
+
+  // Pad to the currency's scale, then take one digit more than needed: that
+  // extra digit is the entire rounding decision.
+  const scaled = fraction.padEnd(digits + 1, '0')
+  const kept = `${whole || '0'}${scaled.slice(0, digits)}`
+  const units = Number(kept)
+
+  // Everything after the kept digits, not just the first of them: `12.0049` must
+  // round down and `12.005` must round up, and looking only at the `0` and the
+  // `4` respectively cannot tell those apart. Compared as a string against the
+  // half-way point of the same length, so no float is created here either.
+  const remainder = scaled.slice(digits)
+  const roundsUp = remainder >= '5'.padEnd(remainder.length, '0')
+
+  return roundsUp ? units + 1 : units
+}

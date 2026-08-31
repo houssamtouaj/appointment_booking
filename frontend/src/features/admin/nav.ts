@@ -28,11 +28,12 @@ import type { MeResponse } from '@/types'
  * the screen exists for — and the API agrees: `GET /api/bookings` is not role
  * -scoped, only the dashboard's aggregate is.
  *
- * Services and Team stay *reachable* for staff even though they are not linked:
- * the routes are shared (see `routes.tsx`), because a staff member may read the
- * catalogue and the roster and may not write to either. What F19 hides here is
- * the invitation to go somewhere with nothing to do; what wave 7 hides is the
- * buttons.
+ * Services and Team are **not** merely unlinked for staff — from wave 7 they are
+ * owner-only routes and a staff member typing either URL is redirected with an
+ * explanation (`routes.tsx` records why that changed from wave 1's shared
+ * routes). So this table and the router agree rather than one being the
+ * courtesy and the other the permission — which they still are for the rows
+ * above, where the hidden link and the real check are different things.
  */
 export type NavItem = {
   to: string

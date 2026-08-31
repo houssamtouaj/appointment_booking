@@ -17,11 +17,22 @@ import {
   bookingPageSchema,
   bookingStatusRequestSchema,
 } from '@/api/schemas/booking-admin'
-import { serviceSchema, servicePageSchema } from '@/api/schemas/catalog'
+import {
+  serviceRequestSchema,
+  serviceSchema,
+  servicePageSchema,
+  serviceUpdateRequestSchema,
+} from '@/api/schemas/catalog'
 import { bookingSummarySchema, dashboardStatsSchema } from '@/api/schemas/dashboard'
 import { acceptInvitationRequestSchema, invitationPreviewSchema } from '@/api/schemas/invitation'
 import { policySchema } from '@/api/schemas/policy'
-import { staffSchema } from '@/api/schemas/staff'
+import {
+  deactivationWarningSchema,
+  inviteStaffRequestSchema,
+  staffSchema,
+  staffUpdateResponseSchema,
+  updateStaffRequestSchema,
+} from '@/api/schemas/staff'
 import {
   openingHoursSchema,
   publicBusinessSchema,
@@ -119,4 +130,24 @@ export const CONTRACT_SCHEMAS: Record<string, ContractSchema> = {
   BookingResponse: bookingDetailSchema,
   BookingStatusRequest: bookingStatusRequestSchema,
   PolicyResponse: policySchema,
+
+  // --- Catalog and team writes (wave 7) --------------------------------
+  // The first request bodies in the registry that are not auth's. Every one of
+  // them is a *patch* except `ServiceRequest` and `InviteStaffRequest`, and the
+  // check is still a name diff: what it catches is a field renamed on the
+  // server, which on a patch body is worse than on a response — a request that
+  // sends the old name is accepted, ignored, and answers 200 with the edit
+  // silently not applied.
+  ServiceRequest: serviceRequestSchema,
+  ServiceUpdateRequest: serviceUpdateRequestSchema,
+  InviteStaffRequest: inviteStaffRequestSchema,
+  UpdateStaffRequest: updateStaffRequestSchema,
+  StaffUpdateResponse: staffUpdateResponseSchema,
+  // A record nested inside `StaffUpdateResponse`. springdoc's `TypeNameResolver`
+  // publishes a nested class under its **simple** name unless `use-fqn` is set,
+  // which this backend does not set — so `DeactivationWarning`, not
+  // `StaffUpdateResponseDeactivationWarning`. That is the one key in this block
+  // inferred from springdoc's behaviour rather than read off a controller, and
+  // `npm run contract:check` against a running stack is what confirms it.
+  DeactivationWarning: deactivationWarningSchema,
 }

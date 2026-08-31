@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatMoney } from '@/lib/money'
+import {
+  currencyDigits,
+  formatMoney,
+  isAmountInput,
+  toAmountInput,
+  toMinorUnits,
+} from '@/lib/money'
 
 /**
  * Named after the failures they prevent rather than after the function they
@@ -49,5 +55,106 @@ describe('formatMoney', () => {
 
   it('renders zero as a price rather than as an empty string', () => {
     expect(flatten(formatMoney(0, 'EUR', 'en-IE'))).toBe('€0.00')
+  })
+})
+
+describe('toMinorUnits', () => {
+  it('round-trips the price the wave gate names', () => {
+    // 12.10 → 1210 → "€12.10". The middle number is what goes on the wire, and
+    // the demo verifies it in the network tab.
+    const cents = toMinorUnits('12.10', 'EUR')
+    expect(cents).toBe(1210)
+    expect(flatten(formatMoney(cents, 'EUR', 'en-IE'))).toBe('€12.10')
+  })
+
+  it('does not lose a cent at .005 — the case Math.round(n * 100) gets wrong', () => {
+    // `1.005 * 100` is 100.49999999999999, so the float route rounds *down* and
+    // charges a cent less than the price that was typed. 572 of the 10 000
+    // two-decimal half-cent prices land the wrong side of that, `0.145` and
+    // `1.255` among them. Proven here rather than asserted, so the comment
+    // cannot rot on the day V8 changes its mind.
+    expect(Math.round(1.005 * 100)).toBe(100)
+    expect(toMinorUnits('1.005', 'EUR')).toBe(101)
+
+    expect(Math.round(0.145 * 100)).toBe(14)
+    expect(toMinorUnits('0.145', 'EUR')).toBe(15)
+  })
+
+  it('is exact at 12.10, where the double is not', () => {
+    // The wave plan cites `12.10 * 100` as the motivating case and is half
+    // right: the *stored* double for 12.10 is 12.099999999999999645, and the
+    // multiplication happens to round back to exactly 1210. The class of bug is
+    // real — see the previous test — but this is not one of its instances, and
+    // a test asserting it were would fail for the right reason.
+    expect((12.1).toFixed(18)).toBe('12.099999999999999645')
+    expect(12.1 * 100).toBe(1210)
+    expect(toMinorUnits('12.10', 'EUR')).toBe(1210)
+  })
+
+  it('rounds .995 up, and up to the next unit', () => {
+    expect(toMinorUnits('12.995', 'EUR')).toBe(1300)
+  })
+
+  it('rounds half away from zero only at the half — .0049 stays down', () => {
+    // The digit-by-digit reason the remainder is compared whole: looking only at
+    // the first dropped digit cannot separate .0049 from .005.
+    expect(toMinorUnits('12.0049', 'EUR')).toBe(1200)
+    expect(toMinorUnits('12.0051', 'EUR')).toBe(1201)
+  })
+
+  it('scales by the currency, not by 100', () => {
+    // A JPY price of 4500 is 4500 minor units. Scaling by 100 would send
+    // 450000 and sell a ¥4,500 service for ¥450,000.
+    expect(toMinorUnits('4500', 'JPY')).toBe(4500)
+    expect(toMinorUnits('1.234', 'BHD')).toBe(1234)
+  })
+
+  it('reads a pasted comma as a decimal separator', () => {
+    expect(toMinorUnits('12,10', 'EUR')).toBe(1210)
+  })
+
+  it('pads a bare unit count and a leading dot', () => {
+    expect(toMinorUnits('12', 'EUR')).toBe(1200)
+    expect(toMinorUnits('.5', 'EUR')).toBe(50)
+    expect(toMinorUnits('0', 'EUR')).toBe(0)
+  })
+
+  it('refuses the strings Number() would quietly accept', () => {
+    // `Number('')` is 0, which is a free service rather than an empty field —
+    // the one failure this validation exists to prevent.
+    for (const text of ['', ' ', '.', '1e3', '0x10', 'Infinity', '-5', '12.10.5']) {
+      expect(isAmountInput(text)).toBe(false)
+      expect(() => toMinorUnits(text, 'EUR')).toThrow()
+    }
+  })
+
+  it('accepts what the price input can produce', () => {
+    for (const text of ['0', '12', '12.1', '12.10', '12,10', '.5', ' 7 ']) {
+      expect(isAmountInput(text)).toBe(true)
+    }
+  })
+})
+
+describe('toAmountInput', () => {
+  it('fills the edit form with a bare decimal, not a formatted price', () => {
+    // `<input type="number">` accepts nothing else, and `toMinorUnits` reads it
+    // straight back.
+    expect(toAmountInput(1210, 'EUR')).toBe('12.10')
+    expect(toAmountInput(4500, 'JPY')).toBe('4500')
+    expect(toAmountInput(1234, 'BHD')).toBe('1.234')
+  })
+
+  it('round-trips every price in the demo catalogue', () => {
+    for (const cents of [0, 5, 1210, 3500, 4499, 7200]) {
+      expect(toMinorUnits(toAmountInput(cents, 'EUR'), 'EUR')).toBe(cents)
+    }
+  })
+})
+
+describe('currencyDigits', () => {
+  it('reports the currency’s own scale, which is what the input’s step is', () => {
+    expect(currencyDigits('EUR')).toBe(2)
+    expect(currencyDigits('JPY')).toBe(0)
+    expect(currencyDigits('BHD')).toBe(3)
   })
 })

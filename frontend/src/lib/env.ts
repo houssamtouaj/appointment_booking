@@ -52,3 +52,16 @@ export const API_MODE = readApiMode()
  * full `/api/...` path.
  */
 export const API_ORIGIN = API_MODE === 'proxy' ? '' : API_BASE_URL
+
+/**
+ * True in `vite dev`, false in a build. Vite's own flag, not a `VITE_` variable,
+ * and read here for the same reason as the rest: one read, one documented
+ * meaning.
+ *
+ * It gates exactly one thing — the line on the invitation dialog that says where
+ * to find the mail locally. Outbound mail goes to MailHog in Compose and to a
+ * real provider in production, so that sentence is true in development and
+ * misleading anywhere else. It is not a feature flag and nothing behavioural
+ * hangs off it.
+ */
+export const IS_DEV = import.meta.env.DEV

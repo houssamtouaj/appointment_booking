@@ -1,7 +1,9 @@
+import { SERVICES_PATH } from '@/api/catalog'
 import { client } from '@/api/client'
 import { servicePageSchema, type Service } from '@/api/schemas/catalog'
 import { MAX_PAGE_SIZE } from '@/api/schemas/page'
 import { staffListSchema, type Staff } from '@/api/schemas/staff'
+import { STAFF_PATH } from '@/api/staff'
 
 /**
  * The two reads that make every booking on every admin screen legible (F7).
@@ -19,9 +21,6 @@ import { staffListSchema, type Staff } from '@/api/schemas/staff'
  * only the live catalogue renders that booking as a blank. The archive is not
  * optional here; it is most of the point.
  */
-
-const SERVICES_PATH = '/api/services'
-const STAFF_PATH = '/api/staff'
 
 /**
  * One flat namespace, not per-business. Every one of these calls is scoped to

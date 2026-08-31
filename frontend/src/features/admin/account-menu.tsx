@@ -4,9 +4,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import { DropdownMenu } from 'radix-ui'
 import { toast } from 'sonner'
 
+import { Monogram } from '@/components/monogram'
 import { useAuth } from '@/features/auth/use-auth'
 import { useTheme, type Theme } from '@/hooks/use-theme'
-import { cn } from '@/lib/utils'
 import type { MeResponse } from '@/types'
 
 /**
@@ -32,7 +32,7 @@ export function AccountMenu({ user }: { user: MeResponse }) {
         className="text-foreground hover:bg-accent flex items-center gap-2 rounded-sm py-1 pr-1.5 pl-1 text-sm transition-colors"
         aria-label={`Account: ${user.fullName}`}
       >
-        <Monogram fullName={user.fullName} />
+        <Monogram fullName={user.fullName} size="md" />
         <span className="hidden max-w-[12ch] truncate sm:inline">{user.fullName}</span>
         <ChevronDown className="text-muted-foreground size-3.5" aria-hidden="true" />
       </DropdownMenu.Trigger>
@@ -121,33 +121,4 @@ const THEMES = [
 
 function Separator() {
   return <DropdownMenu.Separator className="bg-rule my-1.5 h-px" />
-}
-
-/**
- * Initials, in the display face.
- *
- * Not a photo: the API has no avatar field and inventing one from a
- * gravatar-shaped hash would send every user's email address to a third party to
- * decorate a 28px circle. Two letters at most — three initials at this size stop
- * being legible before they stop fitting.
- */
-function Monogram({ fullName }: { fullName: string }) {
-  const initials = fullName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        'bg-primary-wash text-primary font-display tracking-display',
-        'inline-flex size-7 shrink-0 items-center justify-center rounded-full text-sm leading-none',
-      )}
-    >
-      {initials}
-    </span>
-  )
 }

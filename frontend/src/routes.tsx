@@ -14,6 +14,8 @@ import { LoginPage } from '@/features/auth/login-page'
 import { RegisterPage } from '@/features/auth/register-page'
 import { ResetPasswordPage } from '@/features/auth/reset-password-page'
 import { RequireAuth, RequireOwner } from '@/features/auth/route-guards'
+import { ServicesPage } from '@/features/services/services-page'
+import { TeamPage } from '@/features/staff/team-page'
 import { DEMO_SLUG } from '@/lib/env'
 import { NotFoundPage } from '@/pages/not-found'
 import { Placeholder } from '@/pages/placeholder'
@@ -107,21 +109,11 @@ export const routes: RouteObject[] = [
             children: [
               { path: 'dashboard', element: <DashboardPage /> },
               { path: 'calendar', element: <CalendarPage /> },
-              // Services and Team are *shared* routes, not owner-only. F19 is about
-              // actions: a staff member may read the catalogue and the roster and
-              // may not create, edit or invite. Gating the whole route would hide
-              // information they are allowed to see, so the check belongs on the
-              // buttons, in the waves that add them — and the nav simply does not
-              // offer the link (`features/admin/nav.ts`).
               {
-                path: 'services',
-                element: <Placeholder eyebrow="Admin" title="Services" wave="Wave 7" />,
-              },
-              {
-                path: 'team',
-                element: <Placeholder eyebrow="Admin" title="Team" wave="Wave 7" />,
-              },
-              {
+                // A staff member's own working hours, and the one route under
+                // `/team` that is **not** owner-only: their nav links straight
+                // here (`features/admin/nav.ts`), so it is the screen `/team`
+                // is replaced by for them rather than a child of it.
                 path: 'team/:id/hours',
                 element: (
                   <Placeholder
@@ -133,11 +125,32 @@ export const routes: RouteObject[] = [
                 ),
               },
               {
-                // The one route in the table that is owner-only end to end (F19):
-                // business settings and the booking policy have no staff-readable
-                // half.
+                // The owner-only branch (F19).
+                //
+                // **Services and Team moved in here in wave 7, and that is a
+                // change of mind worth recording.** Wave 1 made them shared
+                // routes on a reasonable argument: F19 is about actions, a staff
+                // member may *read* the catalogue and the roster, and gating the
+                // whole route hides information they are allowed to see — so the
+                // check belonged on the buttons.
+                //
+                // Wave 7's plan settles it the other way, and its demo is
+                // explicit: signed in as a seeded `STAFF` account, neither screen
+                // is in the nav *and both URLs redirect*. Two things decided it
+                // once the screens were real. Every control on both of them is a
+                // write — there is no read-only version of "invite", "assign",
+                // "deactivate" — so a staff member's version of either screen
+                // would be a list with every button disabled, which is a worse
+                // answer than a redirect. And the roster carries every
+                // colleague's email address, which is an owner's view of their
+                // team rather than a directory.
+                //
+                // `settings` was always here: business settings and the booking
+                // policy have no staff-readable half at all.
                 element: <RequireOwner />,
                 children: [
+                  { path: 'services', element: <ServicesPage /> },
+                  { path: 'team', element: <TeamPage /> },
                   {
                     path: 'settings',
                     element: (

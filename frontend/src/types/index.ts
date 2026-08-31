@@ -37,7 +37,12 @@ export type {
   StaffTransition,
 } from '@/api/schemas/booking-admin'
 
-export type { Service, ServicePage } from '@/api/schemas/catalog'
+export type {
+  Service,
+  ServicePage,
+  ServiceRequest,
+  ServiceUpdateRequest,
+} from '@/api/schemas/catalog'
 
 export type { BookingSummary, DashboardStats } from '@/api/schemas/dashboard'
 
@@ -56,4 +61,10 @@ export type { Policy } from '@/api/schemas/policy'
 
 export type { ErrorCode, ProblemDetail, ValidationError } from '@/api/schemas/problem'
 
-export type { Staff } from '@/api/schemas/staff'
+export type {
+  DeactivationWarning,
+  InviteStaffRequest,
+  Staff,
+  StaffUpdateResponse,
+  UpdateStaffRequest,
+} from '@/api/schemas/staff'
