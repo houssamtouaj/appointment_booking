@@ -17,6 +17,11 @@ import { Toaster } from '@/components/toaster'
  * The skip link stays at this level because it has to be the **first tab stop on
  * the page**, before whichever header comes next. Both layouts below provide a
  * `<main id="main">` for it to land on.
+ *
+ * It lives in `layouts/` rather than in `components/` because it mounts two
+ * feature-owned pieces. `components/` is the layer features build on, and a file
+ * in it importing out of `features/auth` inverts that for the whole tree — the
+ * next person reasonably reads one such import as permission for theirs.
  */
 export function RootLayout() {
   return (

@@ -1,7 +1,7 @@
 import { Navigate, type RouteObject } from 'react-router-dom'
 
-import { PublicLayout } from '@/components/public-layout'
-import { RootLayout } from '@/components/root-layout'
+import { PublicLayout } from '@/layouts/public-layout'
+import { RootLayout } from '@/layouts/root-layout'
 import { AdminLayout } from '@/features/admin/admin-layout'
 import { CalendarPage } from '@/features/calendar/calendar-page'
 import { DashboardPage } from '@/features/dashboard/dashboard-page'

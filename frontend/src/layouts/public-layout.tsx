@@ -12,6 +12,9 @@ import { SessionMenu } from '@/features/auth/session-menu'
  * a slot has no use for a nav rail full of screens they cannot open, and the one
  * link that matters to a signed-in owner previewing their own booking page is
  * the way back in — which is what `SessionMenu` is.
+ *
+ * In `layouts/` for the same reason as `RootLayout`: it mounts a feature's
+ * component, which is a thing a layout may do and a thing `components/` may not.
  */
 export function PublicLayout() {
   return (
