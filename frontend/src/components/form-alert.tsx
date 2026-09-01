@@ -1,7 +1,7 @@
 import { RequestIdNote } from '@/components/request-id-note'
 import type { ValidationError } from '@/types'
 
-type FormAlertProps = {
+export type FormAlertProps = {
   /** The message for the failure as a whole. Chosen by `code`, never by matching on `detail`. */
   message: string
   /**

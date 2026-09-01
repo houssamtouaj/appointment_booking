@@ -1,21 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { register as registerBusiness } from '@/api/auth'
-import { applyFieldErrors, isApiError } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { isApiError } from '@/api/error'
 import { registerRequestSchema } from '@/api/schemas/auth'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
 import { useAuth } from '@/hooks/use-auth'
-import type { RegisterRequest, ValidationError } from '@/types'
+import type { RegisterRequest } from '@/types'
 
 /**
  * `/register` (F17). Self-registration ships so that a reviewer can have their
@@ -28,11 +27,6 @@ import type { RegisterRequest, ValidationError } from '@/types'
  */
 export function RegisterPage() {
   const { status, adoptSession } = useAuth()
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
 
   const form = useForm<RegisterRequest>({
     resolver: zodResolver(registerRequestSchema),
@@ -50,6 +44,8 @@ export function RegisterPage() {
     },
   })
 
+  const { alert, reportFailure, clear } = useFormErrorSummary(form)
+
   const create = useMutation({
     mutationFn: registerBusiness,
     onSuccess: (auth) => {
@@ -66,7 +62,7 @@ export function RegisterPage() {
           { type: 'server', message: 'That address is taken. Try another.' },
           { shouldFocus: true },
         )
-        setAlert(null)
+        clear()
         return
       }
       if (isApiError(error, 'EMAIL_TAKEN')) {
@@ -75,20 +71,13 @@ export function RegisterPage() {
           { type: 'server', message: 'An account already exists for this address.' },
           { shouldFocus: true },
         )
-        setAlert(null)
+        clear()
         return
       }
 
       // Everything else: attach what maps to a field, and surface what does not
       // rather than letting React Hook Form drop it silently.
-      const unmatched = applyFieldErrors(error, form)
-      setAlert({
-        message: describeError(error, {
-          VALIDATION_FAILED: 'Some of these details need fixing.',
-        }),
-        unmatched,
-        requestId: requestIdOf(error),
-      })
+      reportFailure(error, { copy: { VALIDATION_FAILED: 'Some of these details need fixing.' } })
     },
   })
 
@@ -112,13 +101,7 @@ export function RegisterPage() {
         </>
       }
     >
-      {alert ? (
-        <FormAlert
-          message={alert.message}
-          unmatched={alert.unmatched}
-          requestId={alert.requestId}
-        />
-      ) : null}
+      {alert ? <FormAlert {...alert} /> : null}
 
       <form
         noValidate

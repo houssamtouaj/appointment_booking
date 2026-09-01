@@ -4,16 +4,16 @@ import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { applyFieldErrors, isApiError, problemCount, problemText } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { isApiError, problemCount, problemText } from '@/api/error'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { FormAlert } from '@/components/form-alert'
 import { useUpdateBusiness } from '@/features/settings/settings-queries'
 import { TimezoneDialog, type TimezoneShift } from '@/features/settings/timezone-dialog'
 import { ZoneSuggestions } from '@/features/settings/zone-suggestions'
-import type { Business, BusinessRequest, ValidationError } from '@/types'
+import type { Business, BusinessRequest } from '@/types'
 
 /**
  * Name, timezone, currency and the deposit rule.
@@ -50,11 +50,6 @@ export function BusinessForm({ business }: { business: Business }) {
   const update = useUpdateBusiness()
   const zoneListId = useId()
   const [shift, setShift] = useState<TimezoneShift | null>(null)
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
 
   const form = useForm<BusinessFormValues, unknown, z.output<typeof SCHEMA>>({
     resolver: zodResolver(SCHEMA),
@@ -66,6 +61,8 @@ export function BusinessForm({ business }: { business: Business }) {
       depositPercent: business.depositPercent,
     },
   })
+
+  const { alert, reportFailure, clear } = useFormErrorSummary(form)
 
   const depositRequired = useWatch({ control: form.control, name: 'depositRequired' })
   const depositEntry = useWatch({ control: form.control, name: 'depositPercent' })
@@ -85,7 +82,7 @@ export function BusinessForm({ business }: { business: Business }) {
    * the dialog's confirm button is the sole caller that passes `true`.
    */
   function send(values: z.output<typeof SCHEMA>, confirmShift?: true) {
-    setAlert(null)
+    clear()
 
     const request: BusinessRequest = {
       name: values.name,
@@ -121,14 +118,11 @@ export function BusinessForm({ business }: { business: Business }) {
         }
 
         setShift(null)
-        const unmatched = applyFieldErrors(error, form)
-        setAlert({
-          message: describeError(error, {
+        reportFailure(error, {
+          copy: {
             VALIDATION_FAILED: 'Check the fields marked below.',
             ACCESS_DENIED: 'Only an owner can change the business settings.',
-          }),
-          unmatched,
-          requestId: requestIdOf(error),
+          },
         })
       },
     })
@@ -147,13 +141,7 @@ export function BusinessForm({ business }: { business: Business }) {
         onSubmit={form.handleSubmit((values) => send(values))}
         className="max-w-copy mt-4 grid gap-5"
       >
-        {alert ? (
-          <FormAlert
-            message={alert.message}
-            unmatched={alert.unmatched}
-            requestId={alert.requestId}
-          />
-        ) : null}
+        {alert ? <FormAlert {...alert} /> : null}
 
         <FormField label="Name" error={errors.name?.message}>
           {(control) => (

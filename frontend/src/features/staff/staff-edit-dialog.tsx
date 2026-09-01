@@ -1,20 +1,19 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { applyFieldErrors, isApiError } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { isApiError } from '@/api/error'
 import { roleSchema } from '@/api/schemas/auth'
 import { FormField } from '@/components/form-field'
 import { Modal } from '@/components/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { FormAlert } from '@/components/form-alert'
 import { lastOwnerReason, LAST_OWNER_COPY } from '@/features/staff/staff-state'
 import { useUpdateStaff } from '@/features/staff/team-queries'
-import type { Role, Staff, ValidationError } from '@/types'
+import type { Role, Staff } from '@/types'
 
 /**
  * Name and role. Deactivation is not here — it is on the row.
@@ -50,22 +49,19 @@ type StaffEditDialogProps = {
 
 export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps) {
   const update = useUpdateStaff()
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
 
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: { fullName: person.fullName, role: person.role },
   })
 
+  const { alert, reportFailure, clear } = useFormErrorSummary(form)
+
   /** Set when demoting this person would leave the business ownerless. */
   const cannotDemote = lastOwnerReason(person, team)
 
   function submit(values: StaffFormValues) {
-    setAlert(null)
+    clear()
 
     const patch: { fullName?: string; role?: Role } = {}
     const fullName = values.fullName.trim()
@@ -102,16 +98,11 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
               { type: 'server', message: LAST_OWNER_COPY },
               { shouldFocus: true },
             )
-            setAlert(null)
+            clear()
             return
           }
 
-          const unmatched = applyFieldErrors(error, form)
-          setAlert({
-            message: describeError(error, { VALIDATION_FAILED: 'Check the name.' }),
-            unmatched,
-            requestId: requestIdOf(error),
-          })
+          reportFailure(error, { copy: { VALIDATION_FAILED: 'Check the name.' } })
         },
       },
     )
@@ -138,13 +129,7 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
         </>
       }
     >
-      {alert ? (
-        <FormAlert
-          message={alert.message}
-          unmatched={alert.unmatched}
-          requestId={alert.requestId}
-        />
-      ) : null}
+      {alert ? <FormAlert {...alert} /> : null}
 
       <form id="staff-form" noValidate onSubmit={form.handleSubmit(submit)} className="grid gap-5">
         <FormField label="Full name" error={errors.fullName?.message}>

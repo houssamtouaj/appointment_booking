@@ -1,20 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { resetPassword } from '@/api/auth'
-import { applyFieldErrors } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
 import { passwordSchema } from '@/api/schemas/auth'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
-import type { ValidationError } from '@/types'
 import { z } from 'zod'
 
 /**
@@ -44,16 +41,13 @@ type FormValues = z.infer<typeof formSchema>
 export function ResetPasswordPage() {
   const { token = '' } = useParams()
   const navigate = useNavigate()
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { password: '', confirm: '' },
   })
+
+  const { alert, reportFailure } = useFormErrorSummary(form)
 
   const submit = useMutation({
     mutationFn: (values: FormValues) => resetPassword({ token, password: values.password }),
@@ -62,19 +56,17 @@ export function ResetPasswordPage() {
       navigate('/login', { replace: true })
     },
     onError: (error) => {
-      setAlert({
-        message: describeError(error, {
+      // The server's `errors[]` names `password`, which this form has, and
+      // `token`, which it does not — so the token message comes back unmatched
+      // and lands in the banner rather than disappearing.
+      reportFailure(error, {
+        copy: {
           // The single shape this endpoint fails in that is worth its own
           // sentence: the token is spent, expired, or was never ours. The API
           // does not distinguish between them and neither should this.
           VALIDATION_FAILED: 'That link is no longer valid. Ask for a new one.',
           NOT_FOUND: 'That link is no longer valid. Ask for a new one.',
-        }),
-        // The server's `errors[]` names `password`, which this form has, and
-        // `token`, which it does not — so the token message comes back unmatched
-        // and lands in the banner rather than disappearing.
-        unmatched: applyFieldErrors(error, form),
-        requestId: requestIdOf(error),
+        },
       })
     },
   })
@@ -93,13 +85,7 @@ export function ResetPasswordPage() {
         </>
       }
     >
-      {alert ? (
-        <FormAlert
-          message={alert.message}
-          unmatched={alert.unmatched}
-          requestId={alert.requestId}
-        />
-      ) : null}
+      {alert ? <FormAlert {...alert} /> : null}
 
       <form
         noValidate

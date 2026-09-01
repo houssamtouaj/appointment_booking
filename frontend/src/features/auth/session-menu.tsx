@@ -41,12 +41,7 @@ export function SessionMenu() {
         <span className="text-foreground font-medium">{user?.fullName}</span>
         <span className="text-muted-foreground"> · {user?.business.name}</span>
       </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={leaving}
-        onClick={() => void leave()}
-      >
+      <Button variant="ghost" size="sm" disabled={leaving} onClick={() => void leave()}>
         {leaving ? 'Signing out…' : 'Sign out'}
       </Button>
     </div>

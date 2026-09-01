@@ -1,19 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { applyFieldErrors } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
 import { SLOT_GRANULARITIES } from '@/api/schemas/policy'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { FormAlert } from '@/components/form-alert'
 import { describeCutoff, describePolicy, POLICY_HINTS } from '@/features/settings/policy-copy'
 import { useUpdatePolicy } from '@/features/settings/settings-queries'
-import type { Policy, ValidationError } from '@/types'
+import type { Policy } from '@/types'
 
 /**
  * The four numbers a customer feels.
@@ -53,11 +51,6 @@ type PolicyFormValues = z.input<typeof SCHEMA>
 
 export function PolicyForm({ policy }: { policy: Policy }) {
   const update = useUpdatePolicy()
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
 
   const form = useForm<PolicyFormValues, unknown, z.output<typeof SCHEMA>>({
     resolver: zodResolver(SCHEMA),
@@ -68,6 +61,8 @@ export function PolicyForm({ policy }: { policy: Policy }) {
       slotGranularityMinutes: policy.slotGranularityMinutes,
     },
   })
+
+  const { alert, reportFailure, clear } = useFormErrorSummary(form)
 
   // Read live so the preview moves with the inputs rather than with the last
   // save — the sentence is there to be checked *before* the button.
@@ -84,7 +79,7 @@ export function PolicyForm({ policy }: { policy: Policy }) {
   const readable = Object.values(draft).every((value) => Number.isFinite(value))
 
   function submit(values: z.output<typeof SCHEMA>) {
-    setAlert(null)
+    clear()
 
     update.mutate(values, {
       onSuccess: (saved) => {
@@ -92,14 +87,11 @@ export function PolicyForm({ policy }: { policy: Policy }) {
         toast.success('Your booking rules are saved.', { description: describePolicy(saved) })
       },
       onError: (error) => {
-        const unmatched = applyFieldErrors(error, form)
-        setAlert({
-          message: describeError(error, {
+        reportFailure(error, {
+          copy: {
             VALIDATION_FAILED: 'Check the numbers marked below.',
             ACCESS_DENIED: 'Only an owner can change the booking rules.',
-          }),
-          unmatched,
-          requestId: requestIdOf(error),
+          },
         })
       },
     })
@@ -114,13 +106,7 @@ export function PolicyForm({ policy }: { policy: Policy }) {
       </h2>
 
       <form noValidate onSubmit={form.handleSubmit(submit)} className="max-w-copy mt-4 grid gap-5">
-        {alert ? (
-          <FormAlert
-            message={alert.message}
-            unmatched={alert.unmatched}
-            requestId={alert.requestId}
-          />
-        ) : null}
+        {alert ? <FormAlert {...alert} /> : null}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField

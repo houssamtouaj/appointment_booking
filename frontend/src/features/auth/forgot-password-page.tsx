@@ -5,15 +5,14 @@ import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 
 import { forgotPassword } from '@/api/auth'
-import { applyFieldErrors } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
 import { forgotPasswordRequestSchema } from '@/api/schemas/auth'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
-import type { ForgotPasswordRequest, ValidationError } from '@/types'
+import type { ForgotPasswordRequest } from '@/types'
 
 /**
  * `/forgot-password`. The screen whose whole job is to say the same thing
@@ -31,31 +30,24 @@ import type { ForgotPasswordRequest, ValidationError } from '@/types'
  */
 export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false)
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
 
   const form = useForm<ForgotPasswordRequest>({
     resolver: zodResolver(forgotPasswordRequestSchema),
     defaultValues: { email: '' },
   })
 
+  const { alert, reportFailure, clear } = useFormErrorSummary(form)
+
   const request = useMutation({
     mutationFn: forgotPassword,
     onSuccess: () => {
-      setAlert(null)
+      clear()
       setSent(true)
     },
     onError: (error) => {
       // Only ever a rate limit or an outage — never "no such account".
-      setAlert({
-        message: describeError(error, {
-          RATE_LIMITED: 'Too many requests. Wait a minute and try again.',
-        }),
-        unmatched: applyFieldErrors(error, form),
-        requestId: requestIdOf(error),
+      reportFailure(error, {
+        copy: { RATE_LIMITED: 'Too many requests. Wait a minute and try again.' },
       })
     },
   })
@@ -85,13 +77,7 @@ export function ForgotPasswordPage() {
         </div>
       ) : (
         <>
-          {alert ? (
-            <FormAlert
-              message={alert.message}
-              unmatched={alert.unmatched}
-              requestId={alert.requestId}
-            />
-          ) : null}
+          {alert ? <FormAlert {...alert} /> : null}
 
           <form
             noValidate

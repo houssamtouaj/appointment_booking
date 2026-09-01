@@ -3,17 +3,17 @@ import { MailCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
-import { applyFieldErrors, isApiError } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { isApiError } from '@/api/error'
 import { inviteStaffRequestSchema } from '@/api/schemas/staff'
 import { FormField } from '@/components/form-field'
 import { Modal } from '@/components/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { FormAlert } from '@/components/form-alert'
 import { useInviteStaff } from '@/features/staff/team-queries'
 import { IS_DEV } from '@/lib/env'
-import type { InviteStaffRequest, Staff, ValidationError } from '@/types'
+import type { InviteStaffRequest, Staff } from '@/types'
 
 /**
  * "Invite a colleague" — and then, in words, what that actually did.
@@ -39,19 +39,16 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
   const invite = useInviteStaff()
   /** The colleague the API created, once it has. Switches the dialog's body. */
   const [invited, setInvited] = useState<Staff | null>(null)
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
 
   const form = useForm<InviteStaffRequest>({
     resolver: zodResolver(inviteStaffRequestSchema),
     defaultValues: { fullName: '', email: '', role: 'STAFF' },
   })
 
+  const { alert, reportFailure, clear } = useFormErrorSummary(form)
+
   function submit(values: InviteStaffRequest) {
-    setAlert(null)
+    clear()
     invite.mutate(values, {
       onSuccess: (person) => setInvited(person),
       onError: (error) => {
@@ -70,18 +67,11 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
             },
             { shouldFocus: true },
           )
-          setAlert(null)
+          clear()
           return
         }
 
-        const unmatched = applyFieldErrors(error, form)
-        setAlert({
-          message: describeError(error, {
-            VALIDATION_FAILED: 'Check the address and the name.',
-          }),
-          unmatched,
-          requestId: requestIdOf(error),
-        })
+        reportFailure(error, { copy: { VALIDATION_FAILED: 'Check the address and the name.' } })
       },
     })
   }
@@ -164,13 +154,7 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
         </>
       }
     >
-      {alert ? (
-        <FormAlert
-          message={alert.message}
-          unmatched={alert.unmatched}
-          requestId={alert.requestId}
-        />
-      ) : null}
+      {alert ? <FormAlert {...alert} /> : null}
 
       <form id="invite-form" noValidate onSubmit={form.handleSubmit(submit)} className="grid gap-5">
         <FormField label="Full name" error={errors.fullName?.message}>

@@ -1,12 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { acceptInvitation, authKeys, fetchInvitation } from '@/api/auth'
-import { applyFieldErrors, isApiError } from '@/api/error'
+import { isApiError } from '@/api/error'
 import { describeError, requestIdOf } from '@/api/error-copy'
 import { acceptInvitationRequestSchema } from '@/api/schemas/invitation'
 import { ErrorState } from '@/components/error-state'
@@ -14,9 +13,10 @@ import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
-import type { AcceptInvitationRequest, ValidationError } from '@/types'
+import type { AcceptInvitationRequest } from '@/types'
 
 /**
  * `/accept-invitation/:token` — another route the backend names (F12).
@@ -35,11 +35,6 @@ import type { AcceptInvitationRequest, ValidationError } from '@/types'
 export function AcceptInvitationPage() {
   const { token = '' } = useParams()
   const navigate = useNavigate()
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
 
   const invitation = useQuery({
     queryKey: authKeys.invitation(token),
@@ -55,6 +50,8 @@ export function AcceptInvitationPage() {
     defaultValues: { fullName: '', password: '' },
   })
 
+  const { alert, reportFailure } = useFormErrorSummary(form)
+
   const accept = useMutation({
     mutationFn: (values: AcceptInvitationRequest) => acceptInvitation(token, values),
     onSuccess: () => {
@@ -65,12 +62,8 @@ export function AcceptInvitationPage() {
       navigate('/login', { replace: true })
     },
     onError: (error) => {
-      setAlert({
-        message: describeError(error, {
-          INVITATION_CONSUMED: 'This invitation has already been used or has expired.',
-        }),
-        unmatched: applyFieldErrors(error, form),
-        requestId: requestIdOf(error),
+      reportFailure(error, {
+        copy: { INVITATION_CONSUMED: 'This invitation has already been used or has expired.' },
       })
     },
   })
@@ -127,13 +120,7 @@ export function AcceptInvitationPage() {
         </>
       }
     >
-      {alert ? (
-        <FormAlert
-          message={alert.message}
-          unmatched={alert.unmatched}
-          requestId={alert.requestId}
-        />
-      ) : null}
+      {alert ? <FormAlert {...alert} /> : null}
 
       <form
         noValidate

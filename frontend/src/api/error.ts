@@ -233,8 +233,9 @@ function readRequestId(headers: unknown): string | undefined {
  * entry and finishes; React Hook Form quietly accepts a path no input is
  * registered at, so an error on a field the form does not have becomes a
  * submission that appears to fail for no reason. Handing those back lets the
- * form put them somewhere a person can see — `useFormErrorSummary` in the
- * account screens does exactly that.
+ * form put them somewhere a person can see — `hooks/use-form-error-summary.ts`
+ * is where every form in the app does exactly that, and is the only caller that
+ * needs to know this returns anything.
  *
  * Matching is by path, so `guest.email` finds the nested input. It relies on
  * the form declaring `defaultValues` for everything it registers, which every

@@ -4,8 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 
-import { applyFieldErrors, isApiError } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { isApiError } from '@/api/error'
 import {
   MAX_BUFFER_MINUTES,
   SERVICE_MAX_MINUTES,
@@ -18,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { FormAlert } from '@/components/form-alert'
 import { useCreateService, useUpdateService } from '@/features/services/catalog-queries'
 import {
@@ -34,7 +34,7 @@ import type { Lookups } from '@/hooks/use-lookups'
 import { currencyDigits } from '@/lib/money'
 import { formatDuration } from '@/lib/time'
 import { cn } from '@/lib/utils'
-import type { Service, Staff, ValidationError } from '@/types'
+import type { Service, Staff } from '@/types'
 
 /**
  * One dialog for create and for edit, because there is one service.
@@ -76,11 +76,6 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
   const update = useUpdateService()
   const pending = create.isPending || update.isPending
 
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
   /**
    * True once the person has been shown the "nobody can perform this" warning.
    * It gates the panel, not the save: the save is gated by which button was
@@ -92,6 +87,8 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
     resolver: zodResolver(serviceFormSchema),
     defaultValues: service ? serviceFormValues(service, currency) : emptyServiceForm(),
   })
+
+  const { alert, reportFailure, clear } = useFormErrorSummary(form)
 
   /**
    * `useWatch` and not `form.watch()`, and the reason is the subscription rather
@@ -145,7 +142,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
       setWarnedAboutStaff(true)
       return
     }
-    setAlert(null)
+    clear()
 
     if (!editing) {
       create.mutate(toCreateRequest(formValues, currency), {
@@ -157,7 +154,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
           )
           onClose()
         },
-        onError: reportFailure,
+        onError: handleFailure,
       })
       return
     }
@@ -178,12 +175,12 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
           toast.success(`${saved.name} is updated.`)
           onClose()
         },
-        onError: reportFailure,
+        onError: handleFailure,
       },
     )
   }
 
-  function reportFailure(error: unknown) {
+  function handleFailure(error: unknown) {
     // The one code that belongs on a specific field. It carries the offending
     // ids as a problem member, but the useful thing to say is not which id — an
     // owner never saw one — it is that the picker is out of date, which happens
@@ -194,18 +191,11 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
         message:
           'One of those colleagues is no longer part of this business. Reload the page and pick again.',
       })
-      setAlert(null)
+      clear()
       return
     }
 
-    const unmatched = applyFieldErrors(error, form)
-    setAlert({
-      message: describeError(error, {
-        VALIDATION_FAILED: 'Some of these details need fixing.',
-      }),
-      unmatched,
-      requestId: requestIdOf(error),
-    })
+    reportFailure(error, { copy: { VALIDATION_FAILED: 'Some of these details need fixing.' } })
   }
 
   const errors = form.formState.errors
@@ -234,13 +224,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
         </>
       }
     >
-      {alert ? (
-        <FormAlert
-          message={alert.message}
-          unmatched={alert.unmatched}
-          requestId={alert.requestId}
-        />
-      ) : null}
+      {alert ? <FormAlert {...alert} /> : null}
 
       <form
         id="service-form"

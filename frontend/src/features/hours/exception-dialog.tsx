@@ -1,18 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { applyFieldErrors } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
 import { FormField } from '@/components/form-field'
 import { Modal } from '@/components/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { FormAlert } from '@/components/form-alert'
 import { useCreateOverride } from '@/features/hours/hours-queries'
-import type { OverrideRequest, ValidationError } from '@/types'
+import type { OverrideRequest } from '@/types'
 
 /**
  * Adding one override, at whichever of the two levels the session is allowed to
@@ -79,11 +77,6 @@ export function ExceptionDialog({
   onClose,
 }: ExceptionDialogProps) {
   const create = useCreateOverride()
-  const [alert, setAlert] = useState<{
-    message: string
-    unmatched: ValidationError[]
-    requestId?: string
-  } | null>(null)
 
   const form = useForm<ExceptionFormValues>({
     resolver: zodResolver(SCHEMA),
@@ -98,6 +91,8 @@ export function ExceptionDialog({
     },
   })
 
+  const { alert, reportFailure, clear } = useFormErrorSummary(form)
+
   // `useWatch` and not `form.watch()`, for the reason `service-form-dialog.tsx`
   // sets out: the latter returns a fresh function every render, which React
   // Compiler cannot memoise and warns about.
@@ -106,7 +101,7 @@ export function ExceptionDialog({
   const wholeDay = useWatch({ control: form.control, name: 'wholeDay' }) && type === 'BLOCKED'
 
   function submit(values: ExceptionFormValues) {
-    setAlert(null)
+    clear()
 
     const timed = !(values.wholeDay && values.type === 'BLOCKED')
     const request: OverrideRequest = {
@@ -132,14 +127,11 @@ export function ExceptionDialog({
           onClose()
         },
         onError: (error) => {
-          const unmatched = applyFieldErrors(error, form)
-          setAlert({
-            message: describeError(error, {
+          reportFailure(error, {
+            copy: {
               VALIDATION_FAILED: 'Check the date and times.',
               ACCESS_DENIED: 'You can only change your own days.',
-            }),
-            unmatched,
-            requestId: requestIdOf(error),
+            },
           })
         },
       },
@@ -165,13 +157,7 @@ export function ExceptionDialog({
         </>
       }
     >
-      {alert ? (
-        <FormAlert
-          message={alert.message}
-          unmatched={alert.unmatched}
-          requestId={alert.requestId}
-        />
-      ) : null}
+      {alert ? <FormAlert {...alert} /> : null}
 
       <form
         id="exception-form"
