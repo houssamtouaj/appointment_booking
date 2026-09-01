@@ -12,6 +12,25 @@ import { useTheme } from '@/hooks/use-theme'
  * CSS variables at ours is what keeps a toast looking like the rest of the page
  * in both themes.
  */
+/**
+ * At module scope, not inline. The object is entirely static — every value is a
+ * CSS variable, so the theme swap happens in the stylesheet rather than here —
+ * and `useTheme` re-renders this component on every theme change, which is the
+ * one moment a fresh identity would hand Sonner a new options object for no
+ * reason.
+ */
+const TOAST_OPTIONS = {
+  style: {
+    background: 'var(--card)',
+    color: 'var(--card-foreground)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-md)',
+    boxShadow: 'var(--elevation-2)',
+    fontFamily: 'var(--font-body)',
+    fontSize: 'var(--text-sm)',
+  },
+} as const
+
 export function Toaster() {
   const { theme } = useTheme()
 
@@ -25,17 +44,7 @@ export function Toaster() {
       // Toasts are announcements, not decoration: close button always available,
       // and rich colours off because our own tokens supply them below.
       closeButton
-      toastOptions={{
-        style: {
-          background: 'var(--card)',
-          color: 'var(--card-foreground)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-md)',
-          boxShadow: 'var(--elevation-2)',
-          fontFamily: 'var(--font-body)',
-          fontSize: 'var(--text-sm)',
-        },
-      }}
+      toastOptions={TOAST_OPTIONS}
     />
   )
 }
