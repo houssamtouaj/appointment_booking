@@ -14,7 +14,18 @@ RUN mvn -B -ntp dependency:go-offline
 
 # Source layer.
 COPY src ./src
-RUN mvn -B -ntp clean package -DskipTests \
+
+# Spotless is skipped here, and only here. It is bound to `validate`, so it would
+# otherwise run on every image build - and it cannot succeed in this context. Its
+# config names ${project.basedir}/eclipse-formatter.xml, which sits beside the POM and
+# is not copied in; its lineEndings policy is GIT_ATTRIBUTES, and .gitattributes lives
+# at the repository root, one level above `context: ./backend`, while .dockerignore
+# drops .git/ on purpose. Copying all three in would only move a source-hygiene gate
+# into a packaging build, where a stray indent becomes a failed deploy.
+#
+# The check is not lost: ci.yml runs `./mvnw -B -ntp verify` on every push, against a
+# checkout that has the formatter file and the git metadata the policy reads.
+RUN mvn -B -ntp clean package -DskipTests -Dspotless.check.skip=true \
     && mv target/*.jar target/app.jar
 
 # ----------------------------------- runtime -----------------------------------------
