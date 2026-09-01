@@ -24,8 +24,17 @@ import { MAX_RANGE_DAYS, addDays, weekOf, type DayKey, type DayRange } from '@/l
  * Reference data. Five minutes rather than the app-wide thirty seconds: a
  * catalogue changes when an owner edits it, which is not while a customer is
  * moving between two steps of a booking.
+ *
+ * The same number as `hooks/use-lookups.ts`'s `REFERENCE_STALE_TIME`, and
+ * deliberately not that constant. These are the *public* endpoints — a different
+ * cache, reached by a stranger with no session, invalidated by nothing the admin
+ * mutations touch — and sharing the constant would tie the two together at the
+ * one place they are most likely to want to diverge: the admin side can afford a
+ * long window because its writes invalidate on save, and this side cannot,
+ * because the owner editing the catalogue is on another device entirely. Renamed
+ * so that a reader who greps the number finds two answers and this paragraph.
  */
-const REFERENCE_STALE_TIME = 5 * 60_000
+const PUBLIC_REFERENCE_STALE_TIME = 5 * 60_000
 
 /**
  * Availability is not reference data. Someone else may take the slot being
@@ -37,7 +46,7 @@ export function useBusiness(slug: string) {
   return useQuery({
     queryKey: publicKeys.business(slug),
     queryFn: ({ signal }) => fetchBusiness(slug, signal),
-    staleTime: REFERENCE_STALE_TIME,
+    staleTime: PUBLIC_REFERENCE_STALE_TIME,
   })
 }
 
@@ -49,7 +58,7 @@ export function useStaffForService(slug: string, serviceId: string | undefined) 
     // system, so the fetch cannot be reached without the value it needs and
     // nothing has to promise on its behalf.
     queryFn: serviceId ? ({ signal }) => fetchStaff(slug, serviceId, signal) : skipToken,
-    staleTime: REFERENCE_STALE_TIME,
+    staleTime: PUBLIC_REFERENCE_STALE_TIME,
   })
 }
 
