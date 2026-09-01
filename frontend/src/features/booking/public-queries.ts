@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 
 import {
@@ -44,8 +44,11 @@ export function useBusiness(slug: string) {
 export function useStaffForService(slug: string, serviceId: string | undefined) {
   return useQuery({
     queryKey: publicKeys.staff(slug, serviceId ?? ''),
-    queryFn: ({ signal }) => fetchStaff(slug, serviceId as string, signal),
-    enabled: Boolean(serviceId),
+    // `skipToken` rather than `enabled: Boolean(serviceId)` with the id asserted
+    // into place. Both disable the query; only this one is visible to the type
+    // system, so the fetch cannot be reached without the value it needs and
+    // nothing has to promise on its behalf.
+    queryFn: serviceId ? ({ signal }) => fetchStaff(slug, serviceId, signal) : skipToken,
     staleTime: REFERENCE_STALE_TIME,
   })
 }
@@ -78,9 +81,12 @@ export function useAvailability(
   options?: { enabled?: boolean },
 ) {
   return useQuery({
-    queryKey: publicKeys.availability(slug, request as AvailabilityRequest),
-    queryFn: ({ signal }) => fetchAvailability(slug, request as AvailabilityRequest, signal),
-    enabled: Boolean(request) && options?.enabled !== false,
+    queryKey: publicKeys.availability(slug, request),
+    queryFn: request ? ({ signal }) => fetchAvailability(slug, request, signal) : skipToken,
+    // Still an `enabled`, for the caller's own reason — the flow disables this
+    // while a later step is on screen. What it no longer carries is the absence
+    // of `request`, which `skipToken` above states in the type instead.
+    enabled: options?.enabled !== false,
     staleTime: AVAILABILITY_STALE_TIME,
   })
 }

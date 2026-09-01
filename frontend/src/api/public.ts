@@ -44,7 +44,15 @@ export const publicKeys = {
    * and the 10:35 too, and those may sit in a prefetched neighbouring week.
    */
   availabilityAll: (slug: string) => ['public', slug, 'availability'] as const,
-  availability: (slug: string, request: AvailabilityRequest) =>
+  /**
+   * One week, named by the request that asks for it.
+   *
+   * `undefined` is a legal argument: the booking flow mounts this query before
+   * the customer has chosen a service, and the alternative was asserting a
+   * request the caller does not have yet. A key holding `undefined` names a
+   * query that never runs, which is exactly what it is.
+   */
+  availability: (slug: string, request: AvailabilityRequest | undefined) =>
     ['public', slug, 'availability', request] as const,
   /**
    * A booking, keyed by the token rather than by its id and outside the

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { skipToken, useMutation, useQuery } from '@tanstack/react-query'
 
 import {
   bookingKeys,
@@ -115,8 +115,10 @@ export function useBookingList(
 export function useBookingDetail(id: string | undefined) {
   return useQuery({
     queryKey: bookingKeys.detail(id ?? ''),
-    queryFn: ({ signal }) => fetchBookingDetail(id as string, signal),
-    enabled: Boolean(id),
+    // `skipToken`, so the closed sheet's query is disabled by something the type
+    // system can see rather than by an `enabled` the assertion below it has to
+    // be trusted to match. See `public-queries.ts`.
+    queryFn: id ? ({ signal }) => fetchBookingDetail(id, signal) : skipToken,
   })
 }
 
