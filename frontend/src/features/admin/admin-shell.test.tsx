@@ -8,9 +8,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetBootstrap } from '@/api/bootstrap'
 import { client, resetInFlightRefresh } from '@/api/client'
 import { createQueryClient } from '@/api/query-client'
-import { endSessionQuietly } from '@/api/session'
+import { endSessionQuietly, hasSession } from '@/api/session'
 import { AuthProvider } from '@/features/auth/auth-provider'
 import { routes } from '@/routes'
+import { toast } from 'sonner'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -244,5 +245,39 @@ describe('the shell', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
     expect(screen.queryByRole('navigation', { name: 'Sections' })).not.toBeInTheDocument()
+  })
+})
+
+describe('leaving', () => {
+  /**
+   * The menu's own exit, which `auth-provider.test.tsx` does not reach — that
+   * file drives `signOut` through a harness button of its own, so the four steps
+   * a person actually goes through (the flag, the revocation, the confirmation,
+   * the redirect) were asserted nowhere.
+   */
+  it('revokes the session, says so, and lands on the login screen', async () => {
+    const user = userEvent.setup()
+    const router = await renderShell(OWNER)
+
+    await user.click(screen.getByRole('button', { name: /Account: Camille Bérard/ }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(hasSession()).toBe(false)
+    expect(toast.success).toHaveBeenCalledWith('Signed out')
+  })
+
+  it('replaces the admin screen rather than stacking the login on top of it', async () => {
+    const user = userEvent.setup()
+    const router = await renderShell(OWNER, '/calendar')
+
+    await user.click(screen.getByRole('button', { name: /Account: Camille Bérard/ }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+
+    // `replace`, because the screen behind is guarded: a back button that
+    // returned to it would bounce straight forward again.
+    expect(router.state.location.pathname).toBe('/login')
+    expect(router.state.historyAction).toBe('REPLACE')
   })
 })

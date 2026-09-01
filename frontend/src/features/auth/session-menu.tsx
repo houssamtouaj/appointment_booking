@@ -1,22 +1,25 @@
-import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
+import { Link, useLocation } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
+import { useSignOut } from '@/hooks/use-sign-out'
 
 /**
- * The right-hand end of the header: who is signed in, and the way out.
+ * The right-hand end of the public header: who is signed in, and the way out.
  *
- * Wave 5 replaces this with the admin nav's account menu. Until then it is what
- * makes the exit demo checkable — "sign in as demo, see the user's name" needs
- * the name to be somewhere.
+ * Wave 5's plan had the admin nav's account menu replacing this, and that is not
+ * what happened — the two are on different headers and both are load-bearing.
+ * `AccountMenu` needs an authenticated session to render a name, a monogram and
+ * a link to the tenant's own booking page; this header is mounted on every
+ * public route, most of which a stranger reaches, so it has to have an anonymous
+ * state and a loading state as well. It is also the only thing that makes the
+ * exit demo checkable — "sign in as demo, see the user's name" needs the name to
+ * be somewhere.
  */
 export function SessionMenu() {
-  const { status, user, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { status, user } = useAuth()
   const location = useLocation()
-  const [leaving, setLeaving] = useState(false)
+  const { leave, leaving } = useSignOut()
 
   // Nothing during the bootstrap. A "Log in" link that appears for one round
   // trip and then turns into a name is worse than a gap the same width.
@@ -42,16 +45,7 @@ export function SessionMenu() {
         variant="ghost"
         size="sm"
         disabled={leaving}
-        onClick={async () => {
-          setLeaving(true)
-          try {
-            await signOut()
-            toast.success('Signed out')
-            navigate('/login', { replace: true })
-          } finally {
-            setLeaving(false)
-          }
-        }}
+        onClick={() => void leave()}
       >
         {leaving ? 'Signing out…' : 'Sign out'}
       </Button>

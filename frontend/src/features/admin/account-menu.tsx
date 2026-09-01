@@ -1,11 +1,9 @@
 import { Check, ChevronDown, ExternalLink, LogOut, Monitor, Moon, Sun } from 'lucide-react'
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { DropdownMenu } from 'radix-ui'
-import { toast } from 'sonner'
 
 import { Monogram } from '@/components/monogram'
-import { useAuth } from '@/hooks/use-auth'
+import { useSignOut } from '@/hooks/use-sign-out'
 import { isTheme, useTheme } from '@/hooks/use-theme'
 import type { MeResponse } from '@/types'
 
@@ -21,10 +19,8 @@ import type { MeResponse } from '@/types'
  * being able to pick directly rather than cycling past.
  */
 export function AccountMenu({ user }: { user: MeResponse }) {
-  const { signOut } = useAuth()
   const { theme, setTheme } = useTheme()
-  const navigate = useNavigate()
-  const [leaving, setLeaving] = useState(false)
+  const { leave, leaving } = useSignOut()
 
   return (
     <DropdownMenu.Root>
@@ -93,19 +89,12 @@ export function AccountMenu({ user }: { user: MeResponse }) {
 
           <DropdownMenu.Item
             disabled={leaving}
-            onSelect={async (event) => {
-              // The menu closes on select and unmounts this handler's owner with
-              // it, so the await has to survive that — hence the guard rather
-              // than any state read after it.
+            onSelect={(event) => {
+              // The menu closes on select and would unmount this handler's owner
+              // mid-await; `preventDefault` keeps it open until the round trip
+              // has finished and the navigation has happened.
               event.preventDefault()
-              setLeaving(true)
-              try {
-                await signOut()
-                toast.success('Signed out')
-                navigate('/login', { replace: true })
-              } finally {
-                setLeaving(false)
-              }
+              void leave()
             }}
             className="text-foreground data-[highlighted]:bg-accent flex cursor-default items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-sm outline-none data-[disabled]:opacity-50"
           >
