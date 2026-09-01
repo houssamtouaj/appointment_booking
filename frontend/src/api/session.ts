@@ -41,6 +41,35 @@ let established = false
 
 const listeners = new Set<Listener>()
 
+/**
+ * Subscribers to the token itself, kept apart from the ones above.
+ *
+ * `Listener` is about a session *ending* and carries a reason; this fires on
+ * every change to the token, including a rotation, which is not an event anybody
+ * needs to be told about in words. The only consumer is the dev panel, which
+ * reports whether a token is in memory — and read during render that line goes
+ * stale the moment anything but the panel's own click changes it: a real expiry,
+ * or the interceptor rotating one.
+ */
+const tokenListeners = new Set<() => void>()
+
+function notifyTokenChanged(): void {
+  for (const listener of tokenListeners) listener()
+}
+
+/** Subscribe to token changes. Returns the unsubscribe, for `useSyncExternalStore`. */
+export function onAccessTokenChanged(listener: () => void): () => void {
+  tokenListeners.add(listener)
+  return () => {
+    tokenListeners.delete(listener)
+  }
+}
+
+/** Whether a token is in memory right now. A snapshot, for `useSyncExternalStore`. */
+export function hasAccessToken(): boolean {
+  return accessToken !== null
+}
+
 export function getAccessToken(): string | null {
   return accessToken
 }
@@ -65,6 +94,7 @@ export function hasSession(): boolean {
 export function beginSession(token: string): void {
   accessToken = token
   established = true
+  notifyTokenChanged()
 }
 
 /**
@@ -75,6 +105,7 @@ export function beginSession(token: string): void {
 export function endSessionQuietly(): void {
   accessToken = null
   established = false
+  notifyTokenChanged()
 }
 
 /**
@@ -89,6 +120,7 @@ export function endSession(reason: SessionEndReason): void {
   const wasEstablished = established
   accessToken = null
   established = false
+  notifyTokenChanged()
   if (!wasEstablished) return
   for (const listener of listeners) listener(reason)
 }
@@ -110,6 +142,7 @@ export function onSessionEnded(listener: Listener): () => void {
  */
 export function forgetAccessToken(): void {
   accessToken = null
+  notifyTokenChanged()
 }
 
 /** The one sentence each ending gets. `reused` is its own, deliberately (wave gate). */

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 
 import { client } from '@/api/client'
-import { forgetAccessToken, getAccessToken } from '@/api/session'
+import { forgetAccessToken, hasAccessToken, onAccessTokenChanged } from '@/api/session'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -23,6 +23,14 @@ export function SessionDebugPanel() {
   const { status } = useAuth()
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState<string | null>(null)
+  /**
+   * Subscribed, not read during render. The token is a module variable, and the
+   * line below happened to update only because the same click also called
+   * `setNote` — so a token dropped by anything else, a real expiry or the
+   * interceptor's rotation, left the panel reporting the wrong thing. The app
+   * already uses this pattern for the theme and for media queries.
+   */
+  const tokenPresent = useSyncExternalStore(onAccessTokenChanged, hasAccessToken, () => false)
 
   if (!import.meta.env.DEV) return null
   if (status !== 'authenticated') return null
@@ -45,7 +53,7 @@ export function SessionDebugPanel() {
           </div>
 
           <p className="text-muted-foreground mb-3">
-            Access token: {getAccessToken() ? 'in memory' : 'gone'}
+            Access token: {tokenPresent ? 'in memory' : 'gone'}
           </p>
 
           <div className="grid gap-2">
