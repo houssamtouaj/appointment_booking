@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 
 import { Monogram } from '@/components/monogram'
 import { useAuth } from '@/hooks/use-auth'
-import { useTheme, type Theme } from '@/hooks/use-theme'
+import { isTheme, useTheme } from '@/hooks/use-theme'
 import type { MeResponse } from '@/types'
 
 /**
@@ -56,7 +56,12 @@ export function AccountMenu({ user }: { user: MeResponse }) {
           <p className="text-muted-foreground text-2xs tracking-eyebrow px-2.5 pt-1.5 pb-1 font-mono uppercase">
             Theme
           </p>
-          <DropdownMenu.RadioGroup value={theme} onValueChange={(next) => setTheme(next as Theme)}>
+          <DropdownMenu.RadioGroup
+            value={theme}
+            onValueChange={(next) => {
+              if (isTheme(next)) setTheme(next)
+            }}
+          >
             {THEMES.map(({ value, label, icon: Icon }) => (
               <DropdownMenu.RadioItem
                 key={value}

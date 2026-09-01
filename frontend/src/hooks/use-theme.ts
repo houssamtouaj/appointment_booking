@@ -12,6 +12,19 @@ export const THEME_STORAGE_KEY = 'slotflow-theme'
 const ORDER: readonly Theme[] = ['system', 'light', 'dark']
 
 /**
+ * The three values, as a runtime question.
+ *
+ * Radix's menu hands its `onValueChange` a bare `string`, and the alternative
+ * there is asserting it into `Theme` — safe today because the values come from a
+ * local `as const` array, and wrong the first time somebody adds a fourth radio
+ * item without touching this union. `some` rather than `includes` so that
+ * nothing has to be widened to ask the question.
+ */
+export function isTheme(value: string): value is Theme {
+  return ORDER.some((theme) => theme === value)
+}
+
+/**
  * A module-level store rather than component state, so that two toggles mounted
  * at once (the public header and the admin settings page, from wave 5 on) do not
  * disagree about which theme is active.
