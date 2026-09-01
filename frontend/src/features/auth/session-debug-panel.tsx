@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { client } from '@/api/client'
 import { forgetAccessToken, getAccessToken } from '@/api/session'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/features/auth/use-auth'
+import { useAuth } from '@/hooks/use-auth'
 
 /**
  * Two buttons that exist so the single-flight refresh can be *seen* rather than

@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 
 import { Container } from '@/components/container'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuth } from '@/features/auth/use-auth'
+import { useAuth } from '@/hooks/use-auth'
 
 /**
  * The two route guards (F19). Layout routes, so they wrap a whole branch of the

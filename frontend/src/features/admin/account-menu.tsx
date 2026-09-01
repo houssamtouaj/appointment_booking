@@ -5,7 +5,7 @@ import { DropdownMenu } from 'radix-ui'
 import { toast } from 'sonner'
 
 import { Monogram } from '@/components/monogram'
-import { useAuth } from '@/features/auth/use-auth'
+import { useAuth } from '@/hooks/use-auth'
 import { useTheme, type Theme } from '@/hooks/use-theme'
 import type { MeResponse } from '@/types'
 

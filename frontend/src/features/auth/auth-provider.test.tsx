@@ -10,7 +10,7 @@ import { createQueryClient } from '@/api/query-client'
 import { beginSession, endSessionQuietly, getAccessToken, hasSession } from '@/api/session'
 import { resetBootstrap } from '@/api/bootstrap'
 import { AuthProvider } from '@/features/auth/auth-provider'
-import { useAuth } from '@/features/auth/use-auth'
+import { useAuth } from '@/hooks/use-auth'
 
 // Sonner renders into a portal and its own store; spying on the module is the
 // only way to assert "no toast" rather than "no toast I happened to query for".

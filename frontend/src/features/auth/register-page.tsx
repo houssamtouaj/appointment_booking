@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/features/auth/form-alert'
-import { useAuth } from '@/features/auth/use-auth'
+import { useAuth } from '@/hooks/use-auth'
 import type { RegisterRequest, ValidationError } from '@/types'
 
 /**

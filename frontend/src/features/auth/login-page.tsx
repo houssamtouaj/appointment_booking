@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/features/auth/form-alert'
 import { safeNextPath } from '@/features/auth/next-path'
-import { useAuth } from '@/features/auth/use-auth'
+import { useAuth } from '@/hooks/use-auth'
 import type { AuthResponse, LoginRequest } from '@/types'
 
 /**

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { businessKeys, fetchBusiness, updateBusiness } from '@/api/business'
 import { fetchPolicy, policyKeys, updatePolicy } from '@/api/policy'
-import { useAuth } from '@/features/auth/use-auth'
+import { useAuth } from '@/hooks/use-auth'
 import type { BusinessRequest, PolicyRequest } from '@/types'
 
 /**

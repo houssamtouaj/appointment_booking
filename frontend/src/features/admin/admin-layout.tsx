@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AccountMenu } from '@/features/admin/account-menu'
 import { AdminNav } from '@/features/admin/admin-nav'
-import { useAuth } from '@/features/auth/use-auth'
+import { useAuth } from '@/hooks/use-auth'
 import type { MeResponse } from '@/types'
 
 /**
