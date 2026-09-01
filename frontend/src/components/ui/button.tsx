@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils'
  *    the quiet sibling, `danger` cancels. Sizes keep a 44px `lg` because the
  *    booking flow's confirm button is a touch target on a phone.
  */
-const buttonVariants = cva(
+export const buttonVariants = cva(
   [
     'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap',
     'rounded-sm text-sm font-medium transition-colors',
@@ -51,7 +51,7 @@ const buttonVariants = cva(
   },
 )
 
-function Button({
+export function Button({
   className,
   variant,
   size,
@@ -71,5 +71,3 @@ function Button({
     />
   )
 }
-
-export { Button, buttonVariants }

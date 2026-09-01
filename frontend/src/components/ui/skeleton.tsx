@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
  * reflow when data lands. A generic one cannot do that, and reintroduces the
  * jump it was meant to remove.
  */
-function Skeleton({ className, ...props }: React.ComponentProps<'div'>) {
+export function Skeleton({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="skeleton"
@@ -23,5 +23,3 @@ function Skeleton({ className, ...props }: React.ComponentProps<'div'>) {
     />
   )
 }
-
-export { Skeleton }
