@@ -42,6 +42,7 @@ npm run dev              # http://localhost:5173
 npm run typecheck        # tsc -b across app, node and test projects
 npm run lint             # eslint, zero warnings tolerated
 npm run test             # vitest run
+npm run test -- src/lib/time.test.ts   # one file; add -t '<name>' for one case
 npm run format:check     # what CI checks
 npm run contract:check   # diff Zod schemas against a running API's /v3/api-docs (needs the stack up)
 npm run e2e              # Playwright; needs `docker compose up` + `npm run e2e:install` once
@@ -87,6 +88,11 @@ true. A violation surfaces as `409`.
 
 **A booking is confirmed by the Stripe webhook, never by the browser redirect.**
 `?checkout=success` chooses the tone of one sentence; the page reads the booking either way.
+Stripe retries for three days, so the webhook is guarded twice over: `stripe_event`'s primary key is
+Stripe's own `evt_...` id (a replay is a duplicate-key error from Postgres, not a check someone
+remembered to write), and the transition itself only ever moves `PENDING -> CONFIRMED` or
+`PENDING -> CANCELLED`. Either guard alone would do; both are there because the cost is a customer's
+money. The table has no foreign key to `booking` on purpose.
 
 **Tenant scope comes from the `bid` claim of the access token** — never a path variable, query
 parameter or body field. Repositories take `businessId` as a parameter (`findByIdAndBusinessId`);
@@ -111,6 +117,13 @@ re-presenting a rotated token revokes every session that user holds and answers 
 is hashed inside a transaction (BCrypt 12 would park a pooled connection); use a `TransactionTemplate`
 around the writes instead, never a self-invoked `@Transactional` private method.
 
+**Rate limits are a filter, not an annotation.** `common/web/RateLimitFilter` runs bucket4j buckets
+keyed by client IP and sits *ahead* of BCrypt on `POST /api/auth/login` — that ordering is the point,
+so a password-spray never reaches the slow hash. Budgets are config, not code
+(`slotflow.rate-limit.*` in `application.yml`). Which address the bucket keys on depends on
+`FORWARD_HEADERS_STRATEGY`: `none` locally, `framework` only behind a proxy that *overwrites*
+`X-Forwarded-For` rather than appending to a caller's.
+
 **Errors.** Every response, including 500s and ones written by filters, is `application/problem+json`
 with the same members. `code` (from `common/error/ErrorCode.java`) is the only part a client branches
 on. `errors[]` on 422 only, `requestId` on 5xx only. `ProblemDetailContractTest` asserts that body
@@ -130,6 +143,14 @@ six refreshes would trip reuse detection and sign the user out. `/api/auth/login
 Zod schemas in `src/api/schemas/` are the hand-written source of truth for the contract; everything
 in `src/types/` is `z.infer` of them. `problemDetailSchema` is deliberately **loose** — a strict
 object strips the `earliestStart`/`latestStart` a policy refusal carries.
+
+TanStack Query's defaults are decided once in `src/api/query-client.ts` and no feature restates them:
+**a 4xx is never retried** (a 403 does not improve on the second ask), a 5xx and a status-0 network
+failure are; mutations never retry at all, because an auto-retried booking is how a double booking
+gets made. `createQueryClient()` is a factory, not a singleton — a shared cache is what makes a test
+pass alone and fail in the suite. Session restore is one refresh then one `me`, held in a
+module-scope promise in `src/api/bootstrap.ts`: a `useRef` guard does not survive the `StrictMode`
+double mount, and a module-level promise's lifetime is what actually means "once per page load".
 
 Public booking flow state lives in the **URL** (`?service=&staff=&date=&slot=`), not a context. The
 current step is derived from those parameters, which is what makes the `409` recovery free.
