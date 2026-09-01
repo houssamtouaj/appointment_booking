@@ -25,6 +25,32 @@ import type { BookingStatus, StaffTransition } from '@/types'
 type Patchable = { id: string; status: BookingStatus }
 
 /**
+ * The three guards that let the patch below narrow rather than assert.
+ *
+ * Cache entries arrive as `unknown` — deliberately, since the whole approach is
+ * to patch whatever shape is found rather than to name the queries expected to
+ * exist — and the alternative was three `as` expressions guarded by
+ * `Array.isArray` and `'id' in cached` next door. Same runtime checks, said once
+ * and in the type system.
+ */
+function isPatchable(value: unknown): value is Patchable {
+  return typeof value === 'object' && value !== null && 'id' in value && 'status' in value
+}
+
+function isPatchableList(value: unknown): value is Patchable[] {
+  return Array.isArray(value) && value.every(isPatchable)
+}
+
+function isPatchablePage(value: unknown): value is { content: Patchable[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'content' in value &&
+    isPatchableList((value as { content: unknown }).content)
+  )
+}
+
+/**
  * Rewrite one booking's status wherever it is cached.
  *
  * The same booking is in up to three places at once — the week grid's array,
@@ -39,14 +65,9 @@ function patchCachedStatus(client: QueryClient, id: string, status: BookingStatu
 
     const edit = <T extends Patchable>(row: T): T => (row.id === id ? { ...row, status } : row)
 
-    if (Array.isArray(cached)) return (cached as Patchable[]).map(edit)
-
-    if (typeof cached === 'object' && 'content' in cached) {
-      const page = cached as { content: Patchable[] }
-      return { ...page, content: page.content.map(edit) }
-    }
-
-    if (typeof cached === 'object' && 'id' in cached) return edit(cached as Patchable)
+    if (isPatchableList(cached)) return cached.map(edit)
+    if (isPatchablePage(cached)) return { ...cached, content: cached.content.map(edit) }
+    if (isPatchable(cached)) return edit(cached)
 
     return cached
   })

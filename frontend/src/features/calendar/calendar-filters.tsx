@@ -2,7 +2,7 @@ import { bookingStatusSchema } from '@/api/schemas/booking'
 import type { CalendarParams } from '@/features/calendar/calendar-params'
 import { STATUS_STYLES } from '@/features/calendar/status-style'
 import type { Lookups } from '@/hooks/use-lookups'
-import type { BookingStatus, Staff } from '@/types'
+import type { Staff } from '@/types'
 
 /**
  * Colleague and status, both in the URL so a filtered week is a link.
@@ -53,7 +53,11 @@ export function CalendarFilters({ params, lookups }: { params: CalendarParams; l
         onChange={(event) =>
           params.setFilters({
             staffId: params.staffId,
-            status: (event.target.value || undefined) as BookingStatus | undefined,
+            // The same parse the read path uses (`calendar-params.ts`), rather
+            // than an assertion over a `<select>`'s string. "Any status" is the
+            // empty option, which fails the parse and comes back `undefined` —
+            // exactly what clearing the filter means.
+            status: bookingStatusSchema.safeParse(event.target.value).data,
           })
         }
         className="border-input bg-card text-foreground h-8 rounded-sm border px-2 text-xs"
