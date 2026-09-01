@@ -122,33 +122,34 @@ function Calendar({ user }: { user: MeResponse }) {
   const emptyResult =
     rows !== undefined && rows.length === 0 && !filling && (view !== 'list' || params.page === 0)
 
-  return (
-    <Container className="pb-12">
-      <PageHeader
-        eyebrow="Admin"
-        title="Calendar"
-        description={`Every appointment at ${user.business.name}, in ${zoneCity(timeZone)} time.`}
-        actions={
-          <CalendarToolbar
-            params={params}
-            view={view}
-            lookups={lookups}
-            weekUnavailable={!wideEnough}
-          />
-        }
-      />
-
-      {lookups.error ? (
-        // Names come from the lookups, and a grid of unnamed tiles is a grid of
-        // unidentifiable appointments. Unlike the dashboard — where the figures
-        // stay correct without them — there is nothing useful left here.
+  /**
+   * The body, as early returns rather than one eight-branch conditional.
+   *
+   * Every condition is still derived above and named; what this shape adds is
+   * that the branches read in priority order at one indent level — names before
+   * rows, a failure with nothing cached before an empty result, an empty result
+   * before any view. As a nested ternary the same eight branches were readable
+   * only because each was commented, which is a warning rather than a defence.
+   */
+  function renderBody() {
+    // Names come from the lookups, and a grid of unnamed tiles is a grid of
+    // unidentifiable appointments. Unlike the dashboard — where the figures stay
+    // correct without them — there is nothing useful left here.
+    if (lookups.error) {
+      return (
         <ErrorState
           title="The calendar could not resolve its names"
           description={describeError(lookups.error)}
           requestId={requestIdOf(lookups.error)}
           onRetry={() => void queryClient.invalidateQueries({ queryKey: referenceKeys.all })}
         />
-      ) : failure && !stillHasData ? (
+      )
+    }
+
+    // A failure with nothing cached to fall back on. With data still in hand the
+    // screen keeps drawing it rather than replacing it with an error.
+    if (failure && !stillHasData) {
+      return (
         <ErrorState
           // A week too large is not a failure to load, it is a refusal to draw
           // something misleading — so it says what to do rather than offering a
@@ -168,7 +169,11 @@ function Calendar({ user }: { user: MeResponse }) {
               : () => void (view === 'list' ? list.refetch() : week.refetch())
           }
         />
-      ) : emptyResult ? (
+      )
+    }
+
+    if (emptyResult) {
+      return (
         <EmptyWeek
           filtered={Boolean(params.staffId || params.status)}
           onClearFilters={() => params.setFilters({})}
@@ -177,7 +182,11 @@ function Calendar({ user }: { user: MeResponse }) {
           searchedAndFoundNothing={nearest.isSuccess && nearest.data === null}
           slug={user.business.slug}
         />
-      ) : view === 'list' ? (
+      )
+    }
+
+    if (view === 'list') {
+      return (
         <BookingList
           page={list.data}
           lookups={lookups}
@@ -187,12 +196,22 @@ function Calendar({ user }: { user: MeResponse }) {
           selectedId={params.bookingId}
           onOpen={params.openBooking}
         />
-      ) : view === 'day' && !filling && !hasBookingsOnDate ? (
-        <EmptyDay
-          nearestDay={nearestBusyDay(params.date, bookings ?? [], timeZone)}
-          onGoToDay={params.setDate}
-        />
-      ) : view === 'day' ? (
+      )
+    }
+
+    if (view === 'day') {
+      // A day with nothing on it, which is a different answer from a week with
+      // nothing on it: this one offers the nearest day that is busy.
+      if (!filling && !hasBookingsOnDate) {
+        return (
+          <EmptyDay
+            nearestDay={nearestBusyDay(params.date, bookings ?? [], timeZone)}
+            onGoToDay={params.setDate}
+          />
+        )
+      }
+
+      return (
         <DayGrid
           date={params.date}
           today={today}
@@ -205,20 +224,42 @@ function Calendar({ user }: { user: MeResponse }) {
           selectedId={params.bookingId}
           onOpen={params.openBooking}
         />
-      ) : (
-        <WeekGrid
-          week={params.week}
-          today={today}
-          bookings={filling ? [] : (bookings ?? [])}
-          loading={filling}
-          scale={scale}
-          timeZone={timeZone}
-          lookups={lookups}
-          openingHours={business.data?.openingHours}
-          selectedId={params.bookingId}
-          onOpen={params.openBooking}
-        />
-      )}
+      )
+    }
+
+    return (
+      <WeekGrid
+        week={params.week}
+        today={today}
+        bookings={filling ? [] : (bookings ?? [])}
+        loading={filling}
+        scale={scale}
+        timeZone={timeZone}
+        lookups={lookups}
+        openingHours={business.data?.openingHours}
+        selectedId={params.bookingId}
+        onOpen={params.openBooking}
+      />
+    )
+  }
+
+  return (
+    <Container className="pb-12">
+      <PageHeader
+        eyebrow="Admin"
+        title="Calendar"
+        description={`Every appointment at ${user.business.name}, in ${zoneCity(timeZone)} time.`}
+        actions={
+          <CalendarToolbar
+            params={params}
+            view={view}
+            lookups={lookups}
+            weekUnavailable={!wideEnough}
+          />
+        }
+      />
+
+      {renderBody()}
 
       {params.bookingId ? (
         <BookingSheet
