@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { authKeys, fetchMe, logout } from '@/api/auth'
@@ -96,7 +96,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [queryClient])
 
-  const value: AuthContextValue = { status, user, adoptSession, refreshUser, signOut }
+  /**
+   * Memoised, and the three `useCallback`s above are why.
+   *
+   * Nine components across seven features read this through `useAuth`, so the
+   * value's identity is what decides whether they re-render — and an unmemoised
+   * object literal here discards the stability the callbacks exist to provide.
+   * It caused no re-renders while this component's only state was `status` and
+   * `user`, because then it re-rendered exactly when the value genuinely changed.
+   * That is an undeclared invariant rather than a design: one more `useState`
+   * here, or a parent that re-renders, and every consumer in the app goes with
+   * it.
+   */
+  const value = useMemo<AuthContextValue>(
+    () => ({ status, user, adoptSession, refreshUser, signOut }),
+    [status, user, adoptSession, refreshUser, signOut],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
