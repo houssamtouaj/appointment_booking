@@ -1,3 +1,4 @@
+import { RequestIdNote } from '@/components/request-id-note'
 import type { ValidationError } from '@/types'
 
 type FormAlertProps = {
@@ -38,14 +39,7 @@ export function FormAlert({ message, unmatched, requestId }: FormAlertProps) {
           ))}
         </ul>
       ) : null}
-      {requestId ? (
-        <p className="text-muted-foreground mt-2 text-xs">
-          Reference{' '}
-          <code className="text-foreground bg-muted rounded-xs px-1.5 py-0.5 font-mono select-all">
-            {requestId}
-          </code>
-        </p>
-      ) : null}
+      <RequestIdNote requestId={requestId} className="mt-2" />
     </div>
   )
 }

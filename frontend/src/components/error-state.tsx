@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react'
 
+import { RequestIdNote } from '@/components/request-id-note'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -49,14 +50,7 @@ export function ErrorState({ title, description, requestId, onRetry, className }
           </Button>
         ) : null}
 
-        {requestId ? (
-          <p className="text-muted-foreground mt-5 text-xs">
-            Reference{' '}
-            <code className="text-foreground bg-muted rounded-xs px-1.5 py-0.5 font-mono select-all">
-              {requestId}
-            </code>
-          </p>
-        ) : null}
+        <RequestIdNote requestId={requestId} className="mt-5" />
       </div>
     </div>
   )
