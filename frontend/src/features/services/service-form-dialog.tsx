@@ -94,11 +94,11 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
   })
 
   /**
-   * `useWatch` and not `form.watch()`. The latter returns a fresh function on
-   * every render, which React Compiler cannot memoise and warns about; `useWatch`
-   * is a hook and subscribes to the three fields the preview and the staff
-   * warning actually depend on, rather than re-rendering the dialog on every
-   * keystroke in the description.
+   * `useWatch` and not `form.watch()`, and the reason is the subscription rather
+   * than anything about identity: `useWatch` is a hook that subscribes to the
+   * named fields, so the dialog re-renders when one of *those four* changes.
+   * `form.watch()` called during render subscribes to the whole form, which
+   * re-renders this dialog on every keystroke in the description.
    */
   const staffIds = useWatch({ control: form.control, name: 'staffIds' }) ?? []
   const durationMinutes = useWatch({ control: form.control, name: 'durationMinutes' }) ?? ''

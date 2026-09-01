@@ -104,11 +104,11 @@ function SlotDaySection({
   const active = Math.min(activeIndex, ordered.length - 1)
   const buttons = useRef<(HTMLButtonElement | null)[]>([])
 
-  // Plain functions, not useCallback: the React Compiler is on for this project
-  // and memoises them itself. A hand-written useCallback here reads as an
-  // optimisation and is the opposite — the compiler refuses to optimise a
-  // component whose manual memoization it cannot prove it preserves, so the
-  // whole component falls back to no memoization at all.
+  // Plain functions, not `useCallback`, and the reason is what they are handed
+  // to: inline handlers on plain DOM elements, none of which is memoised. Their
+  // identity therefore gates nothing — a fresh function per render costs one
+  // allocation and skips no re-render — while a `useCallback` would add a
+  // dependency array to keep correct for no measurable return.
   function focusAt(index: number) {
     setActiveIndex(index)
     buttons.current[index]?.focus()

@@ -69,10 +69,14 @@ export function useGridFocus(columns: readonly FocusColumn[]): GridFocus {
     elements.current.get(id)?.focus()
   }
 
-  // Plain functions, not `useCallback`: the React Compiler is on for this
-  // project and memoises them itself. A hand-written `useCallback` here reads as
-  // an optimisation and is the opposite — the compiler declines to optimise a
-  // component whose manual memoization it cannot prove it preserves.
+  // Plain functions, not `useCallback`. Everything returned here is consumed by
+  // `time-grid.tsx` and passed to tiles that are not wrapped in `memo`, so no
+  // identity comparison anywhere depends on them. The one visible consequence is
+  // that `register` below hands React a new ref callback each render, so every
+  // tile's ref detaches and reattaches — the map is rebuilt correctly in the
+  // same pass and focus is only ever read inside an event handler, so it is a
+  // cost rather than a bug. Memoising it would mean memoising `elements` and the
+  // whole chain above it, which is a larger change than the cost justifies.
   function onKeyDown(event: React.KeyboardEvent, position: GridPosition) {
     const column = columns[position.column]
     if (!column) return

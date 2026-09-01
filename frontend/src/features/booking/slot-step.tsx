@@ -96,8 +96,9 @@ export function SlotStep({
 
   /**
    * One week ahead, on intent only — see `usePrefetchWeek`. A plain function
-   * because the React Compiler memoises it; a manual useCallback it cannot
-   * prove it preserves makes it skip the whole component.
+   * because it goes onto an unmemoised element as an inline handler, so its
+   * identity decides nothing: no child is wrapped in `memo` and no effect
+   * depends on it.
    */
   function warmNextWeek() {
     prefetchWeek(availabilityRequest(weekRangeFor(nextWeekStart), serviceId, staff, timeZone))
