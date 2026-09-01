@@ -1,5 +1,3 @@
-import { forwardRef } from 'react'
-
 import type { TileGeometry } from '@/features/calendar/grid-scale'
 import { styleOf } from '@/features/calendar/status-style'
 import { serviceNameIn, staffNameIn, type Lookups } from '@/hooks/use-lookups'
@@ -42,6 +40,13 @@ type BookingTileProps = {
   onOpen: () => void
   onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => void
   onFocus: () => void
+  /**
+   * An ordinary prop, on React 19. `useGridFocus` collects these to move focus
+   * between tiles; this was the codebase's only `forwardRef`, which on 19 buys a
+   * wrapper, a second type parameter and a named inner function in exchange for
+   * a value that can simply be destructured beside `booking`.
+   */
+  ref?: React.Ref<HTMLButtonElement>
 }
 
 /**
@@ -65,10 +70,18 @@ type BookingTileProps = {
 const THREE_LINE_MINUTES = 45
 const INLINE_MINUTES = 25
 
-export const BookingTile = forwardRef<HTMLButtonElement, BookingTileProps>(function BookingTile(
-  { booking, lookups, timeZone, geometry, tabIndex, selected, onOpen, onKeyDown, onFocus },
+export function BookingTile({
+  booking,
+  lookups,
+  timeZone,
+  geometry,
+  tabIndex,
+  selected,
+  onOpen,
+  onKeyDown,
+  onFocus,
   ref,
-) {
+}: BookingTileProps) {
   const style = styleOf(booking.status)
   const Icon = style.icon
 
@@ -135,4 +148,4 @@ export const BookingTile = forwardRef<HTMLButtonElement, BookingTileProps>(funct
       ) : null}
     </button>
   )
-})
+}
