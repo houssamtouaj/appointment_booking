@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { bookingKeys, patchBookingStatus } from '@/api/bookings'
 import { dashboardKeys } from '@/api/dashboard'
 import { isApiError, problemMember } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { describeError, referenceNote } from '@/api/error-copy'
 import { statusWord } from '@/features/calendar/status-style'
 import type { BookingStatus, StaffTransition } from '@/types'
 
@@ -142,7 +142,7 @@ export function useStatusMutation() {
       }
 
       toast.error(describeRefusal(error, variables.status), {
-        description: requestIdOf(error) && `Reference ${requestIdOf(error)}`,
+        description: referenceNote(error),
       })
     },
 

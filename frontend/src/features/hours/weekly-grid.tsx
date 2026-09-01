@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { isApiError, problemText } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { describeError, referenceNote } from '@/api/error-copy'
 import { dayOfWeekSchema } from '@/api/schemas/public'
 import { Button } from '@/components/ui/button'
 import { DayRow } from '@/features/hours/day-row'
@@ -118,7 +118,7 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
             HOURS_OVERLAP: 'Two ranges overlap. Nothing was saved.',
             ACCESS_DENIED: 'You can only edit your own hours.',
           }),
-          { description: requestIdOf(error) && `Reference ${requestIdOf(error)}` },
+          { description: referenceNote(error) },
         )
       },
     })

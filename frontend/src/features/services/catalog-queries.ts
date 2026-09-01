@@ -9,7 +9,7 @@ import {
   serviceKeys,
   updateService,
 } from '@/api/catalog'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { describeError, referenceNote } from '@/api/error-copy'
 import { referenceKeys } from '@/api/reference'
 import { tabQuery, type ServiceTab } from '@/features/services/service-params'
 import type { Service, ServiceRequest, ServiceUpdateRequest } from '@/types'
@@ -110,7 +110,7 @@ export function useServiceAction() {
     },
     onError: (error) => {
       toast.error(describeError(error), {
-        description: requestIdOf(error) && `Reference ${requestIdOf(error)}`,
+        description: referenceNote(error),
       })
     },
   })

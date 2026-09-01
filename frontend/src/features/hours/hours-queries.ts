@@ -11,7 +11,7 @@ import {
   fetchWorkingHours,
   replaceWorkingHours,
 } from '@/api/availability'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { describeError, referenceNote } from '@/api/error-copy'
 import { publicKeys } from '@/api/public'
 import type { Override, OverrideRequest, WorkingHoursRequest } from '@/types'
 
@@ -135,7 +135,7 @@ export function useDeleteOverride() {
     },
     onError: (error) => {
       toast.error(describeError(error), {
-        description: requestIdOf(error) && `Reference ${requestIdOf(error)}`,
+        description: referenceNote(error),
       })
     },
   })

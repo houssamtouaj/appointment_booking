@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import { toast } from 'sonner'
 
 import { serviceKeys } from '@/api/catalog'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { describeError, referenceNote } from '@/api/error-copy'
 import { fetchTeam, referenceKeys } from '@/api/reference'
 import { inviteStaff, resendInvitation, updateStaff } from '@/api/staff'
 import { REFERENCE_STALE_TIME } from '@/hooks/use-lookups'
@@ -88,7 +88,7 @@ export function useResendInvitation() {
       // `describeError` falls through to the server's `detail` for
       // `DATA_CONFLICT`, which is what that is.
       toast.error(describeError(error), {
-        description: requestIdOf(error) && `Reference ${requestIdOf(error)}`,
+        description: referenceNote(error),
       })
     },
   })

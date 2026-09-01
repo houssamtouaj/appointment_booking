@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { isApiError } from '@/api/error'
-import { describeError, requestIdOf } from '@/api/error-copy'
+import { describeError, referenceNote, requestIdOf } from '@/api/error-copy'
 import { Container } from '@/components/container'
 import { EmptyState } from '@/components/empty-state'
 import { ErrorState } from '@/components/error-state'
@@ -104,7 +104,7 @@ function Team({ user }: { user: MeResponse }) {
             return
           }
           toast.error(describeError(error), {
-            description: requestIdOf(error) && `Reference ${requestIdOf(error)}`,
+            description: referenceNote(error),
           })
         },
       },

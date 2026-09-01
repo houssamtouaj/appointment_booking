@@ -48,3 +48,20 @@ export function describeError(
 export function requestIdOf(error: unknown): string | undefined {
   return isApiError(error) ? error.requestId : undefined
 }
+
+/**
+ * The line under a toast that turns a report into a log query.
+ *
+ * One sentence, written identically in four features and six places, each of
+ * them calling `requestIdOf` twice in the same expression. It belongs here for
+ * the same reason `describeError` does: this file is where the app decides how a
+ * failure is worded, and "Reference" is part of that wording.
+ *
+ * `undefined` rather than an empty string when there is no id — a cross-origin
+ * 4xx has none (see `readRequestId` in `error.ts`), and Sonner draws an empty
+ * description as a blank line.
+ */
+export function referenceNote(error: unknown): string | undefined {
+  const requestId = requestIdOf(error)
+  return requestId ? `Reference ${requestId}` : undefined
+}
