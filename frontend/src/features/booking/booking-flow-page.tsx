@@ -3,22 +3,14 @@ import { useCallback, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
-import { applyFieldErrors, isApiError } from '@/api/error'
+import { isApiError } from '@/api/error'
 import { describeError, requestIdOf } from '@/api/error-copy'
 import { guestDetailsSchema } from '@/api/schemas/booking'
 import { Container } from '@/components/container'
 import { ErrorState } from '@/components/error-state'
 import { BusinessNotFound } from '@/features/booking/business-not-found'
-import { describeBookingFailure, type BookingFailure } from '@/features/booking/booking-errors'
 import { BookingFailureAlert } from '@/features/booking/booking-failure-alert'
-import {
-  ANYONE,
-  stepOf,
-  toSearch,
-  useBookingParams,
-  type BookingParams,
-  type BookingStep,
-} from '@/features/booking/booking-params'
+import { ANYONE, toSearch, type BookingStep } from '@/features/booking/booking-params'
 import { useCreateBooking } from '@/features/booking/booking-queries'
 import { rememberedBookingToken } from '@/features/booking/booking-storage'
 import { BookingStepper } from '@/features/booking/booking-stepper'
@@ -26,20 +18,16 @@ import { Confirmation } from '@/features/booking/confirmation'
 import { DepositHandoff } from '@/features/booking/deposit-handoff'
 import { DetailsStep } from '@/features/booking/details-step'
 import { NoServices } from '@/features/booking/no-services'
-import { useBusiness, useStaffForService } from '@/features/booking/public-queries'
+import { useBusiness } from '@/features/booking/public-queries'
 import { ServiceCard } from '@/features/booking/service-card'
 import { LandingSkeleton } from '@/features/booking/skeletons'
 import { SlotStep } from '@/features/booking/slot-step'
 import { StaffStep } from '@/features/booking/staff-step'
+import { useBookingFailure } from '@/features/booking/use-booking-failure'
+import { useEffectiveBookingParams } from '@/features/booking/use-effective-params'
 import { formatDuration } from '@/lib/time'
 import { formatMoney } from '@/lib/money'
-import type {
-  GuestDetails,
-  PublicBooking,
-  PublicBusiness,
-  PublicService,
-  ValidationError,
-} from '@/types'
+import type { GuestDetails, PublicBooking, PublicBusiness, PublicService } from '@/types'
 
 /**
  * `/b/:slug/book` — service, then who, then when, then who you are.
@@ -107,74 +95,17 @@ type Booked = {
   staffName?: string
 }
 
-/** A failure, and the choices it was about — see `visibleFailure` below. */
-type FlowFailure = {
-  failure: BookingFailure
-  /** `params.slot` at the moment of the attempt. `undefined` is impossible here. */
-  slot: string
-  /** `params.serviceId` at the moment of the attempt. `undefined` is impossible here. */
-  serviceId: string
-  unmatched: ValidationError[]
-}
-
 function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
-  const { params, setParams } = useBookingParams()
   const navigate = useNavigate()
   const location = useLocation()
 
   /**
-   * The service the URL names, **if the catalogue still has it**.
-   *
-   * A link can outlive a service: `?service=` may name one that has since been
-   * archived, or simply be nonsense. Falling back to the service step renders a
-   * question the customer can answer, where the alternative is a staff step
-   * headed by a service name we do not have.
-   *
-   * This is not a staleness check standing in for the server's. Whether a
-   * service is still *bookable* is answered by `422 SERVICE_INACTIVE` at booking
-   * time and by nothing here; this is only about not rendering a step whose
-   * subject is missing.
+   * The URL's choices, reconciled against a catalogue and a roster that may have
+   * moved since the link was made — see `use-effective-params.ts`. Everything
+   * below reads `effective` rather than the raw parameters.
    */
-  const service = business.services.find((candidate) => candidate.id === params.serviceId)
-
-  const { data: staffList } = useStaffForService(slug, service?.id)
-  const onlyStaff = staffList?.length === 1 ? staffList[0] : undefined
-
-  /**
-   * The same rule applied to `?staff=`, for the same reason.
-   *
-   * A link can outlive a staff member's assignment as easily as a service —
-   * they leave, or stop performing this one — and an id nobody recognises goes
-   * straight into the availability request as `staffId`, where the customer gets
-   * an error screen or a permanently empty picker and no way to understand
-   * either. Dropping back to step 2 asks a question they can answer.
-   *
-   * Only once the list has arrived: `staffList` is `undefined` while it loads,
-   * and bouncing on that would send every direct link through the staff step
-   * for a moment on its way in.
-   */
-  const staffKnown =
-    params.staff === ANYONE || !staffList || staffList.some((member) => member.id === params.staff)
-
-  /**
-   * The choices the URL is allowed to claim. Everything below reads these rather
-   * than the raw parameters, so the stepper, the heading and the step being
-   * rendered cannot disagree about which choices are still real.
-   */
-  const effective: BookingParams = !service
-    ? {}
-    : staffKnown
-      ? params
-      : { serviceId: params.serviceId }
-  const effectiveStep: BookingStep = stepOf(effective)
-
-  const staffSummary =
-    effective.staff === ANYONE
-      ? // When one person is the only candidate the step answered itself, so the
-        // stepper names them rather than saying "Anyone" — which would read as a
-        // choice the customer did not make.
-        (onlyStaff?.displayName ?? 'Anyone')
-      : staffList?.find((member) => member.id === effective.staff)?.displayName
+  const { params, setParams, service, effective, effectiveStep, staffSummary, answeredItself } =
+    useEffectiveBookingParams(slug, business)
 
   // ------------------------------------------------------------------
   //  Step 4: the form, the write, and the six ways it does not work
@@ -198,7 +129,16 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
 
   const create = useCreateBooking(slug)
   const [booked, setBooked] = useState<Booked | null>(null)
-  const [failure, setFailure] = useState<FlowFailure | null>(null)
+  const {
+    visibleFailure,
+    report: reportFailure,
+    clear: clearFailure,
+  } = useBookingFailure({
+    timeZone: business.timezone,
+    form,
+    params,
+    setParams,
+  })
 
   /**
    * A booking this tab already started, if Stripe's redirect never came back.
@@ -245,7 +185,7 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
       },
       {
         onSuccess: (created) => {
-          setFailure(null)
+          clearFailure()
           setBooked({ booking: created, service, staffName: staffSummary })
           /**
            * **A history entry of its own, so that Back leaves the confirmation
@@ -266,56 +206,10 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
            */
           navigate(location.pathname + location.search, { state: { booked: true } })
         },
-        onError: (caught) => handleFailure(caught, slot, service.id),
+        onError: (caught) => reportFailure(caught, { slot, serviceId: service.id }),
       },
     )
   }
-
-  function handleFailure(caught: unknown, slot: string, serviceId: string) {
-    // Field-level messages first, so that a 422 lands under the input it is
-    // about rather than only in the banner. What matches nothing comes back and
-    // is shown, because React Hook Form accepts `setError` on an unregistered
-    // path without complaint and the message would otherwise vanish.
-    const unmatched = applyFieldErrors(caught, form)
-    const described = describeBookingFailure(caught, business.timezone)
-    setFailure({ failure: described, slot, serviceId, unmatched })
-
-    if (described.recover === 'slot') {
-      // Back to the picker: clear the slot, and open the week the server named
-      // when it named one. The availability cache was already invalidated by the
-      // mutation, so what redraws is what is free now.
-      setParams({ slot: undefined, date: described.goToDate ?? params.date })
-      return
-    }
-    if (described.recover === 'service') {
-      // The catalogue changed underneath. Everything downstream of the service
-      // is now meaningless, including the week.
-      setParams({ serviceId: undefined, staff: undefined, date: undefined, slot: undefined })
-    }
-  }
-
-  /**
-   * Whether the failure still describes the situation on screen.
-   *
-   * It survives being sent back a step — that is the point of it — and stops the
-   * moment the customer has chosen a *different* one of the things it blamed.
-   * Comparing against the choices it happened on is what expresses that without
-   * a second piece of state to keep in step.
-   *
-   * Both choices, not just the slot. `SERVICE_INACTIVE` and
-   * `STAFF_NOT_ASSIGNED` recover by clearing the service *and* the slot, so a
-   * slot-only rule can never see the recovery it asked for: the customer picks
-   * another service, `slot` is still absent, and "that service is no longer
-   * bookable" stays pinned above the staff step and the picker for a service it
-   * was never about. Absent still counts as unchanged, which is what keeps the
-   * sentence on screen for the step it sent them back to.
-   */
-  const visibleFailure =
-    failure &&
-    (!params.serviceId || params.serviceId === failure.serviceId) &&
-    (!params.slot || params.slot === failure.slot)
-      ? failure
-      : undefined
 
   // ------------------------------------------------------------------
   //  Rendering
@@ -370,10 +264,6 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
       </Container>
     )
   }
-
-  // The step that answered itself is not a step anyone can go back to: StaffStep
-  // redirects out of it on mount, so a link there would do nothing visible.
-  const answeredItself = Boolean(onlyStaff) && effective.staff === ANYONE
 
   return (
     <Container width="copy" className="pb-20">
