@@ -29,7 +29,7 @@ const SIZES = {
   lg: 'size-9 text-sm',
 } as const
 
-export type MonogramSize = keyof typeof SIZES
+type MonogramSize = keyof typeof SIZES
 
 type MonogramProps = {
   fullName: string

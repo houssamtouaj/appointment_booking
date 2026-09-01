@@ -50,15 +50,21 @@ export function hasSession(): boolean {
   return established
 }
 
-/** A successful login, register, demo-login or bootstrap. */
+/**
+ * A successful login, register, demo-login, bootstrap **or rotation**.
+ *
+ * There was a second, narrower `setAccessToken` here — token only, `established`
+ * untouched — on the argument that a rotation cannot establish what already
+ * exists. Nothing called it, and nothing should: the rotation path is
+ * `refreshSession`, which is also the *bootstrap* path (`bootstrapSession`
+ * wraps it), and on a cold page load that call is precisely what establishes the
+ * session. A narrower function there would leave a reloaded tab holding a valid
+ * token with `established` false, so the next involuntary ending would tell
+ * nobody.
+ */
 export function beginSession(token: string): void {
   accessToken = token
   established = true
-}
-
-/** A successful rotation. Does not change whether a session exists — it already did. */
-export function setAccessToken(token: string): void {
-  accessToken = token
 }
 
 /**
