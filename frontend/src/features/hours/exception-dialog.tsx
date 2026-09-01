@@ -10,7 +10,7 @@ import { FormField } from '@/components/form-field'
 import { Modal } from '@/components/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { FormAlert } from '@/features/auth/form-alert'
+import { FormAlert } from '@/components/form-alert'
 import { useCreateOverride } from '@/features/hours/hours-queries'
 import type { OverrideRequest, ValidationError } from '@/types'
 

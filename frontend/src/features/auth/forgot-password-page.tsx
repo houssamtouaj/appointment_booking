@@ -12,7 +12,7 @@ import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AuthLayout } from '@/features/auth/auth-layout'
-import { FormAlert } from '@/features/auth/form-alert'
+import { FormAlert } from '@/components/form-alert'
 import type { ForgotPasswordRequest, ValidationError } from '@/types'
 
 /**

@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AuthLayout } from '@/features/auth/auth-layout'
-import { FormAlert } from '@/features/auth/form-alert'
+import { FormAlert } from '@/components/form-alert'
 import type { AcceptInvitationRequest, ValidationError } from '@/types'
 
 /**
