@@ -43,8 +43,13 @@ export function CopyText({ value, label, className }: CopyTextProps) {
   async function copy() {
     try {
       // Absent on an insecure origin and in some embedded browsers. The value is
-      // on screen either way, which is why failing here is quiet.
-      await navigator.clipboard?.writeText(value)
+      // on screen either way, which is why failing here is quiet — but quiet
+      // means *nothing*, not "Copied". This was `await navigator.clipboard?.…`,
+      // which resolves to `undefined` when there is no clipboard and then
+      // announced a copy that never happened: the exact silent failure the doc
+      // above says a copy-button-only control would have.
+      if (!navigator.clipboard) return
+      await navigator.clipboard.writeText(value)
       setCopied(true)
       window.clearTimeout(timer.current)
       timer.current = window.setTimeout(() => setCopied(false), 2000)

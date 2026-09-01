@@ -1,5 +1,6 @@
 import { UserRound } from 'lucide-react'
 
+import { initialsOf } from '@/components/initials'
 import { cn } from '@/lib/utils'
 
 /**
@@ -59,22 +60,4 @@ export function Monogram({ fullName, size = 'sm', muted, className }: MonogramPr
       {initials || <UserRound className="size-3.5" />}
     </span>
   )
-}
-
-/**
- * `"Amélie Rousseau"` → `"AR"`.
- *
- * Spread into code points rather than indexed with `[0]`, because `"Émile"[0]`
- * is fine and an emoji or a surrogate pair is not — a name field accepts
- * anything a person answers with, and half a code point renders as a
- * replacement character.
- */
-function initialsOf(fullName: string): string {
-  return fullName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => [...part][0] ?? '')
-    .join('')
-    .toUpperCase()
 }
