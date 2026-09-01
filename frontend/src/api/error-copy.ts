@@ -1,5 +1,5 @@
 import { isApiError } from '@/api/error'
-import type { ErrorCode } from '@/types'
+import type { ErrorCode } from '@/api/schemas/problem'
 
 /**
  * `ApiError.code` to a sentence a person can act on.
