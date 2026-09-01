@@ -22,7 +22,7 @@ export function TimeGutter({ scale }: { scale: GridScale }) {
       {scale.marks.map((mark, index) => (
         <span
           key={`${mark.minutes}-${mark.label}`}
-          className="text-muted-foreground absolute right-2 -translate-y-1/2 font-mono text-[0.6875rem]"
+          className="text-muted-foreground text-grid absolute right-2 -translate-y-1/2 font-mono"
           style={{ top: remOf(mark.minutes) }}
         >
           {/* Midnight is the top edge and its label would be clipped in half.

@@ -22,7 +22,8 @@ import { extendTailwindMerge } from 'tailwind-merge'
  *
  * Declaring the scale here fixes it once for every caller. Anything added to the
  * `--text-*` block in `theme.css` whose suffix is not a t-shirt size has to be
- * added below in the same commit.
+ * added below in the same commit — `text-grid`, the calendar's 11px, is the
+ * newest one and it fails the guess exactly as the display sizes do.
  *
  * **The same guess is made for every other t-shirt scale**, so the rest of the
  * theme's role-named tokens are declared here too:
@@ -41,7 +42,7 @@ import { extendTailwindMerge } from 'tailwind-merge'
 const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {
-      'font-size': [{ text: ['display-sm', 'display-md', 'display-lg'] }],
+      'font-size': [{ text: ['grid', 'display-sm', 'display-md', 'display-lg'] }],
       shadow: [{ shadow: ['e1', 'e2', 'e3'] }],
       tracking: [{ tracking: ['display', 'eyebrow'] }],
       'max-w': [{ 'max-w': ['copy'] }],

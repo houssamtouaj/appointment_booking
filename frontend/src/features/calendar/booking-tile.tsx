@@ -131,19 +131,19 @@ export function BookingTile({
 
       <span className="flex min-w-0 items-center gap-1 leading-tight">
         {Icon ? <Icon aria-hidden="true" className="size-3 shrink-0" /> : null}
-        <span className="shrink-0 font-mono text-[0.6875rem]">{from}</span>
+        <span className="text-grid shrink-0 font-mono">{from}</span>
         {/* Beside the clock rather than under it on a half-hour tile — the two
             stacked need one pixel more than such a tile has, and what gets cut
             is the name. */}
         {room === 'inline' ? (
-          <span className="truncate text-[0.6875rem] font-medium">{booking.guestName}</span>
+          <span className="text-grid truncate font-medium">{booking.guestName}</span>
         ) : null}
       </span>
 
       {room === 'full' ? (
         <>
           <span className="truncate text-xs leading-tight font-medium">{booking.guestName}</span>
-          <span className="truncate text-[0.6875rem] leading-tight opacity-80">{service}</span>
+          <span className="text-grid truncate leading-tight opacity-80">{service}</span>
         </>
       ) : null}
     </button>

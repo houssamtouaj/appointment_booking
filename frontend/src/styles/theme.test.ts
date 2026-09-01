@@ -146,6 +146,17 @@ describe('the token discipline', () => {
     ).toEqual({ hex: [], rgb: [] })
   })
 
+  // The same rule one axis over, and it had four breaches when it was written:
+  // `text-[0.6875rem]` in three places on the calendar tile and one in the hour
+  // gutter, all of them the value `--text-grid` now holds. An arbitrary size is
+  // worse than an off-scale token, because `tailwind-merge` files it correctly
+  // and nothing ever asks whether the number belongs to the scale.
+  it.each(files)('%s carries no arbitrary font size', (path, source) => {
+    const literal = source.match(/text-\[[^\]]+\]/g) ?? []
+
+    expect(literal, `${path} should use a --text-* token from src/styles/theme.css`).toEqual([])
+  })
+
   it.each(files)('%s carries no literal duration', (path, source) => {
     // A bare `160ms`, or Tailwind's arbitrary `duration-[120ms]`.
     const literal = source.match(/\b\d+(?:\.\d+)?ms\b|duration-\[[^\]]+\]/g) ?? []
