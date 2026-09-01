@@ -94,8 +94,9 @@ export function ExceptionDialog({
   const { alert, reportFailure, clear } = useFormErrorSummary(form)
 
   // `useWatch` and not `form.watch()`, for the reason `service-form-dialog.tsx`
-  // sets out: the latter returns a fresh function every render, which React
-  // Compiler cannot memoise and warns about.
+  // sets out: these subscribe to three named fields, where `form.watch()` during
+  // render subscribes to the whole form and re-renders the dialog on every
+  // keystroke in the reason field.
   const scope = useWatch({ control: form.control, name: 'scope' })
   const type = useWatch({ control: form.control, name: 'type' })
   const wholeDay = useWatch({ control: form.control, name: 'wholeDay' }) && type === 'BLOCKED'
