@@ -109,10 +109,22 @@ function money(minorUnits: number, currency: string, locale?: string): FigureVal
  * `4.2553%` is claiming a precision that two integers and a division do not
  * have. `Intl` rather than `* 100`, so the separator follows the reader's locale
  * the way every other number on the screen does.
+ *
+ * Cached, for the reason `lib/money.ts` gives — construction is the expensive
+ * half of formatting — and for a smaller one: this file agreeing with its two
+ * neighbours matters more here than the cost does. One figure per render makes
+ * that cost negligible, and a reader who has just seen `money.ts` and `time.ts`
+ * both keep their formatters should not have to work out why this one does not.
+ * Keyed by locale because `undefined` means "the browser's".
  */
+const formatters = new Map<string, Intl.NumberFormat>()
+
 function percent(rate: number, locale?: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'percent',
-    maximumFractionDigits: 1,
-  }).format(rate)
+  const key = locale ?? ''
+  let formatter = formatters.get(key)
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 })
+    formatters.set(key, formatter)
+  }
+  return formatter.format(rate)
 }
