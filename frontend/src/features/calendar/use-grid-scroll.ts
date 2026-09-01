@@ -40,10 +40,12 @@ export function useGridScroll(
     // Half an hour of air above, so the first appointment does not sit flush
     // against the header.
     scroller.current.scrollTop = remToPx(Math.max(0, anchor - 30) * (HOUR_REM / 60))
-    // `anchorKey` carries `anchor`; depending on both would re-run on renders
-    // where only the identity of the columns array changed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorKey])
+    // Both, and listing `anchor` costs nothing: `anchorKey` is built from it, so
+    // it cannot change without the key changing. What the key adds is the *other*
+    // half — re-anchor when the displayed days change even though the minute has
+    // not — and that is what this array is for. Naming `anchor` as well is what
+    // lets the rule check it instead of being told not to.
+  }, [anchorKey, anchor])
 
   return scroller
 }
