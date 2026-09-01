@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { isApiError, problemCount, problemText } from '@/api/error'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { FormAlert } from '@/components/form-alert'
@@ -205,11 +206,7 @@ export function BusinessForm({ business }: { business: Business }) {
           <legend className="sr-only">Deposits</legend>
 
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              {...form.register('depositRequired')}
-              className="border-input accent-primary size-4 rounded-xs border"
-            />
+            <Checkbox {...form.register('depositRequired')} />
             Ask for a deposit when a customer books
           </label>
 

@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { FormField } from '@/components/form-field'
 import { Modal } from '@/components/modal'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { FormAlert } from '@/components/form-alert'
@@ -228,11 +229,7 @@ export function ExceptionDialog({
 
         {type === 'BLOCKED' ? (
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              {...form.register('wholeDay')}
-              className="border-input accent-primary size-4 rounded-xs border"
-            />
+            <Checkbox {...form.register('wholeDay')} />
             The whole day
           </label>
         ) : null}

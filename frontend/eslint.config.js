@@ -31,6 +31,20 @@ export default tseslint.config(
       ecmaVersion: 2023,
       globals: globals.browser,
     },
+    // `jsx-a11y` matches control elements by tag name, so a `<label>` wrapping one
+    // of this app's own atoms reads to it as a label wrapping nothing. Naming them
+    // here is the plugin's supported answer and is better than the alternative at
+    // each call site, which is an `eslint-disable` on the very rule that catches
+    // the mistake this one is not making.
+    settings: {
+      'jsx-a11y': {
+        components: {
+          Checkbox: 'input',
+          Input: 'input',
+          Textarea: 'textarea',
+        },
+      },
+    },
     plugins: {
       'react-refresh': reactRefresh,
     },

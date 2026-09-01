@@ -14,6 +14,7 @@ import {
 import { FormField } from '@/components/form-field'
 import { Modal } from '@/components/modal'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -451,12 +452,13 @@ function StaffPicker({
                     checked && 'bg-primary-wash',
                   )}
                 >
-                  <input
+                  <Checkbox
                     id={id}
-                    type="checkbox"
                     checked={checked}
                     onChange={(event) => onToggle(person.id, event.target.checked)}
-                    className="accent-primary size-4 shrink-0"
+                    // No border in the picker: the rows already have one each,
+                    // and a second edge per row reads as a table.
+                    className="border-0"
                   />
                   <Label htmlFor={id} className="flex-1 truncate font-normal">
                     {person.fullName}

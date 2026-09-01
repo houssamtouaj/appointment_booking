@@ -1,6 +1,8 @@
 import { Plus, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { rangeProblem, type ClockTime, type DraftDay } from '@/features/hours/hours-model'
 import { formatWeekday } from '@/lib/time'
 import { cn } from '@/lib/utils'
@@ -56,13 +58,11 @@ export function DayRow({
         {/* A checkbox rather than a switch: it is a value in a form that is
             saved with a button, not a setting that takes effect on click, and
             the two read differently to a screen reader. */}
-        <input
-          type="checkbox"
+        <Checkbox
           id={`open-${day.dayOfWeek}`}
           checked={!closed}
           disabled={disabled}
           onChange={onToggle}
-          className="border-input accent-primary size-4 rounded-xs border"
         />
         <label
           htmlFor={`open-${day.dayOfWeek}`}
@@ -85,26 +85,33 @@ export function DayRow({
 
             return (
               <div key={range.key} className="flex flex-wrap items-center gap-2">
-                <input
+                {/* The atom, not a hand-styled `<input>`. Every class the raw
+                    version carried — `border-input`, `bg-card`, `h-9`,
+                    `rounded-sm`, the `aria-invalid` hook — is already in
+                    `components/ui/input.tsx`, and `exception-dialog.tsx` renders
+                    the same control through it forty lines away. What is left
+                    here is what is actually specific: a tighter gutter and
+                    tabular figures, since these sit in a row of six. */}
+                <Input
                   type="time"
                   aria-label={`${shift} start`}
                   aria-invalid={Boolean(problem) || overlapping}
                   value={range.start}
                   disabled={disabled}
                   onChange={(event) => onChange(range.key, 'start', event.target.value)}
-                  className="border-input bg-card text-foreground aria-invalid:border-destructive h-9 rounded-sm border px-2 font-mono text-sm"
+                  className="w-auto px-2 font-mono"
                 />
                 <span aria-hidden="true" className="text-muted-foreground">
                   –
                 </span>
-                <input
+                <Input
                   type="time"
                   aria-label={`${shift} end`}
                   aria-invalid={Boolean(problem) || overlapping}
                   value={range.end}
                   disabled={disabled}
                   onChange={(event) => onChange(range.key, 'end', event.target.value)}
-                  className="border-input bg-card text-foreground aria-invalid:border-destructive h-9 rounded-sm border px-2 font-mono text-sm"
+                  className="w-auto px-2 font-mono"
                 />
 
                 <Button
