@@ -41,6 +41,16 @@ function staffPath(staffId: string): string {
 export const availabilityKeys = {
   all: ['availability'] as const,
   hours: (staffId: string) => ['availability', 'hours', staffId] as const,
+  /**
+   * Every cached month of overrides, and **not** a prefix of `hours`.
+   *
+   * That distinction is the point of having it. `all` is a prefix of both, so a
+   * mutation that invalidated `all` to refresh the overrides list also refetched
+   * the weekly template sitting on the same screen — behind a grid that may hold
+   * unsaved edits. An override does not change the weekly template, so nothing
+   * should ask.
+   */
+  overridesAll: ['availability', 'overrides'] as const,
   overrides: (range: { from: string; to: string }) =>
     ['availability', 'overrides', range.from, range.to] as const,
 }

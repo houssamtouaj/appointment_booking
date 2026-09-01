@@ -125,6 +125,14 @@ let overrides: unknown[] = []
 let requests: AxiosRequestConfig[] = []
 let hoursStatus = 200
 let putAnswer: ((config: AxiosRequestConfig) => { data: unknown; status: number }) | undefined
+/**
+ * A `POST /api/exceptions` that actually returns the row it created.
+ *
+ * The default below answers every non-GET with a bodiless 204, which the create
+ * mutation rejects — `overrideSchema.parse(null)` throws — so a test that needs
+ * the *success* path, and the invalidation that hangs off it, has to say so.
+ */
+let postAnswer: ((config: AxiosRequestConfig) => { data: unknown; status: number }) | undefined
 
 function callsTo(method: string, path: string): AxiosRequestConfig[] {
   return requests.filter(
@@ -162,6 +170,10 @@ function stubApi() {
         ranges = sent.ranges
         data = { staffId: AMELIE.id, ranges }
       }
+    } else if (method === 'post' && url.includes('exceptions') && postAnswer) {
+      const answer = postAnswer(config)
+      data = answer.data
+      status = answer.status
     } else if (method !== 'get') {
       status = 204
     } else if (url.includes('/working-hours')) {
@@ -244,6 +256,7 @@ beforeEach(() => {
   requests = []
   hoursStatus = 200
   putAnswer = undefined
+  postAnswer = undefined
 })
 
 afterEach(() => {
@@ -494,6 +507,39 @@ describe('one-off overrides', () => {
     const effect = screen.getByLabelText('Effect') as HTMLSelectElement
     expect(effect).toBeDisabled()
     expect(within(effect).queryByRole('option', { name: /extra/i })).toBeNull()
+  })
+
+  it('refetches the overrides but not the weekly template it sits beside', async () => {
+    postAnswer = () => ({
+      data: { ...WHOLE_DAY_CLOSURE, date: '2026-12-25', reason: 'Christmas' },
+      status: 201,
+    })
+    const user = userEvent.setup()
+    await renderHours()
+    await screen.findByLabelText('Monday, shift 1 start')
+
+    const templateReadsBefore = callsTo('get', `/api/staff/${AMELIE.id}/working-hours`).length
+    const overrideReadsBefore = callsTo('get', '/api/exceptions').length
+
+    await user.click(addOverrideButton())
+    fireEvent.change(await screen.findByLabelText('Date'), { target: { value: '2026-12-25' } })
+    await user.type(screen.getByLabelText('Reason'), 'Christmas')
+    await user.selectOptions(screen.getByLabelText('Applies to'), 'business')
+    await user.click(screen.getByRole('button', { name: 'Add it' }))
+
+    await waitFor(() => expect(callsTo('post', '/api/exceptions')).toHaveLength(1))
+    await waitFor(() =>
+      expect(callsTo('get', '/api/exceptions').length).toBeGreaterThan(overrideReadsBefore),
+    )
+
+    // The grid on this page holds a draft seeded on mount and never
+    // resynchronised, deliberately. An override does not change the weekly
+    // template, so a refetch of it here would be a refetch behind unsaved edits
+    // for no reason — which is what invalidating the whole `availability`
+    // namespace used to do, `all` being a prefix of `hours(staffId)`.
+    expect(callsTo('get', `/api/staff/${AMELIE.id}/working-hours`)).toHaveLength(
+      templateReadsBefore,
+    )
   })
 
   it('posts a whole-day closure to the business path with no times on it', async () => {

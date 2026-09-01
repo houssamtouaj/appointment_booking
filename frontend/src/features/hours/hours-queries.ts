@@ -22,18 +22,30 @@ import type { Override, OverrideRequest, WorkingHoursRequest } from '@/types'
  * mutations do not have to think about: **a change to hours or overrides changes
  * what the public booking page offers.** A slot picker cached three minutes ago
  * is now wrong in a way nothing on the admin side would ever correct, and the
- * wave's demo walks straight from this screen to `/b/demo-salon`. So
- * {@link invalidateAvailability} clears the public namespace as well as this
- * one, and it is the only place either is spelled out.
+ * wave's demo walks straight from this screen to `/b/demo-salon`. So every
+ * mutation here clears the public namespace, and this is the only place that is
+ * spelled out.
  *
  * What is **not** invalidated: the booking lists. Availability is a statement
  * about slots that could be taken, and an appointment that already exists is
  * unaffected by the week's shape changing underneath it — the engine does not
  * retroactively cancel anything, and a refetch of the calendar would provably
  * change nothing.
+ *
+ * And what is no longer invalidated: **the whole `availability` namespace.** It
+ * used to be, from one shared helper, and `availabilityKeys.all` is a prefix of
+ * `hours(staffId)` — so creating or deleting an override refetched the weekly
+ * template behind a grid that may hold unsaved edits. `WeeklyGrid`'s draft is
+ * seeded from that query on mount and never resynchronised, deliberately, so the
+ * refetch is the thing that makes the unsynchronised draft reachable: another
+ * session edits this colleague's hours, the owner adds an override here, and the
+ * grid then shows values the server no longer has while the unsaved-changes
+ * guard reports the difference as the owner's own edits. Overrides do not change
+ * the weekly template, so the fix is for nothing to ask.
  */
-function invalidateAvailability(client: QueryClient): void {
-  void client.invalidateQueries({ queryKey: availabilityKeys.all })
+
+/** The half every write here shares: what a stranger is offered has changed. */
+function invalidatePublicOffers(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: publicKeys.all })
 }
 
@@ -67,7 +79,10 @@ export function useReplaceWorkingHours(staffId: string) {
       // instead of against the draft it happened to send. Anything the server
       // normalised shows up immediately rather than on the next mount.
       client.setQueryData(availabilityKeys.hours(staffId), saved)
-      invalidateAvailability(client)
+      // Seeded above, so there is nothing left in this namespace to refetch: not
+      // the overrides, which a template does not touch, and not another
+      // colleague's week.
+      invalidatePublicOffers(client)
     },
   })
 }
@@ -108,7 +123,10 @@ export function useCreateOverride() {
       entry.scope === 'staff'
         ? createStaffOverride(entry.staffId, entry.request)
         : createBusinessClosure(entry.request),
-    onSuccess: () => invalidateAvailability(client),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: availabilityKeys.overridesAll })
+      invalidatePublicOffers(client)
+    },
   })
 }
 
@@ -130,7 +148,8 @@ export function useDeleteOverride() {
     mutationFn: ({ override, asStaff }: RemoveOverride) =>
       asStaff ? deleteStaffOverride(asStaff, override.id) : deleteOverride(override.id),
     onSuccess: () => {
-      invalidateAvailability(client)
+      void client.invalidateQueries({ queryKey: availabilityKeys.overridesAll })
+      invalidatePublicOffers(client)
       toast.success('That override is gone. Availability is back to the weekly hours.')
     },
     onError: (error) => {
