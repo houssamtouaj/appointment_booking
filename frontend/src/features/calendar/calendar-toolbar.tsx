@@ -116,11 +116,22 @@ function StepControl({ params, view }: { params: CalendarParams; view: CalendarV
  * behaviour it does not have. So: one tab stop on the checked option, arrows
  * move and select, disabled options are stepped over.
  *
- * **The week option disables itself below 768px** rather than disappearing. A
+ * **The week option refuses itself below 768px** rather than disappearing. A
  * control that vanishes at a breakpoint leaves a person who was using it
  * wondering what they did wrong; one that is present and explains itself does
  * not. It is also honest about what is happening — the day view on a phone is a
  * degradation of the week view, not a different feature.
+ *
+ * **`aria-disabled`, not `disabled`, and the reason in text.** The explanation
+ * used to be a `title` on a `disabled` button, which is the one place it cannot
+ * be reached: a disabled button is not focusable, so no keyboard or screen-reader
+ * user meets it; there is no hover on touch, and touch below 768px is the only
+ * context where the option is refused at all; and `title` on a disabled control
+ * is announced inconsistently at best. So the button stays focusable and
+ * announced, the click is ignored, and the sentence is rendered beside the group
+ * and pointed at with `aria-describedby` — which is what the sibling
+ * `booking-sheet.tsx` already does for a refusing control, and what
+ * `staff-row.tsx` does for the last owner.
  */
 function ViewSwitch({
   params,
@@ -131,10 +142,11 @@ function ViewSwitch({
 }) {
   const group = useRef<HTMLDivElement>(null)
   const available = VIEWS.filter((view) => !(view === 'week' && weekUnavailable))
-  // The single tab stop. The checked option normally, but a week chosen on a
-  // laptop and reopened on a phone is checked *and* disabled — and a group whose
-  // only tab stop is disabled drops out of the tab order entirely.
-  const stop = available.includes(params.view) ? params.view : available[0]
+  // The single tab stop, and it is simply the checked option now: every button
+  // here is focusable, including a refused one, so the group can no longer drop
+  // out of the tab order by having its only stop disabled. A week chosen on a
+  // laptop and reopened on a phone is checked *and* refused, and still reachable.
+  const stop = params.view
 
   function move(from: CalendarView, step: number) {
     if (available.length === 0) return
@@ -147,50 +159,71 @@ function ViewSwitch({
   }
 
   return (
-    <div
-      ref={group}
-      role="radiogroup"
-      aria-label="Calendar view"
-      className="border-border bg-card flex items-center rounded-sm border p-0.5"
-    >
-      {VIEWS.map((view) => {
-        const disabled = view === 'week' && weekUnavailable
-        const selected = params.view === view
+    <div className="flex flex-col gap-1">
+      <div
+        ref={group}
+        role="radiogroup"
+        aria-label="Calendar view"
+        className="border-border bg-card flex items-center rounded-sm border p-0.5"
+      >
+        {VIEWS.map((view) => {
+          const disabled = view === 'week' && weekUnavailable
+          const selected = params.view === view
 
-        return (
-          <button
-            key={view}
-            type="button"
-            role="radio"
-            data-view={view}
-            aria-checked={selected}
-            disabled={disabled}
-            tabIndex={view === stop ? 0 : -1}
-            title={disabled ? 'The week grid needs a wider screen' : undefined}
-            onClick={() => params.setView(view)}
-            onKeyDown={(event) => {
-              const step =
-                event.key === 'ArrowRight' || event.key === 'ArrowDown'
-                  ? 1
-                  : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-                    ? -1
-                    : 0
-              if (step === 0) return
-              event.preventDefault()
-              move(view, step)
-            }}
-            className={cn(
-              'rounded-xs px-3 py-1 text-xs font-medium transition-colors',
-              selected
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground',
-              disabled && 'cursor-not-allowed opacity-40',
-            )}
-          >
-            {VIEW_LABEL[view]}
-          </button>
-        )
-      })}
+          return (
+            <button
+              key={view}
+              type="button"
+              role="radio"
+              data-view={view}
+              aria-checked={selected}
+              aria-disabled={disabled || undefined}
+              aria-describedby={disabled ? REASON_ID : undefined}
+              tabIndex={view === stop ? 0 : -1}
+              title={disabled ? WEEK_UNAVAILABLE_REASON : undefined}
+              // Ignored rather than prevented by the platform: an `aria-disabled`
+              // control is a real button, so the refusal has to be here.
+              onClick={() => {
+                if (disabled) return
+                params.setView(view)
+              }}
+              onKeyDown={(event) => {
+                const step =
+                  event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                    ? 1
+                    : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                      ? -1
+                      : 0
+                if (step === 0) return
+                event.preventDefault()
+                move(view, step)
+              }}
+              className={cn(
+                'rounded-xs px-3 py-1 text-xs font-medium transition-colors',
+                selected
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+                disabled && 'cursor-not-allowed opacity-40',
+              )}
+            >
+              {VIEW_LABEL[view]}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Rendered, not only tooltipped. This is the only context where the
+          option is refused — touch, below 768px — and a `title` is exactly the
+          thing that context has no way to show. */}
+      {weekUnavailable ? (
+        <p id={REASON_ID} className="text-muted-foreground text-2xs">
+          {WEEK_UNAVAILABLE_REASON}
+        </p>
+      ) : null}
     </div>
   )
 }
+
+/** One sentence, in the tooltip, in the text, and in `aria-describedby`. */
+const WEEK_UNAVAILABLE_REASON = 'The week grid needs a wider screen'
+const REASON_ID = 'calendar-week-unavailable'

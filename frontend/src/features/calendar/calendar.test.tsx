@@ -765,15 +765,38 @@ describe('at 375px', () => {
     expect(screen.queryByRole('region', { name: /Thursday/ })).not.toBeInTheDocument()
   })
 
-  it('keeps the week button visible but disabled, rather than making it vanish', async () => {
+  it('keeps the week button visible and refusing, rather than making it vanish', async () => {
     setViewport(false)
     await renderCalendar()
 
     // A control that disappears at a breakpoint leaves somebody who was using it
     // wondering what they did; one that explains itself does not.
     const week = await screen.findByRole('radio', { name: 'Week' })
-    expect(week).toBeDisabled()
-    expect(week).toHaveAttribute('title', expect.stringContaining('wider screen'))
+    expect(week).toHaveAttribute('aria-disabled', 'true')
+    // `aria-disabled` and not `disabled`, so it is focusable — which is the only
+    // way anybody meets the explanation. This is a touch-only state, so a
+    // `title` alone would reach nobody at all.
+    expect(week).not.toBeDisabled()
+    expect(week).toHaveAccessibleDescription(/wider screen/)
+    expect(screen.getByText('The week grid needs a wider screen')).toBeInTheDocument()
+  })
+
+  it('ignores a press on the refused option instead of switching to a week it cannot draw', async () => {
+    setViewport(false)
+    const user = userEvent.setup()
+    const { router } = await renderCalendar()
+
+    // Choose the day explicitly first, so that a press on the refused option has
+    // something to overwrite and its no-op is observable.
+    await user.click(await screen.findByRole('radio', { name: 'Day' }))
+    await waitFor(() => expect(router.state.location.search).toContain('view=day'))
+
+    // An `aria-disabled` button is a real button, so the refusal is the
+    // component's job rather than the platform's.
+    await user.click(screen.getByRole('radio', { name: 'Week' }))
+
+    expect(router.state.location.search).toContain('view=day')
+    expect(router.state.location.search).not.toContain('view=week')
   })
 
   it('leaves the chosen view in the URL, so the same link is a week on a laptop', async () => {
