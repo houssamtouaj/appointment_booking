@@ -69,13 +69,12 @@ export function ForgotPasswordPage() {
         <div role="status" className="border-border bg-card rounded-sm border px-4 py-4 text-sm">
           <p className="text-foreground font-medium">{t('auth.forgot.sentTitle')}</p>
           <p className="text-muted-foreground mt-1">
-            If <span className="text-foreground">{form.getValues('email')}</span> has an account, a
-            reset link is on its way. It expires in an hour and can be used once.
+            {/* The address is inside the sentence rather than in its own span:
+                French does not put it where English does. It is still shown
+                back, which is what makes "check that address" actionable. */}
+            {t('auth.forgot.sentBody', { email: form.getValues('email') })}
           </p>
-          <p className="text-muted-foreground mt-3 text-xs">
-            No email? Check spam, then try again — we answer the same way whether or not an account
-            exists, so this page cannot tell you which it was.
-          </p>
+          <p className="text-muted-foreground mt-3 text-xs">{t('auth.forgot.sentSpam')}</p>
         </div>
       ) : (
         <>

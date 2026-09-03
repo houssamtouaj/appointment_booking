@@ -124,6 +124,8 @@ export const fr = {
     },
     register: {
       title: 'Créer une entreprise',
+      haveAccount: 'Vous avez déjà un compte ?',
+      logIn: 'Se connecter',
       description:
         'Une seule étape. Vous obtenez un compte propriétaire, un agenda vide et une page de réservation publique.',
       businessName: "Nom de l'entreprise",
@@ -149,6 +151,10 @@ export const fr = {
         'Nous vous enverrons un lien par e-mail. Il fonctionne une fois et dure une heure.',
       backToLogin: 'Retour à la connexion',
       sentTitle: 'Consultez votre boîte de réception',
+      sentBody:
+        "Si {email} a un compte, un lien de réinitialisation est en route. Il expire dans une heure et ne fonctionne qu'une fois.",
+      sentSpam:
+        "Pas d'e-mail ? Vérifiez les indésirables, puis réessayez — nous répondons de la même façon qu'un compte existe ou non, cette page ne peut donc pas vous dire lequel c'était.",
       email: 'Adresse e-mail',
       submit: 'Envoyer le lien',
       submitting: 'Envoi…',

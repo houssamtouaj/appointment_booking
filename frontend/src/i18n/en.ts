@@ -181,6 +181,8 @@ export const en = {
     },
     register: {
       title: 'Create a business',
+      haveAccount: 'Already have an account?',
+      logIn: 'Log in',
       description:
         'One step. You get an owner account, an empty calendar and a public booking page.',
       businessName: 'Business name',
@@ -205,6 +207,11 @@ export const en = {
       description: 'We will email you a link. It works once and lasts an hour.',
       backToLogin: 'Back to log in',
       sentTitle: 'Check your inbox',
+      /** `{email}` is what was typed. The sentence never confirms it has an account. */
+      sentBody:
+        'If {email} has an account, a reset link is on its way. It expires in an hour and can be used once.',
+      sentSpam:
+        'No email? Check spam, then try again — we answer the same way whether or not an account exists, so this page cannot tell you which it was.',
       email: 'Email',
       submit: 'Send the link',
       submitting: 'Sending…',
