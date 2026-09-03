@@ -294,7 +294,7 @@ top right. Four decisions, F21 to F24.
 
 **A hand-written typed dictionary, not `react-i18next`, `react-intl` or Lingui** (F21).
 `src/i18n/en.ts` is the source of truth; `fr.ts` carries `satisfies Same<typeof en>`, and
-that one line is the whole argument. This app needs ~350 strings, two languages, no lazy
+that one line is the whole argument. This app needs ~750 strings, two languages, no lazy
 namespace loading and no translation-management integration — which is most of what a
 library is for. What it does need is the thing the libraries are weakest at: **a missing
 French string must not compile.** i18next needs a declaration-merging block for key
