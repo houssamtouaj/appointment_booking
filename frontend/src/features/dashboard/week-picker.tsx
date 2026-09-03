@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { shiftWeek, type DashboardWeek } from '@/features/dashboard/dashboard-queries'
 import { formatRange } from '@/lib/time'
+import { useTranslation } from '@/i18n'
 
 /**
  * Previous, next, and the way back to today.
@@ -19,13 +20,14 @@ import { formatRange } from '@/lib/time'
  * looking at it.
  */
 export function WeekPicker({ week }: { week: DashboardWeek }) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="border-border bg-card flex items-center rounded-sm border">
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Previous week"
+          aria-label={t('dashboard.previousWeek')}
           onClick={() => week.goTo(shiftWeek(week.range, -1))}
         >
           <ChevronLeft aria-hidden="true" />
@@ -44,7 +46,7 @@ export function WeekPicker({ week }: { week: DashboardWeek }) {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Next week"
+          aria-label={t('dashboard.nextWeek')}
           onClick={() => week.goTo(shiftWeek(week.range, 1))}
         >
           <ChevronRight aria-hidden="true" />
@@ -53,7 +55,7 @@ export function WeekPicker({ week }: { week: DashboardWeek }) {
 
       {week.isCurrent ? null : (
         <Button variant="outline" size="sm" onClick={() => week.goTo(week.current)}>
-          This week
+          {t('dashboard.thisWeek')}
         </Button>
       )}
     </div>

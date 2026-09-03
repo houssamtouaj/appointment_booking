@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { serviceNameIn, staffNameIn, type Lookups } from '@/hooks/use-lookups'
 import { clockOf, dayKeyOf, formatDayShort, zoneCity } from '@/lib/time'
 import type { BookingSummary } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type UpcomingListProps = {
   /** Absent while either the stats or the lookups are still in flight. */
@@ -40,11 +41,12 @@ type UpcomingListProps = {
  * difference between "Amélie Rousseau" and "Amélie R…".
  */
 export function UpcomingList({ bookings, lookups, timeZone, slug }: UpcomingListProps) {
+  const { t } = useTranslation()
   return (
     <section aria-labelledby="upcoming-heading">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 id="upcoming-heading" className="text-foreground text-sm font-medium">
-          Next five appointments
+          {t('dashboard.upcomingHeading')}
         </h2>
         <span className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
           {zoneCity(timeZone)}
@@ -56,11 +58,11 @@ export function UpcomingList({ bookings, lookups, timeZone, slug }: UpcomingList
       ) : bookings.length === 0 ? (
         <EmptyState
           icon={CalendarClock}
-          title="No appointments scheduled"
-          description="Nothing is booked from here on. The booking page is where the next one comes from."
+          title={t('dashboard.upcomingEmptyTitle')}
+          description={t('dashboard.upcomingEmptyBody')}
           action={
             <Button asChild variant="outline" size="sm">
-              <Link to={`/b/${slug}`}>Open the booking page</Link>
+              <Link to={`/b/${slug}`}>{t('dashboard.openBookingPage')}</Link>
             </Button>
           }
         />
@@ -118,10 +120,11 @@ function Row({
 
 /** Five rows at the height five rows actually are. */
 function UpcomingSkeleton() {
+  const { t } = useTranslation()
   return (
     <div className="border-border bg-card overflow-hidden rounded-md border">
       <span className="sr-only" role="status">
-        Loading the next appointments
+        {t('dashboard.upcomingLoading')}
       </span>
       {Array.from({ length: 5 }, (_, index) => (
         <div
@@ -149,9 +152,10 @@ function UpcomingSkeleton() {
  * lie than the one it was avoiding.
  */
 export function UpcomingError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const { t } = useTranslation()
   return (
     <ErrorState
-      title="The appointment list could not be loaded"
+      title={t('dashboard.upcomingErrorTitle')}
       description={describeError(error)}
       requestId={requestIdOf(error)}
       onRetry={onRetry}

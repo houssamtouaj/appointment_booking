@@ -1,3 +1,4 @@
+import { currentLocale, type TKey } from '@/i18n'
 import { formatMoney } from '@/lib/money'
 import type { DashboardStats } from '@/types'
 
@@ -30,67 +31,80 @@ import type { DashboardStats } from '@/types'
  * owner they have a perfect record when what they have is no data, and the API
  * is `@JsonInclude(ALWAYS)`-annotated precisely so a client can tell the two
  * apart. Reintroducing the zero at the last step would waste that.
+ *
+ * A key rather than the sentence, like every other string in this table: the
+ * band translates it at render.
  */
-export const NOT_ENOUGH_DATA = 'Not enough data'
+export const NOT_ENOUGH_DATA: TKey = 'dashboard.figures.notEnoughData'
 
 /**
  * `value` sets in the display face and reads as a number; `absent` sets in body
  * copy and reads as a sentence, because it is one.
+ *
+ * A union rather than one shape with a `kind` flag, so the two halves can carry
+ * different types: a formatted number is already a string in the reader's
+ * locale, and the absent sentence is a dictionary key the band resolves. The
+ * discriminant makes that a compiler-checked branch rather than a cast.
  */
-export type FigureValue = { text: string; kind: 'value' | 'absent' }
+export type FigureValue = { text: string; kind: 'value' } | { text: TKey; kind: 'absent' }
 
 export type Figure = {
   key: keyof DashboardStats
-  label: string
+  label: TKey
   /** One sentence, always on screen — including while the number is still loading. */
-  definition: string
-  format: (stats: DashboardStats, currency: string, locale?: string) => FigureValue
+  definition: TKey
+  /**
+   * No `locale` parameter any more (F23). `formatMoney` and `Intl` below resolve
+   * it from the language store, which is the same answer every other formatter
+   * in the app now reaches — and one fewer thing for a caller to forget.
+   */
+  format: (stats: DashboardStats, currency: string) => FigureValue
 }
 
 export const FIGURES: readonly Figure[] = [
   {
     key: 'todayBookings',
-    label: 'Today',
+    label: 'dashboard.figures.today',
     // The one figure the week picker does not move. Saying so here is cheaper
     // than the support question that follows from paging back a fortnight and
     // watching four numbers change and one refuse to.
-    definition: 'Confirmed appointments starting today, whichever week is shown.',
-    format: (stats, _currency, locale) => count(stats.todayBookings, locale),
+    definition: 'dashboard.figures.todayDefinition',
+    format: (stats) => count(stats.todayBookings),
   },
   {
     key: 'weekBookings',
     // Not "Appointments this week": the picker moves, and a label that names the
     // current week while showing a fortnight ago is a small lie told on every
     // other screenful. The range is stated in full directly above these tiles.
-    label: 'Appointments',
-    definition: 'Confirmed and completed in the week shown. Cancellations never count.',
-    format: (stats, _currency, locale) => count(stats.weekBookings, locale),
+    label: 'dashboard.figures.bookings',
+    definition: 'dashboard.figures.bookingsDefinition',
+    format: (stats) => count(stats.weekBookings),
   },
   {
     key: 'revenueCents',
-    label: 'Revenue earned',
-    definition: 'Completed appointments only. An appointment still to come has not earned yet.',
-    format: (stats, currency, locale) => money(stats.revenueCents, currency, locale),
+    label: 'dashboard.figures.revenue',
+    definition: 'dashboard.figures.revenueDefinition',
+    format: (stats, currency) => money(stats.revenueCents, currency),
   },
   {
     key: 'depositsCents',
-    label: 'Deposits held',
-    definition: 'Paid on appointments in the week that were not cancelled, including future ones.',
-    format: (stats, currency, locale) => money(stats.depositsCents, currency, locale),
+    label: 'dashboard.figures.deposits',
+    definition: 'dashboard.figures.depositsDefinition',
+    format: (stats, currency) => money(stats.depositsCents, currency),
   },
   {
     key: 'noShowRate',
-    label: 'No-shows',
-    definition: 'Missed appointments as a share of the ones that have finished.',
-    format: (stats, _currency, locale) =>
+    label: 'dashboard.figures.noShows',
+    definition: 'dashboard.figures.noShowsDefinition',
+    format: (stats) =>
       stats.noShowRate === null
         ? { text: NOT_ENOUGH_DATA, kind: 'absent' }
-        : { text: percent(stats.noShowRate, locale), kind: 'value' },
+        : { text: percent(stats.noShowRate), kind: 'value' },
   },
 ]
 
-function count(value: number, locale?: string): FigureValue {
-  return { text: value.toLocaleString(locale), kind: 'value' }
+function count(value: number): FigureValue {
+  return { text: value.toLocaleString(currentLocale()), kind: 'value' }
 }
 
 /**
@@ -98,8 +112,8 @@ function count(value: number, locale?: string): FigureValue {
  * property of the tenant, never of the viewer and never hard-coded. It types as
  * `object` in the OpenAPI document and is the string `"EUR"` on the wire (F3).
  */
-function money(minorUnits: number, currency: string, locale?: string): FigureValue {
-  return { text: formatMoney(minorUnits, currency, locale), kind: 'value' }
+function money(minorUnits: number, currency: string): FigureValue {
+  return { text: formatMoney(minorUnits, currency), kind: 'value' }
 }
 
 /**
@@ -115,16 +129,17 @@ function money(minorUnits: number, currency: string, locale?: string): FigureVal
  * neighbours matters more here than the cost does. One figure per render makes
  * that cost negligible, and a reader who has just seen `money.ts` and `time.ts`
  * both keep their formatters should not have to work out why this one does not.
- * Keyed by locale because `undefined` means "the browser's".
+ * Keyed by locale because the language store's answer changes when somebody
+ * switches, and both formatters then stay warm.
  */
 const formatters = new Map<string, Intl.NumberFormat>()
 
-function percent(rate: number, locale?: string): string {
-  const key = locale ?? ''
-  let formatter = formatters.get(key)
+function percent(rate: number): string {
+  const locale = currentLocale()
+  let formatter = formatters.get(locale)
   if (!formatter) {
     formatter = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 })
-    formatters.set(key, formatter)
+    formatters.set(locale, formatter)
   }
   return formatter.format(rate)
 }

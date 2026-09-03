@@ -261,6 +261,58 @@ export const en = {
       logIn: 'Log in',
     },
   },
+  /**
+   * The admin shell's own eyebrow, shared by every admin screen's `PageHeader`.
+   * In `common` rather than under a screen because six screens use it.
+   */
+  admin: {
+    eyebrow: 'Admin',
+  },
+  dashboard: {
+    title: 'Dashboard',
+    /** `{business}` is tenant data and is not translated. */
+    descriptionOwner: 'Every appointment at {business}.',
+    descriptionStaff: 'Your own appointments. An owner sees the whole business on this screen.',
+    errorTitle: 'This week’s figures could not be loaded',
+    bandLabel: 'Figures for the week shown',
+    bandLoading: 'Loading this week’s figures',
+    upcomingHeading: 'Next five appointments',
+    upcomingLoading: 'Loading the next appointments',
+    upcomingEmptyTitle: 'No appointments scheduled',
+    upcomingEmptyBody:
+      'Nothing is booked from here on. The booking page is where the next one comes from.',
+    openBookingPage: 'Open the booking page',
+    upcomingErrorTitle: 'The appointment list could not be loaded',
+    previousWeek: 'Previous week',
+    nextWeek: 'Next week',
+    thisWeek: 'This week',
+    figures: {
+      /**
+       * The definitions are the deliverable as much as the figures are — two of
+       * them are claims about money that have to be worded carefully, and the
+       * French has to be as careful. "Revenue earned", never "Revenue"; deposits
+       * held are deliberately not a subset of it.
+       */
+      today: 'Today',
+      todayDefinition: 'Confirmed appointments starting today, whichever week is shown.',
+      bookings: 'Appointments',
+      bookingsDefinition: 'Confirmed and completed in the week shown. Cancellations never count.',
+      revenue: 'Revenue earned',
+      revenueDefinition:
+        'Completed appointments only. An appointment still to come has not earned yet.',
+      deposits: 'Deposits held',
+      depositsDefinition:
+        'Paid on appointments in the week that were not cancelled, including future ones.',
+      noShows: 'No-shows',
+      noShowsDefinition: 'Missed appointments as a share of the ones that have finished.',
+      /**
+       * What `noShowRate: null` renders as. A business with nothing completed has
+       * no no-show rate, and "0%" would tell an owner they have a perfect record
+       * when what they have is no data.
+       */
+      notEnoughData: 'Not enough data',
+    },
+  },
   components: {
     copyText: {
       copy: 'Copy',

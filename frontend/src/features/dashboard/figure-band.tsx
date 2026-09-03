@@ -2,6 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { FIGURES } from '@/features/dashboard/figures'
 import { cn } from '@/lib/utils'
 import type { DashboardStats } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type FigureBandProps = {
   /** Absent while the week is in flight. The labels and definitions show regardless. */
@@ -31,15 +32,16 @@ type FigureBandProps = {
  * of the loaded state that is taller than the loading one.
  */
 export function FigureBand({ stats, currency }: FigureBandProps) {
+  const { t } = useTranslation()
   return (
     <section aria-labelledby="figures-heading">
       <h2 id="figures-heading" className="sr-only">
-        Figures for the week shown
+        {t('dashboard.bandLabel')}
       </h2>
 
       {/* One live region for the whole band, rather than a "loading" per cell. */}
       <span className="sr-only" role="status">
-        {stats ? '' : 'Loading this week’s figures'}
+        {stats ? '' : t('dashboard.bandLoading')}
       </span>
 
       <dl className="border-border bg-rule grid gap-px overflow-hidden rounded-md border sm:grid-cols-2">
@@ -57,7 +59,7 @@ export function FigureBand({ stats, currency }: FigureBandProps) {
               )}
             >
               <dt className="text-muted-foreground text-2xs tracking-eyebrow flex h-4 items-center font-mono uppercase">
-                {figure.label}
+                {t(figure.label)}
               </dt>
               <dd>
                 {/* Fixed height, both states. 40px of display face and a 36px
@@ -78,14 +80,17 @@ export function FigureBand({ stats, currency }: FigureBandProps) {
                           : 'text-muted-foreground text-sm',
                       )}
                     >
-                      {value.text}
+                      {/* A figure is already a string in the reader's locale; the
+                          absent case is a key, and the discriminant is what says
+                          which. */}
+                      {value.kind === 'absent' ? t(value.text) : value.text}
                     </span>
                   ) : (
                     <Skeleton className="h-9 w-28" />
                   )}
                 </span>
                 <span className="text-muted-foreground mt-1.5 block text-xs">
-                  {figure.definition}
+                  {t(figure.definition)}
                 </span>
               </dd>
             </div>

@@ -17,6 +17,7 @@ const TRANSLATED = [
   'src/pages',
   'src/features/auth',
   'src/features/booking',
+  'src/features/dashboard',
 ]
 
 /**

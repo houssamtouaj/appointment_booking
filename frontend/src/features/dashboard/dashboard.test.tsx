@@ -13,6 +13,7 @@ import { AuthProvider } from '@/features/auth/auth-provider'
 import { NOT_ENOUGH_DATA } from '@/features/dashboard/figures'
 import { daysBetween, weekdayOf } from '@/lib/time'
 import { routes } from '@/routes'
+import { en } from '@/i18n/en'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -196,7 +197,9 @@ describe('the figures', () => {
     statsBody = stats({ noShowRate: null })
     await renderDashboard()
 
-    expect(await screen.findByText(NOT_ENOUGH_DATA)).toBeInTheDocument()
+    // `NOT_ENOUGH_DATA` is a dictionary key from wave 10, so this asserts the
+    // sentence the band actually draws rather than the key that chose it.
+    expect(await screen.findByText(en.dashboard.figures.notEnoughData)).toBeInTheDocument()
     // The whole reason the API sends null rather than 0. A percentage anywhere
     // in the band would mean the client reintroduced the lie at the last step.
     expect(within(figures()).queryByText(/%$/)).not.toBeInTheDocument()

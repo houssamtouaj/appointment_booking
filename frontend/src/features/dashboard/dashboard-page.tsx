@@ -12,6 +12,7 @@ import { UpcomingError, UpcomingList } from '@/features/dashboard/upcoming-list'
 import { WeekPicker } from '@/features/dashboard/week-picker'
 import { useLookups } from '@/hooks/use-lookups'
 import type { MeResponse } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * Screen 5: the numbers a business opens in the morning.
@@ -50,16 +51,17 @@ function Dashboard({ user }: { user: MeResponse }) {
   const week = useDashboardWeek(timeZone)
   const stats = useDashboardStats(week.range, timeZone)
   const lookups = useLookups()
+  const { t } = useTranslation()
 
   return (
     <Container className="pb-12">
       <PageHeader
-        eyebrow="Admin"
-        title="Dashboard"
+        eyebrow={t('admin.eyebrow')}
+        title={t('dashboard.title')}
         description={
           user.role === 'OWNER'
-            ? `Every appointment at ${user.business.name}.`
-            : 'Your own appointments. An owner sees the whole business on this screen.'
+            ? t('dashboard.descriptionOwner', { business: user.business.name })
+            : t('dashboard.descriptionStaff')
         }
         actions={<WeekPicker week={week} />}
       />
@@ -76,7 +78,7 @@ function Dashboard({ user }: { user: MeResponse }) {
         // error box the first time a focus refetch times out — over figures
         // that are on screen, correct, and stamped with the week they are for.
         <ErrorState
-          title="This week’s figures could not be loaded"
+          title={t('dashboard.errorTitle')}
           description={describeError(stats.error)}
           requestId={requestIdOf(stats.error)}
           onRetry={() => void stats.refetch()}

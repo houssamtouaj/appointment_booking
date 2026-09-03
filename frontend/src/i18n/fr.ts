@@ -196,6 +196,45 @@ export const fr = {
       logIn: 'Connexion',
     },
   },
+  admin: {
+    eyebrow: 'Admin',
+  },
+  dashboard: {
+    title: 'Tableau de bord',
+    descriptionOwner: 'Tous les rendez-vous de {business}.',
+    descriptionStaff:
+      'Vos propres rendez-vous. Un propriétaire voit toute l’entreprise sur cet écran.',
+    errorTitle: 'Les chiffres de la semaine n’ont pas pu être chargés',
+    bandLabel: 'Chiffres de la semaine affichée',
+    bandLoading: 'Chargement des chiffres de la semaine',
+    upcomingHeading: 'Les cinq prochains rendez-vous',
+    upcomingLoading: 'Chargement des prochains rendez-vous',
+    upcomingEmptyTitle: 'Aucun rendez-vous prévu',
+    upcomingEmptyBody:
+      'Rien n’est réservé à partir d’ici. C’est de la page de réservation que vient le prochain.',
+    openBookingPage: 'Ouvrir la page de réservation',
+    upcomingErrorTitle: 'La liste des rendez-vous n’a pas pu être chargée',
+    previousWeek: 'Semaine précédente',
+    nextWeek: 'Semaine suivante',
+    thisWeek: 'Cette semaine',
+    figures: {
+      today: "Aujourd'hui",
+      todayDefinition:
+        'Rendez-vous confirmés commençant aujourd’hui, quelle que soit la semaine affichée.',
+      bookings: 'Rendez-vous',
+      bookingsDefinition:
+        'Confirmés et réalisés dans la semaine affichée. Les annulations ne comptent jamais.',
+      revenue: 'Chiffre réalisé',
+      revenueDefinition:
+        'Rendez-vous réalisés uniquement. Un rendez-vous à venir n’a encore rien rapporté.',
+      deposits: 'Acomptes détenus',
+      depositsDefinition:
+        'Versés sur des rendez-vous de la semaine non annulés, y compris ceux à venir.',
+      noShows: 'Absences',
+      noShowsDefinition: 'Rendez-vous manqués rapportés à ceux qui sont terminés.',
+      notEnoughData: 'Pas assez de données',
+    },
+  },
   components: {
     copyText: {
       copy: 'Copier',
