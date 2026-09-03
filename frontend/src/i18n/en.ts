@@ -141,6 +141,40 @@ export const en = {
     checkDateAndTimes: 'Check the date and times.',
     hoursOnlyYourOwnDays: 'You can only change your own days.',
   },
+  /**
+   * The shared pieces in `src/components/` and the two layouts, keyed by the file
+   * that owns each string. A key used in one place is named for its place — the
+   * promotion to `common` happens on the second use, which is what keeps a rename
+   * local.
+   */
+  components: {
+    copyText: {
+      copy: 'Copy',
+      copied: 'Copied',
+      /** `{label}` is the caller's noun: "Your booking link copied". */
+      copiedAnnouncement: '{label} copied',
+    },
+    errorState: {
+      retry: 'Try again',
+    },
+    requestIdNote: {
+      /** The word before the id. `error-copy.ts`'s toast line uses the same key. */
+      reference: 'Reference',
+      /** The toast's one-line form, where the id cannot be its own element. */
+      referenceLine: 'Reference {requestId}',
+    },
+    modal: {
+      close: 'Close',
+    },
+    skipLink: 'Skip to content',
+    footerNote: "A booking platform. Times shown in the business's timezone.",
+  },
+  notFound: {
+    eyebrow: 'Error 404',
+    title: 'No such page',
+    body: 'The link may be incomplete. Links sent by email expire, and some mail clients cut long ones in half — if you followed one, request a fresh link.',
+    action: 'Go to the booking page',
+  },
   language: {
     /** The button's accessible name says what pressing it will do, never the state. */
     switchTo: 'Switch to English',

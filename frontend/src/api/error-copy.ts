@@ -58,7 +58,8 @@ export function requestIdOf(error: unknown): string | undefined {
  * One sentence, written identically in four features and six places, each of
  * them calling `requestIdOf` twice in the same expression. It belongs here for
  * the same reason `describeError` does: this file is where the app decides how a
- * failure is worded, and "Reference" is part of that wording.
+ * failure is worded, and "Reference" is part of that wording — in the reader's
+ * language, from the same key `RequestIdNote` uses for the two-element form.
  *
  * `undefined` rather than an empty string when there is no id — a cross-origin
  * 4xx has none (see `readRequestId` in `error.ts`), and Sonner draws an empty
@@ -66,5 +67,5 @@ export function requestIdOf(error: unknown): string | undefined {
  */
 export function referenceNote(error: unknown): string | undefined {
   const requestId = requestIdOf(error)
-  return requestId ? `Reference ${requestId}` : undefined
+  return requestId ? translate('components.requestIdNote.referenceLine', { requestId }) : undefined
 }

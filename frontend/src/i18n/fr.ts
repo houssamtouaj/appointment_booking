@@ -104,6 +104,31 @@ export const fr = {
     checkDateAndTimes: 'Vérifiez la date et les horaires.',
     hoursOnlyYourOwnDays: 'Vous ne pouvez modifier que vos propres journées.',
   },
+  components: {
+    copyText: {
+      copy: 'Copier',
+      copied: 'Copié',
+      copiedAnnouncement: '{label} copié',
+    },
+    errorState: {
+      retry: 'Réessayer',
+    },
+    requestIdNote: {
+      reference: 'Référence',
+      referenceLine: 'Référence {requestId}',
+    },
+    modal: {
+      close: 'Fermer',
+    },
+    skipLink: 'Aller au contenu',
+    footerNote: "Une plateforme de réservation. Horaires affichés dans le fuseau de l'entreprise.",
+  },
+  notFound: {
+    eyebrow: 'Erreur 404',
+    title: 'Page introuvable',
+    body: 'Le lien est peut-être incomplet. Les liens envoyés par e-mail expirent, et certains logiciels de messagerie coupent les liens longs en deux — si vous avez suivi un lien, demandez-en un nouveau.',
+    action: 'Aller à la page de réservation',
+  },
   language: {
     switchTo: 'Passer en français',
     groupLabel: 'Langue',

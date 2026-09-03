@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n'
 
 type CopyTextProps = {
   /** The exact string a person needs to keep. Shown in full, never truncated in the DOM. */
@@ -32,6 +33,7 @@ type CopyTextProps = {
  * rather than about the link.
  */
 export function CopyText({ value, label, className }: CopyTextProps) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const timer = useRef<number | undefined>(undefined)
 
@@ -80,12 +82,12 @@ export function CopyText({ value, label, className }: CopyTextProps) {
         ) : (
           <Copy className="size-4" aria-hidden="true" />
         )}
-        <span>{copied ? 'Copied' : 'Copy'}</span>
+        <span>{copied ? t('components.copyText.copied') : t('components.copyText.copy')}</span>
         <span className="sr-only"> — {label}</span>
       </Button>
       {/* Announced without stealing focus from the button that was just pressed. */}
       <span role="status" className="sr-only">
-        {copied ? `${label} copied` : ''}
+        {copied ? t('components.copyText.copiedAnnouncement', { label }) : ''}
       </span>
     </div>
   )

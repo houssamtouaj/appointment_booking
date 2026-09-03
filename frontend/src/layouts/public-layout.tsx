@@ -4,6 +4,7 @@ import { Container } from '@/components/container'
 import { LanguageToggle } from '@/components/language-toggle'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { SessionMenu } from '@/features/auth/session-menu'
+import { useTranslation } from '@/i18n'
 
 /**
  * The chrome on everything a stranger can reach: the booking pages, the manage
@@ -18,6 +19,8 @@ import { SessionMenu } from '@/features/auth/session-menu'
  * component, which is a thing a layout may do and a thing `components/` may not.
  */
 export function PublicLayout() {
+  const { t } = useTranslation()
+
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-rule bg-background/85 sticky top-0 z-40 border-b backdrop-blur">
@@ -45,7 +48,7 @@ export function PublicLayout() {
 
       <footer className="border-rule mt-16 border-t">
         <Container className="text-muted-foreground flex h-14 items-center text-xs">
-          A booking platform. Times shown in the business&apos;s timezone.
+          {t('components.footerNote')}
         </Container>
       </footer>
     </div>

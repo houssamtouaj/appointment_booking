@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 
 import { SessionDebugPanel } from '@/features/auth/session-debug-panel'
 import { Toaster } from '@/components/toaster'
+import { useTranslation } from '@/i18n'
 
 /**
  * The frame every route renders inside, and nothing that looks like a page.
@@ -24,6 +25,8 @@ import { Toaster } from '@/components/toaster'
  * next person reasonably reads one such import as permission for theirs.
  */
 export function RootLayout() {
+  const { t } = useTranslation()
+
   return (
     <>
       {/* `fixed`, not `absolute`. Nothing in the ancestor chain is positioned, so
@@ -34,7 +37,7 @@ export function RootLayout() {
         href="#main"
         className="bg-primary text-primary-foreground sr-only rounded-sm px-4 py-2 text-sm font-medium focus-visible:not-sr-only focus-visible:fixed focus-visible:top-3 focus-visible:left-3 focus-visible:z-50"
       >
-        Skip to content
+        {t('components.skipLink')}
       </a>
 
       <Outlet />

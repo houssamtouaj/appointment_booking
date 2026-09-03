@@ -4,6 +4,7 @@ import { useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n'
 
 /**
  * The centred dialog the admin screens put forms in.
@@ -48,6 +49,7 @@ export function Modal({
   children,
   className,
 }: ModalProps) {
+  const { t } = useTranslation()
   const content = useRef<HTMLDivElement>(null)
 
   return (
@@ -98,7 +100,7 @@ export function Modal({
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Close">
+              <Button variant="ghost" size="icon-sm" aria-label={t('components.modal.close')}>
                 <X aria-hidden="true" />
               </Button>
             </Dialog.Close>

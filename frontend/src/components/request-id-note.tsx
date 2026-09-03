@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n'
 
 type RequestIdNoteProps = {
   /** `X-Request-Id` from the failed response. Renders nothing when absent. */
@@ -17,10 +18,11 @@ type RequestIdNoteProps = {
  * copy-pastable in a dialog and not on a page is worse than either.
  */
 export function RequestIdNote({ requestId, className }: RequestIdNoteProps) {
+  const { t } = useTranslation()
   if (!requestId) return null
   return (
     <p className={cn('text-muted-foreground text-xs', className)}>
-      Reference{' '}
+      {t('components.requestIdNote.reference')}{' '}
       <code className="text-foreground bg-muted rounded-xs px-1.5 py-0.5 font-mono select-all">
         {requestId}
       </code>

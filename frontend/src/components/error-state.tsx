@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react'
 import { RequestIdNote } from '@/components/request-id-note'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n'
 
 type ErrorStateProps = {
   /**
@@ -28,6 +29,8 @@ type ErrorStateProps = {
  * surfaces of every list look like siblings.
  */
 export function ErrorState({ title, description, requestId, onRetry, className }: ErrorStateProps) {
+  const { t } = useTranslation()
+
   return (
     <div
       // `alert` rather than `status`: this interrupts, and a screen reader should
@@ -46,7 +49,7 @@ export function ErrorState({ title, description, requestId, onRetry, className }
 
         {onRetry ? (
           <Button variant="outline" size="sm" className="mt-5" onClick={onRetry}>
-            Try again
+            {t('components.errorState.retry')}
           </Button>
         ) : null}
 
