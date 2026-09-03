@@ -8,6 +8,7 @@ import { rememberBookingToken } from '@/features/booking/booking-storage'
 import { HoldNotice } from '@/features/booking/hold-notice'
 import { manageUrlFor } from '@/features/booking/manage-url'
 import type { PublicBooking, PublicBusiness, PublicService } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type DepositHandoffProps = {
   /** A `PENDING` booking. */
@@ -53,6 +54,7 @@ export function DepositHandoff({
   service,
   staffName,
 }: DepositHandoffProps) {
+  const { t } = useTranslation()
   function goToCheckout() {
     if (!checkoutUrl) return
     // Before the navigation, never after: this document stops existing on the
@@ -72,10 +74,10 @@ export function DepositHandoff({
         </span>
         <div>
           <h1 className="font-display text-display-sm text-foreground tracking-display leading-tight">
-            One more step: the deposit
+            {t('booking.handoff.title')}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {business.name} takes a deposit for this booking. Your slot is held while you pay.
+            {t('booking.handoff.subtitle', { business: business.name })}
           </p>
         </div>
       </div>
@@ -95,41 +97,42 @@ export function DepositHandoff({
       {/* D7, in words, before the click rather than after it. */}
       {booking.depositRefundable ? null : (
         <p className="border-border text-foreground rounded-sm border px-3 py-2 text-sm">
-          The deposit is <strong className="font-medium">not refunded</strong> if you cancel, even
-          within the cancellation window.
+          {/* The emphasis on "not refunded" goes with the fragments: French
+              does not put the negation in one span the way English does. */}
+          {t('booking.handoff.notRefunded')}
         </p>
       )}
 
       {checkoutUrl ? (
         <div className="flex flex-wrap items-center gap-3">
           <Button size="lg" onClick={goToCheckout}>
-            Continue to secure checkout
+            {t('booking.handoff.checkout')}
             <ExternalLink className="size-4" aria-hidden="true" />
           </Button>
-          <p className="text-muted-foreground text-xs">You will be taken to Stripe to pay.</p>
+          <p className="text-muted-foreground text-xs">{t('booking.handoff.checkoutNote')}</p>
         </div>
       ) : (
         <div className="space-y-4">
           <p className="border-danger/40 text-foreground rounded-sm border px-3 py-2 text-sm">
-            We could not open the payment page just now. Your booking exists and the slot is held —
-            open it below to try again.
+            {t('booking.handoff.unavailable')}
           </p>
           <Button size="lg" asChild>
-            <Link to={`/booking/${booking.cancellationToken}`}>Open your booking</Link>
+            <Link to={`/booking/${booking.cancellationToken}`}>
+              {t('booking.handoff.openBooking')}
+            </Link>
           </Button>
         </div>
       )}
 
       <section className="border-border bg-card rounded-md border p-5">
-        <h2 className="text-foreground text-base font-medium">If anything goes wrong</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          This link comes back to your booking whether or not the payment goes through. It is in
-          your email too.
-        </p>
+        <h2 className="text-foreground text-base font-medium">
+          {t('booking.handoff.fallbackHeading')}
+        </h2>
+        <p className="text-muted-foreground mt-1 text-sm">{t('booking.handoff.fallbackBody')}</p>
         <CopyText
           className="mt-4"
           value={manageUrlFor(booking.cancellationToken)}
-          label="Your booking link"
+          label={t('booking.confirmation.linkLabel')}
         />
       </section>
     </div>

@@ -15,6 +15,7 @@ import { LandingSkeleton } from '@/features/booking/skeletons'
 import { TimezoneNote } from '@/features/booking/timezone-note'
 import { zoneCity } from '@/lib/time'
 import type { PublicBusiness } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * `/b/:slug` — the first thing a stranger sees, and the frame the README's GIF
@@ -26,6 +27,7 @@ import type { PublicBusiness } from '@/types'
  * exists for consumers that want the catalogue alone.
  */
 export function BusinessLandingPage() {
+  const { t } = useTranslation()
   const { slug = '' } = useParams()
   const { data, isPending, isError, error, refetch } = useBusiness(slug)
 
@@ -34,7 +36,7 @@ export function BusinessLandingPage() {
       <Container>
         {/* The skeleton is aria-hidden, so this is what a screen reader hears. */}
         <p role="status" className="sr-only">
-          Loading this business
+          {t('booking.landing.loading')}
         </p>
         <LandingSkeleton />
       </Container>
@@ -49,7 +51,7 @@ export function BusinessLandingPage() {
       <Container width="copy">
         <div className="py-16">
           <ErrorState
-            title="This page could not be loaded"
+            title={t('booking.landing.errorTitle')}
             description={describeError(error)}
             requestId={requestIdOf(error)}
             onRetry={() => void refetch()}
@@ -63,13 +65,14 @@ export function BusinessLandingPage() {
 }
 
 function Landing({ business, slug }: { business: PublicBusiness; slug: string }) {
+  const { t } = useTranslation()
   const bookHref = `/b/${slug}/book`
 
   return (
     <Container className="pb-20">
       <header className="pt-10 pb-8 sm:pt-14">
         <p className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
-          Book an appointment
+          {t('booking.landing.eyebrow')}
         </p>
         {/* The condensed display face doing the job it was chosen for: a tenant's
             name is arbitrary and still has to hold at 375px. */}
@@ -79,13 +82,17 @@ function Landing({ business, slug }: { business: PublicBusiness; slug: string })
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-foreground text-base">
-            {zoneCity(business.timezone)} · {business.services.length}{' '}
-            {business.services.length === 1 ? 'service' : 'services'}
+            {/* `Intl.PluralRules` picks the count's form — French counts 0 with
+                the singular, which `length === 1` cannot express. */}
+            {t('booking.landing.cityAndCount', {
+              city: zoneCity(business.timezone),
+              count: t('booking.landing.serviceCount', { count: business.services.length }),
+            })}
           </p>
           <Button asChild size="lg" className="sm:w-auto">
             <Link to={bookHref}>
               <CalendarPlus aria-hidden="true" />
-              Book an appointment
+              {t('booking.landing.book')}
             </Link>
           </Button>
         </div>
@@ -104,7 +111,7 @@ function Landing({ business, slug }: { business: PublicBusiness; slug: string })
       <div className="grid gap-10 lg:grid-cols-[1fr_18rem] lg:gap-14">
         <section>
           <h2 className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
-            Services
+            {t('booking.landing.services')}
           </h2>
 
           {business.services.length === 0 ? (
@@ -127,7 +134,7 @@ function Landing({ business, slug }: { business: PublicBusiness; slug: string })
 
         <aside>
           <h2 className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
-            Opening hours
+            {t('booking.landing.openingHours')}
           </h2>
           <div className="mt-4">
             <OpeningHoursTable hours={business.openingHours} timeZone={business.timezone} />
@@ -159,13 +166,14 @@ function Landing({ business, slug }: { business: PublicBusiness; slug: string })
  * asserting it here is a wave gate item.
  */
 function DepositNote({ business }: { business: PublicBusiness }) {
+  const { t } = useTranslation()
   if (!business.depositRequired) return null
 
   return (
     <p className="text-muted-foreground border-rule border-l-2 py-1 pl-3 text-sm">
       {business.depositPercent === undefined
-        ? 'A deposit may be requested when you confirm.'
-        : `A ${business.depositPercent}% deposit may be requested when you confirm.`}
+        ? t('booking.landing.depositMaybe')
+        : t('booking.landing.depositMaybePercent', { percent: business.depositPercent })}
     </p>
   )
 }

@@ -28,6 +28,7 @@ import { useBookingFailure } from '@/features/booking/use-booking-failure'
 import { useEffectiveBookingParams } from '@/features/booking/use-effective-params'
 import { formatMoney } from '@/lib/money'
 import type { GuestDetails, PublicBooking, PublicBusiness, PublicService } from '@/types'
+import { useTranslation, type TKey } from '@/i18n'
 
 /**
  * `/b/:slug/book` — service, then who, then when, then who you are.
@@ -41,6 +42,7 @@ import type { GuestDetails, PublicBooking, PublicBusiness, PublicService } from 
  * it.
  */
 export function BookingFlowPage() {
+  const { t } = useTranslation()
   const { slug = '' } = useParams()
   const { data, isPending, isError, error, refetch } = useBusiness(slug)
 
@@ -48,7 +50,7 @@ export function BookingFlowPage() {
     return (
       <Container width="copy">
         <p role="status" className="sr-only">
-          Loading this business
+          {t('booking.flow.loading')}
         </p>
         <LandingSkeleton />
       </Container>
@@ -61,7 +63,7 @@ export function BookingFlowPage() {
       <Container width="copy">
         <div className="py-16">
           <ErrorState
-            title="This booking page could not be loaded"
+            title={t('booking.flow.errorTitle')}
             description={describeError(error)}
             requestId={requestIdOf(error)}
             onRetry={() => void refetch()}
@@ -74,11 +76,12 @@ export function BookingFlowPage() {
   return <Flow slug={slug} business={data} />
 }
 
-const STEP_TITLE: Record<BookingStep, string> = {
-  service: 'What are you booking?',
-  staff: 'Who would you like?',
-  slot: 'When suits you?',
-  details: 'Who is this for?',
+/** The h1 of each step, as a key: the question the step is asking. */
+const STEP_TITLE: Record<BookingStep, TKey> = {
+  service: 'booking.flow.stepService',
+  staff: 'booking.flow.stepStaff',
+  slot: 'booking.flow.stepSlot',
+  details: 'booking.flow.stepDetails',
 }
 
 /**
@@ -96,6 +99,7 @@ type Booked = {
 }
 
 function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -289,10 +293,10 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
       {booked ? (
         <ResumeNotice
           token={booked.booking.cancellationToken}
-          message="You have already booked this slot in this tab."
+          message={t('booking.flow.alreadyBooked')}
         />
       ) : resumeToken ? (
-        <ResumeNotice token={resumeToken} message="You already started a booking in this tab." />
+        <ResumeNotice token={resumeToken} message={t('booking.flow.alreadyStarted')} />
       ) : null}
 
       <BookingStepper
@@ -300,16 +304,19 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
         params={effective}
         summary={{
           service: service
-            ? `${service.name} · ${formatDurationText(service.durationMinutes)}`
+            ? t('booking.flow.serviceAndDuration', {
+                name: service.name,
+                duration: formatDurationText(service.durationMinutes),
+              })
             : undefined,
           staff: staffSummary,
         }}
-        note={{ staff: answeredItself ? 'the only one for this service' : undefined }}
+        note={{ staff: answeredItself ? t('booking.flow.onlyOne') : undefined }}
         locked={answeredItself ? ['staff'] : undefined}
       />
 
       <h1 className="font-display text-display-sm text-foreground tracking-display mt-8 leading-tight">
-        {STEP_TITLE[effectiveStep]}
+        {t(STEP_TITLE[effectiveStep])}
       </h1>
 
       <div className="mt-6">
@@ -365,8 +372,11 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
               onContinue={(slot) => setParams({ slot: slot.start })}
             />
             <p className="text-muted-foreground mt-8 text-sm">
-              {service.name} · {formatDurationText(service.durationMinutes)} ·{' '}
-              {formatMoney(service.priceCents, business.currency)}
+              {t('booking.flow.serviceLine', {
+                name: service.name,
+                duration: formatDurationText(service.durationMinutes),
+                price: formatMoney(service.priceCents, business.currency),
+              })}
             </p>
           </>
         ) : null}
@@ -393,11 +403,13 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
 }
 
 function ResumeNotice({ token, message }: { token: string; message: string }) {
+  const { t } = useTranslation()
+
   return (
     <div className="border-border bg-muted text-foreground mb-6 flex flex-wrap items-center justify-between gap-3 rounded-sm border px-4 py-3 text-sm">
       <span>{message}</span>
       <Link to={`/booking/${token}`} className="text-primary underline underline-offset-4">
-        Open it
+        {t('booking.flow.openIt')}
       </Link>
     </div>
   )

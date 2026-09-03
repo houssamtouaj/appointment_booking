@@ -26,6 +26,7 @@ import {
   type DayKey,
 } from '@/lib/time'
 import type { PublicBusiness, Slot } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type SlotStepProps = {
   slug: string
@@ -57,6 +58,7 @@ export function SlotStep({
   onDateChange,
   onContinue,
 }: SlotStepProps) {
+  const { t } = useTranslation()
   const timeZone = business.timezone
   const today = todayIn(timeZone)
   const week = weekRangeFor(date ?? today)
@@ -110,7 +112,7 @@ export function SlotStep({
           <Button
             variant="outline"
             size="icon"
-            aria-label="Previous week"
+            aria-label={t('booking.slotStep.previousWeek')}
             disabled={!canGoBack}
             onClick={() => onDateChange(previousWeekStart)}
           >
@@ -119,7 +121,7 @@ export function SlotStep({
           <Button
             variant="outline"
             size="icon"
-            aria-label="Next week"
+            aria-label={t('booking.slotStep.nextWeek')}
             onMouseEnter={warmNextWeek}
             onFocus={warmNextWeek}
             onClick={() => onDateChange(nextWeekStart)}
@@ -134,13 +136,13 @@ export function SlotStep({
       {isPending ? (
         <>
           <p role="status" className="sr-only">
-            Loading available times
+            {t('booking.slotStep.loading')}
           </p>
           <SlotGridSkeleton />
         </>
       ) : isError ? (
         <ErrorState
-          title="These times could not be loaded"
+          title={t('booking.slotStep.errorTitle')}
           description={describeError(error)}
           requestId={requestIdOf(error)}
           onRetry={() => void refetch()}
@@ -237,6 +239,8 @@ function SelectionBar({
   selected: Slot | null
   onContinue: (slot: Slot) => void
 }) {
+  const { t } = useTranslation()
+
   if (!selected) return null
 
   return (
@@ -244,16 +248,19 @@ function SelectionBar({
       {/* `status`, so choosing a slot is announced without stealing focus from
           the grid the arrow keys are still walking. */}
       <p role="status" className="text-sm">
-        <span className="text-muted-foreground">Selected </span>
-        <span className="text-foreground font-medium">
-          {/* The day in the business's zone, not the viewer's — the same rule
-              the grid headings follow. */}
-          {formatDayHeading(dayKeyOf(selected.start, business.timezone))} at{' '}
-          {clockOf(selected.start, business.timezone)}
-        </span>
+        {/* One sentence, and the day in the business's zone rather than the
+            viewer's — the same rule the grid headings follow. "Selected" was its
+            own span with the rest bolded beside it; French does not put the two
+            in that order, so the emphasis went and the sentence stayed. */}
+        {t('booking.slotStep.selected', {
+          when: t('booking.summary.dateAtTime', {
+            date: formatDayHeading(dayKeyOf(selected.start, business.timezone)),
+            time: clockOf(selected.start, business.timezone),
+          }),
+        })}
       </p>
       <Button size="lg" onClick={() => onContinue(selected)}>
-        Continue
+        {t('booking.slotStep.continue')}
       </Button>
     </div>
   )

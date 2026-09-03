@@ -5,6 +5,7 @@ import { describeError } from '@/api/error-copy'
 import { Button } from '@/components/ui/button'
 import { clockOf, dayKeyOf, formatDayHeading } from '@/lib/time'
 import type { PublicBooking } from '@/types'
+import { translate, useTranslation } from '@/i18n'
 
 type CancelDialogProps = {
   booking: PublicBooking
@@ -46,6 +47,7 @@ export function CancelDialog({
   cancelling,
   error,
 }: CancelDialogProps) {
+  const { t } = useTranslation()
   const cutoff = isApiError(error, 'CANCELLATION_CUTOFF')
   const deadline = problemInstant(error, 'deadline') ?? booking.cancellationDeadline
 
@@ -60,18 +62,16 @@ export function CancelDialog({
           ].join(' ')}
         >
           <AlertDialog.Title className="text-foreground text-xl font-medium">
-            Cancel this booking?
+            {t('booking.cancel.dialogTitle')}
           </AlertDialog.Title>
 
           <AlertDialog.Description className="text-muted-foreground mt-2 text-sm">
-            Your {formatWhen(booking.startsAt, timeZone)} appointment will be given back to the
-            calendar. This cannot be undone — booking again means finding a free time.
+            {t('booking.cancel.dialogBody', { when: formatWhen(booking.startsAt, timeZone) })}
           </AlertDialog.Description>
 
           {booking.depositRefundable ? null : (
             <p className="border-destructive/40 bg-danger-wash text-foreground mt-4 rounded-sm border px-3 py-2 text-sm">
-              <strong className="font-medium">Deposits are not refunded.</strong> If you paid a
-              deposit for this booking, cancelling does not return it.
+              {t('booking.cancel.notRefunded')}
             </p>
           )}
 
@@ -82,10 +82,9 @@ export function CancelDialog({
             >
               {cutoff ? (
                 <>
-                  <p className="font-medium">It is too late to cancel this online.</p>
+                  <p className="font-medium">{t('booking.cancel.cutoffTitle')}</p>
                   <p className="text-muted-foreground mt-1">
-                    The deadline was {formatWhen(deadline, timeZone)}. Please contact the business
-                    directly — they can still cancel it for you.
+                    {t('booking.cancel.cutoffBody', { when: formatWhen(deadline, timeZone) })}
                   </p>
                 </>
               ) : (
@@ -97,14 +96,14 @@ export function CancelDialog({
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <AlertDialog.Cancel asChild>
               {/* The safe action, and the one focus lands on. */}
-              <Button variant="outline">Keep my booking</Button>
+              <Button variant="outline">{t('booking.cancel.keep')}</Button>
             </AlertDialog.Cancel>
             {/* Deliberately not wrapped in AlertDialog.Action: that closes the
                 dialog on click, which would take the cutoff answer off screen
                 the instant the server gave it. The dialog closes on success
                 instead, from the mutation. */}
             <Button variant="danger" disabled={cancelling || cutoff} onClick={onConfirm}>
-              {cancelling ? 'Cancelling…' : 'Yes, cancel it'}
+              {cancelling ? t('booking.cancel.cancelling') : t('booking.cancel.confirm')}
             </Button>
           </div>
         </AlertDialog.Content>
@@ -113,6 +112,10 @@ export function CancelDialog({
   )
 }
 
+/** A day and a clock on the business's own clock, joined by the dictionary. */
 function formatWhen(instant: string, timeZone: string): string {
-  return `${formatDayHeading(dayKeyOf(instant, timeZone))} at ${clockOf(instant, timeZone)}`
+  return translate('booking.summary.dateAtTime', {
+    date: formatDayHeading(dayKeyOf(instant, timeZone)),
+    time: clockOf(instant, timeZone),
+  })
 }

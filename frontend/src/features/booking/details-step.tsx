@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { BookingSummary } from '@/features/booking/booking-summary'
 import type { GuestDetails, PublicBusiness, PublicService } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type DetailsStepProps = {
   /**
@@ -47,6 +48,7 @@ export function DetailsStep({
   onSubmit,
   backHref,
 }: DetailsStepProps) {
+  const { t } = useTranslation()
   const errors = form.formState.errors
 
   return (
@@ -66,17 +68,17 @@ export function DetailsStep({
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
       >
         <ChevronLeft className="size-4" aria-hidden="true" />
-        Choose a different time
+        {t('booking.details.back')}
       </Link>
 
       <form noValidate className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
-        <FormField label="Your name" error={errors.guestName?.message}>
+        <FormField label={t('booking.details.name')} error={errors.guestName?.message}>
           {(control) => <Input {...control} {...form.register('guestName')} autoComplete="name" />}
         </FormField>
 
         <FormField
-          label="Email"
-          hint="Your confirmation and the link to manage this booking go here."
+          label={t('booking.details.email')}
+          hint={t('booking.details.emailHint')}
           error={errors.guestEmail?.message}
         >
           {(control) => (
@@ -93,16 +95,16 @@ export function DetailsStep({
           )}
         </FormField>
 
-        <FormField label="Phone (optional)" error={errors.guestPhone?.message}>
+        <FormField label={t('booking.details.phone')} error={errors.guestPhone?.message}>
           {(control) => (
             <Input {...control} {...form.register('guestPhone')} type="tel" autoComplete="tel" />
           )}
         </FormField>
 
         <FormField
-          label="Anything we should know? (optional)"
+          label={t('booking.details.notes')}
           error={errors.notes?.message}
-          hint="Allergies, a preference, where to park."
+          hint={t('booking.details.notesHint')}
         >
           {(control) => <Textarea {...control} {...form.register('notes')} rows={3} />}
         </FormField>
@@ -111,7 +113,7 @@ export function DetailsStep({
 
         <div className="flex items-center gap-3 pt-2">
           <Button type="submit" size="lg" disabled={submitting}>
-            {submitting ? 'Booking…' : 'Confirm booking'}
+            {submitting ? t('booking.details.submitting') : t('booking.details.submit')}
           </Button>
         </div>
       </form>
@@ -136,13 +138,14 @@ export function DetailsStep({
  * this screen did not need to invent.
  */
 function DepositSentence({ business }: { business: PublicBusiness }) {
+  const { t } = useTranslation()
   if (!business.depositRequired) return null
 
   return (
     <p className="bg-muted text-muted-foreground rounded-sm px-3 py-2 text-sm">
       {business.depositPercent
-        ? `If a deposit is required, it is ${business.depositPercent}% of the price and you will be sent to a secure checkout after this step.`
-        : 'If a deposit is required you will be sent to a secure checkout after this step.'}
+        ? t('booking.details.depositMaybePercent', { percent: business.depositPercent })
+        : t('booking.details.depositMaybe')}
     </p>
   )
 }

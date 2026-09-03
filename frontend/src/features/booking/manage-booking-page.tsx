@@ -24,6 +24,7 @@ import { formatMoney } from '@/lib/money'
 import { clockOf, dayKeyOf, formatDayHeading, viewerTimeZone, zoneAbbreviation } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { BookingStatus, PublicBooking } from '@/types'
+import { useTranslation, type TKey } from '@/i18n'
 
 /**
  * `/booking/:cancellationToken` (F6, F12) — the customer's whole relationship
@@ -50,6 +51,7 @@ import type { BookingStatus, PublicBooking } from '@/types'
  * over that space.
  */
 export function ManageBookingPage() {
+  const { t } = useTranslation()
   const { cancellationToken = '' } = useParams()
   const [search] = useSearchParams()
   const checkout = search.get('checkout')
@@ -88,14 +90,14 @@ export function ManageBookingPage() {
       if (isApiError(query.error, 'NOT_FOUND')) {
         return (
           <Container width="copy" className="py-16">
-            <h1 className="sr-only">Your booking</h1>
+            <h1 className="sr-only">{t('booking.manage.heading')}</h1>
             <EmptyState
               icon={CircleSlash}
-              title="We could not find that booking"
-              description="The link may be incomplete, or it may belong to a booking that was removed. Check the link in your confirmation email — it is the full one."
+              title={t('booking.manage.notFoundTitle')}
+              description={t('booking.manage.notFoundBody')}
               action={
                 <Button variant="outline" asChild>
-                  <Link to="/">Go to the booking page</Link>
+                  <Link to="/">{t('booking.manage.goHome')}</Link>
                 </Button>
               }
             />
@@ -105,9 +107,9 @@ export function ManageBookingPage() {
 
       return (
         <Container width="copy" className="py-16">
-          <h1 className="sr-only">Your booking</h1>
+          <h1 className="sr-only">{t('booking.manage.heading')}</h1>
           <ErrorState
-            title="Your booking could not be loaded"
+            title={t('booking.manage.errorTitle')}
             description={describeError(query.error)}
             requestId={requestIdOf(query.error)}
             onRetry={() => void query.refetch()}
@@ -125,9 +127,9 @@ export function ManageBookingPage() {
          * that booking" — and rendering both would put a generic title above a
          * specific one saying the same thing twice.
          */}
-        <h1 className="sr-only">Your booking</h1>
+        <h1 className="sr-only">{t('booking.manage.heading')}</h1>
         <p role="status" className="sr-only">
-          Loading your booking
+          {t('booking.manage.loading')}
         </p>
         <Skeleton className="h-3 w-24" />
         <Skeleton className="mt-3 h-9 w-72" />
@@ -166,36 +168,36 @@ export function ManageBookingPage() {
  */
 const STATUS: Record<
   BookingStatus,
-  { icon: LucideIcon; title: string; body: string; tone: 'good' | 'wait' | 'gone' }
+  { icon: LucideIcon; title: TKey; body: TKey; tone: 'good' | 'wait' | 'gone' }
 > = {
   PENDING: {
     icon: Clock,
-    title: 'Waiting for your deposit',
-    body: 'Your slot is held until the deposit is paid. Nobody else can take it in the meantime.',
+    title: 'booking.manage.status.pendingTitle',
+    body: 'booking.manage.status.pendingBody',
     tone: 'wait',
   },
   CONFIRMED: {
     icon: CalendarCheck,
-    title: 'Your booking is confirmed',
-    body: 'You are expected. Nothing else to do.',
+    title: 'booking.manage.status.confirmedTitle',
+    body: 'booking.manage.status.confirmedBody',
     tone: 'good',
   },
   CANCELLED: {
     icon: CalendarX,
-    title: 'This booking was cancelled',
-    body: 'The time has gone back into the calendar. This link keeps working, so you can always check what it was.',
+    title: 'booking.manage.status.cancelledTitle',
+    body: 'booking.manage.status.cancelledBody',
     tone: 'gone',
   },
   COMPLETED: {
     icon: CalendarCheck,
-    title: 'This appointment is done',
-    body: 'It was marked completed by the business.',
+    title: 'booking.manage.status.completedTitle',
+    body: 'booking.manage.status.completedBody',
     tone: 'good',
   },
   NO_SHOW: {
     icon: CircleSlash,
-    title: 'Recorded as a no-show',
-    body: 'The business marked this appointment as missed. If that is wrong, contact them — they can correct it.',
+    title: 'booking.manage.status.noShowTitle',
+    body: 'booking.manage.status.noShowBody',
     tone: 'gone',
   },
 }
@@ -211,8 +213,8 @@ const STATUS: Record<
  */
 const HOLD_EXPIRED: (typeof STATUS)[BookingStatus] = {
   icon: CircleSlash,
-  title: 'This hold has expired',
-  body: 'The deposit was not paid in time, so the slot has gone back into the calendar. This booking will be cancelled shortly.',
+  title: 'booking.manage.status.expiredTitle',
+  body: 'booking.manage.status.expiredBody',
   tone: 'gone',
 }
 
@@ -233,6 +235,7 @@ function ManageBooking({
   refetching: boolean
   stale: boolean
 }) {
+  const { t } = useTranslation()
   /**
    * The **viewer's** zone, and this is the one screen in the app where that is
    * right rather than a bug.
@@ -273,7 +276,7 @@ function ManageBooking({
     <Container width="copy" className="pb-20">
       <div className="pt-8 pb-6">
         <p className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
-          Your booking
+          {t('booking.manage.heading')}
         </p>
       </div>
 
@@ -282,14 +285,14 @@ function ManageBooking({
           role="status"
           className="bg-muted text-muted-foreground mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm px-3 py-2 text-sm"
         >
-          We could not check for an update just now. What is below is the last answer we had.
+          {t('booking.manage.stale')}
           <button
             type="button"
             onClick={onCheckAgain}
             disabled={refetching}
             className="text-foreground underline underline-offset-4 disabled:no-underline"
           >
-            {refetching ? 'Checking…' : 'Try again'}
+            {refetching ? t('booking.manage.checking') : t('booking.manage.retry')}
           </button>
         </p>
       ) : null}
@@ -309,9 +312,9 @@ function ManageBooking({
         </span>
         <div>
           <h1 className="font-display text-display-sm text-foreground tracking-display leading-tight">
-            {status.title}
+            {t(status.title)}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">{status.body}</p>
+          <p className="text-muted-foreground mt-1 text-sm">{t(status.body)}</p>
         </div>
       </div>
 
@@ -322,18 +325,20 @@ function ManageBooking({
       ) : null}
 
       <dl className="border-border bg-card divide-rule mt-6 divide-y rounded-md border px-5 py-1">
-        <Row label="When">
-          {formatDayHeading(dayKeyOf(booking.startsAt, timeZone))}
-          <span className="text-muted-foreground"> at </span>
-          <span className="font-mono">{clockOf(booking.startsAt, timeZone)}</span>
-          <span className="text-muted-foreground"> – </span>
-          <span className="font-mono">{clockOf(booking.endsAt, timeZone)}</span>
+        <Row label={t('booking.summary.when')}>
+          {/* One sentence rather than a day, the word "at", and two clocks in
+              their own spans: French does not order them that way. */}
+          {t('booking.manage.whenRange', {
+            date: formatDayHeading(dayKeyOf(booking.startsAt, timeZone)),
+            from: clockOf(booking.startsAt, timeZone),
+            to: clockOf(booking.endsAt, timeZone),
+          })}
         </Row>
-        <Row label="Price">
+        <Row label={t('booking.summary.price')}>
           <span className="font-mono">{formatMoney(booking.priceCents, booking.currency)}</span>
         </Row>
         {booking.guest ? (
-          <Row label="Booked by">
+          <Row label={t('booking.manage.bookedBy')}>
             {booking.guest.name}
             <span className="text-muted-foreground"> · {booking.guest.email}</span>
             {booking.guest.phone ? (
@@ -346,7 +351,7 @@ function ManageBooking({
       {/* One line, once, naming the clock every time above is on — the same rule
           the booking flow's timezone banner follows, for the same reason. */}
       <p className="text-muted-foreground mt-2 text-xs">
-        Times shown in your own time zone ({zoneAbbreviation(timeZone)}).
+        {t('booking.manage.viewerZone', { abbreviation: zoneAbbreviation(timeZone) })}
       </p>
 
       {/* Nothing to pay towards a slot that has gone back into the calendar.
@@ -365,15 +370,12 @@ function ManageBooking({
       <CancelSection booking={booking} timeZone={timeZone} onOpen={() => openDialog(true)} />
 
       <section className="border-border bg-card mt-8 rounded-md border p-5">
-        <h2 className="text-foreground text-base font-medium">Your link to this booking</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          This is the page you are on. Keep it — it does not expire, and it is the only way back to
-          this appointment.
-        </p>
+        <h2 className="text-foreground text-base font-medium">{t('booking.manage.linkHeading')}</h2>
+        <p className="text-muted-foreground mt-1 text-sm">{t('booking.manage.linkBody')}</p>
         <CopyText
           className="mt-4"
           value={manageUrlFor(booking.cancellationToken)}
-          label="Your booking link"
+          label={t('booking.confirmation.linkLabel')}
         />
       </section>
 

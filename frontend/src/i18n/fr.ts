@@ -277,6 +277,183 @@ export const fr = {
       minutes: { one: '{count} minute', other: '{count} minutes' },
       seconds: { one: '{count} seconde', other: '{count} secondes' },
     },
+    staffStep: {
+      loading: 'Chargement des personnes disponibles',
+      errorTitle: "L'équipe n'a pas pu être chargée",
+      emptyTitle: 'Personne ne réalise cette prestation',
+      emptyBody:
+        "Elle n'est pas réservable pour le moment. Une autre prestation est peut-être disponible.",
+      chooseAnother: 'Choisir une autre prestation',
+      anyone: "N'importe qui",
+      anyoneNote: 'Premier disponible — en général le plus de créneaux',
+    },
+    slotStep: {
+      previousWeek: 'Semaine précédente',
+      nextWeek: 'Semaine suivante',
+      loading: 'Chargement des horaires disponibles',
+      errorTitle: "Ces horaires n'ont pas pu être chargés",
+      selected: 'Choisi : {when}',
+      continue: 'Continuer',
+    },
+    details: {
+      back: 'Choisir un autre horaire',
+      name: 'Votre nom',
+      email: 'Adresse e-mail',
+      emailHint: 'Votre confirmation et le lien de gestion de la réservation y seront envoyés.',
+      phone: 'Téléphone (facultatif)',
+      notes: 'Quelque chose à nous signaler ? (facultatif)',
+      notesHint: 'Allergies, une préférence, où se garer.',
+      submit: 'Confirmer la réservation',
+      submitting: 'Réservation…',
+      depositMaybe:
+        'Si un acompte est demandé, vous serez redirigé vers un paiement sécurisé après cette étape.',
+      depositMaybePercent:
+        'Si un acompte est demandé, il représente {percent} % du prix et vous serez redirigé vers un paiement sécurisé après cette étape.',
+    },
+    confirmation: {
+      title: "C'est réservé",
+      subtitle: '{business} a votre rendez-vous. Rien d’autre à faire.',
+      linkHeading: 'Votre lien vers cette réservation',
+      linkBody:
+        "Conservez-le. C'est le seul moyen de revenir à ce rendez-vous — pour le consulter ou l'annuler — et il n'expire pas.",
+      linkLabel: 'Votre lien de réservation',
+      emailNote:
+        "Ce même lien figure dans l'e-mail de confirmation que nous venons d'envoyer, avec un fichier à ajouter à votre agenda.",
+      manage: 'Gérer cette réservation',
+      backTo: 'Retour à {business}',
+    },
+    payment: {
+      heading: "L'acompte",
+      notRefunded: "Les acomptes ne sont pas remboursés en cas d'annulation.",
+      pay: "Payer l'acompte",
+      polling: 'Vérification de votre paiement…',
+      gaveUp: 'Toujours pas confirmé. Si vous avez payé, cela peut prendre encore un instant.',
+      checkAgain: 'Vérifier à nouveau',
+      checking: 'Vérification…',
+    },
+    handoff: {
+      title: "Encore une étape : l'acompte",
+      subtitle:
+        '{business} demande un acompte pour cette réservation. Votre créneau est retenu pendant le paiement.',
+      notRefunded:
+        "L'acompte n'est pas remboursé en cas d'annulation, même dans le délai d'annulation.",
+      checkout: 'Continuer vers le paiement sécurisé',
+      checkoutNote: 'Vous serez redirigé vers Stripe pour payer.',
+      unavailable:
+        "Nous n'avons pas pu ouvrir la page de paiement pour l'instant. Votre réservation existe et le créneau est retenu — ouvrez-la ci-dessous pour réessayer.",
+      openBooking: 'Ouvrir votre réservation',
+      fallbackHeading: 'En cas de problème',
+      fallbackBody:
+        'Ce lien vous ramène à votre réservation, que le paiement aboutisse ou non. Il est aussi dans votre e-mail.',
+    },
+    cancel: {
+      sectionHeading: 'Un empêchement ?',
+      until: 'Vous pouvez annuler en ligne jusqu’au {when}.',
+      tooLate:
+        "La date limite pour annuler en ligne était le {when}. Contactez l'entreprise — elle peut encore annuler pour vous.",
+      open: 'Annuler cette réservation',
+      dialogTitle: 'Annuler cette réservation ?',
+      dialogBody:
+        "Votre rendez-vous du {when} sera rendu à l'agenda. C'est irréversible — réserver de nouveau implique de retrouver un créneau libre.",
+      notRefunded:
+        "Les acomptes ne sont pas remboursés. Si vous avez versé un acompte pour cette réservation, l'annuler ne vous le rend pas.",
+      cutoffTitle: 'Il est trop tard pour annuler en ligne.',
+      cutoffBody:
+        "La date limite était le {when}. Contactez directement l'entreprise — elle peut encore annuler pour vous.",
+      keep: 'Garder ma réservation',
+      confirm: 'Oui, annuler',
+      cancelling: 'Annulation…',
+    },
+    flow: {
+      loading: 'Chargement de cette entreprise',
+      errorTitle: "Cette page de réservation n'a pas pu être chargée",
+      stepService: 'Que réservez-vous ?',
+      stepStaff: 'Avec qui ?',
+      stepSlot: 'Quand cela vous convient-il ?',
+      stepDetails: 'Pour qui est-ce ?',
+      alreadyBooked: 'Vous avez déjà réservé ce créneau dans cet onglet.',
+      alreadyStarted: 'Vous avez déjà commencé une réservation dans cet onglet.',
+      openIt: 'Ouvrir',
+      serviceLine: '{name} · {duration} · {price}',
+      serviceAndDuration: '{name} · {duration}',
+      onlyOne: 'la seule personne pour cette prestation',
+    },
+    landing: {
+      loading: 'Chargement de cette entreprise',
+      errorTitle: "Cette page n'a pas pu être chargée",
+      eyebrow: 'Prendre rendez-vous',
+      book: 'Prendre rendez-vous',
+      cityAndCount: '{city} · {count}',
+      serviceCount: { one: '{count} prestation', other: '{count} prestations' },
+      services: 'Prestations',
+      openingHours: "Heures d'ouverture",
+      depositMaybe: 'Un acompte peut être demandé au moment de confirmer.',
+      depositMaybePercent: 'Un acompte de {percent} % peut être demandé au moment de confirmer.',
+    },
+    manage: {
+      heading: 'Votre réservation',
+      loading: 'Chargement de votre réservation',
+      notFoundTitle: "Nous n'avons pas trouvé cette réservation",
+      notFoundBody:
+        "Le lien est peut-être incomplet, ou il appartient à une réservation supprimée. Vérifiez le lien de votre e-mail de confirmation — c'est le lien complet.",
+      goHome: 'Aller à la page de réservation',
+      errorTitle: "Votre réservation n'a pas pu être chargée",
+      stale:
+        "Nous n'avons pas pu vérifier les mises à jour à l'instant. Ce qui suit est la dernière réponse obtenue.",
+      retry: 'Réessayer',
+      checking: 'Vérification…',
+      bookedBy: 'Réservé par',
+      whenRange: '{date} de {from} à {to}',
+      viewerZone: 'Horaires affichés dans votre propre fuseau ({abbreviation}).',
+      linkHeading: 'Votre lien vers cette réservation',
+      linkBody:
+        "C'est la page où vous êtes. Conservez-la — elle n'expire pas et c'est le seul moyen de revenir à ce rendez-vous.",
+      status: {
+        pendingTitle: 'En attente de votre acompte',
+        pendingBody:
+          "Votre créneau est retenu jusqu'au paiement de l'acompte. Personne d'autre ne peut le prendre entre-temps.",
+        confirmedTitle: 'Votre réservation est confirmée',
+        confirmedBody: 'Vous êtes attendu. Rien d’autre à faire.',
+        cancelledTitle: 'Cette réservation a été annulée',
+        cancelledBody:
+          "L'horaire est retourné à l'agenda. Ce lien continue de fonctionner, vous pouvez donc toujours consulter ce qu'il était.",
+        completedTitle: 'Ce rendez-vous est terminé',
+        completedBody: "Il a été marqué comme réalisé par l'entreprise.",
+        noShowTitle: 'Enregistré comme absence',
+        noShowBody:
+          "L'entreprise a marqué ce rendez-vous comme manqué. Si c'est une erreur, contactez-la — elle peut corriger.",
+        expiredTitle: 'Cette réservation provisoire a expiré',
+        expiredBody:
+          "L'acompte n'a pas été payé à temps, le créneau est donc retourné à l'agenda. Cette réservation sera annulée sous peu.",
+      },
+    },
+    failure: {
+      title: "Cette réservation n'a pas pu aboutir",
+      slotTakenTitle: 'Cet horaire a été pris pendant que vous remplissiez le formulaire',
+      slotTakenBody:
+        "Quelqu'un vient de le réserver. Vos informations sont conservées — choisissez un autre horaire et nous réessaierons.",
+      leadTimeTitle: 'Ce créneau est plus proche que ce que cette entreprise accepte',
+      leadTimeBody: 'Le plus tôt possible est le {when}. Les horaires ci-dessous commencent là.',
+      leadTimeVague: 'Il leur faut plus de préavis. Choisissez un horaire plus tardif.',
+      maxAdvanceTitle: 'Ce créneau est plus lointain que ce que cette entreprise accepte',
+      maxAdvanceBody: 'Le plus tard possible est le {when}. Les horaires ci-dessous s’arrêtent là.',
+      maxAdvanceVague:
+        "Ils ne prennent pas de réservations aussi loin à l'avance. Choisissez un horaire plus proche.",
+      staleTitle: "Cet horaire n'est plus proposé",
+      staleBody:
+        "Les horaires affichés n'étaient plus à jour. Voici ce que cette entreprise a de libre maintenant.",
+      serviceInactiveTitle: "Cette prestation n'est plus réservable",
+      serviceInactiveBody:
+        'Cette entreprise a cessé de la proposer pendant votre réservation. Tout le reste est ci-dessous.',
+      staffTitle: 'Personne ici ne réalise cette prestation pour le moment',
+      staffBody:
+        "L'équipe a changé pendant votre réservation. Choisissez une autre prestation, ou réessayez plus tard.",
+      rateLimitedTitle: 'Trop de tentatives de réservation depuis cet appareil',
+      rateLimitedBody: 'Attendez {window} et réessayez. Vos informations sont conservées.',
+      retrySeconds: { one: '{count} seconde', other: '{count} secondes' },
+      retryMinutes: { one: '{count} minute', other: '{count} minutes' },
+      retryVague: 'quelques minutes',
+    },
     heldUntil: "Réservé jusqu'à {time}",
     slotCount: { one: '{count} horaire', other: '{count} horaires' },
   },

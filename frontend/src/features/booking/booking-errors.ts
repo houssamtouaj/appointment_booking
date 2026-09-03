@@ -1,5 +1,6 @@
 import { isApiError, problemInstant, problemMember } from '@/api/error'
 import { describeError, requestIdOf } from '@/api/error-copy'
+import { translate } from '@/i18n'
 import { clockOf, dayKeyOf, formatDayHeading, type DayKey } from '@/lib/time'
 import type { ErrorCode } from '@/types'
 
@@ -10,6 +11,11 @@ import type { ErrorCode } from '@/types'
  * `409`s that mean opposite things and four are `422`s that lead to three
  * different places, so the status is not the question — and `detail` is prose
  * the backend may reword at any time.
+ *
+ * **Not a component.** `describeBookingFailure` is called from a mutation
+ * handler, so it reads the language store through `translate` rather than
+ * through `useTranslation` — the same reason `describeError` does. The caller
+ * subscribes to the language; this only has to be right when it is called.
  *
  * **`409 BOOKING_SLOT_TAKEN` is the expected outcome, not a crash.** It is what
  * the whole double-booking guarantee produces when two people want the same
@@ -55,9 +61,8 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
     case 'BOOKING_SLOT_TAKEN':
       return {
         code,
-        title: 'That time was taken while you were filling this in',
-        description:
-          'Someone else booked it a moment ago. Your details are kept — choose another time and we will try again.',
+        title: translate('booking.failure.slotTakenTitle'),
+        description: translate('booking.failure.slotTakenBody'),
         recover: 'slot',
         requestId,
       }
@@ -66,10 +71,10 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
       const earliest = problemInstant(error, 'earliestStart')
       return {
         code,
-        title: 'That is sooner than this business takes bookings',
+        title: translate('booking.failure.leadTimeTitle'),
         description: earliest
-          ? `The earliest they can take you is ${at(earliest, timeZone)}. The times below start there.`
-          : 'They need more notice than that. Please choose a later time.',
+          ? translate('booking.failure.leadTimeBody', { when: at(earliest, timeZone) })
+          : translate('booking.failure.leadTimeVague'),
         recover: 'slot',
         // The week on screen was accurate; it is the *chosen start* that is
         // inside the lead time. Refetching would return the same slots.
@@ -82,10 +87,10 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
       const latest = problemInstant(error, 'latestStart')
       return {
         code,
-        title: 'That is further ahead than this business takes bookings',
+        title: translate('booking.failure.maxAdvanceTitle'),
         description: latest
-          ? `The latest they can take you is ${at(latest, timeZone)}. The times below end there.`
-          : 'They do not take bookings that far in advance. Please choose an earlier time.',
+          ? translate('booking.failure.maxAdvanceBody', { when: at(latest, timeZone) })
+          : translate('booking.failure.maxAdvanceVague'),
         recover: 'slot',
         goToDate: latest ? dayKeyOf(latest, timeZone) : undefined,
         requestId,
@@ -98,9 +103,8 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
     case 'SLOT_OUTSIDE_HOURS':
       return {
         code,
-        title: 'That time is no longer on offer',
-        description:
-          'The times on screen were out of date. Here is what this business has free now.',
+        title: translate('booking.failure.staleTitle'),
+        description: translate('booking.failure.staleBody'),
         recover: 'slot',
         requestId,
       }
@@ -108,9 +112,8 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
     case 'SERVICE_INACTIVE':
       return {
         code,
-        title: 'That service is no longer bookable',
-        description:
-          'This business stopped offering it while you were booking. Everything else it does is below.',
+        title: translate('booking.failure.serviceInactiveTitle'),
+        description: translate('booking.failure.serviceInactiveBody'),
         recover: 'service',
         requestId,
       }
@@ -118,9 +121,8 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
     case 'STAFF_NOT_ASSIGNED':
       return {
         code,
-        title: 'Nobody here performs that service at the moment',
-        description:
-          'The team changed while you were booking. Choose another service, or try again later.',
+        title: translate('booking.failure.staffTitle'),
+        description: translate('booking.failure.staffBody'),
         recover: 'service',
         requestId,
       }
@@ -135,8 +137,8 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
     case 'RATE_LIMITED':
       return {
         code,
-        title: 'Too many booking attempts from here',
-        description: `Wait ${retryWindow(error)} and try again. Your details are kept.`,
+        title: translate('booking.failure.rateLimitedTitle'),
+        description: translate('booking.failure.rateLimitedBody', { window: retryWindow(error) }),
         recover: 'stay',
         requestId,
       }
@@ -144,7 +146,7 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
     default:
       return {
         code,
-        title: 'This booking could not be completed',
+        title: translate('booking.failure.title'),
         description: describeError(error, {
           VALIDATION_FAILED: 'errors.bookingDetailsInvalid',
         }),
@@ -157,9 +159,17 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
   }
 }
 
-/** `"Thursday 3 September at 11:00"`, on the business's clock. */
+/**
+ * `"Thursday 3 September at 11:00"`, on the business's clock.
+ *
+ * The word "at" is a dictionary key rather than a literal in a template: French
+ * joins a day and a clock differently, and a joined string cannot say so.
+ */
 function at(instant: string, timeZone: string): string {
-  return `${formatDayHeading(dayKeyOf(instant, timeZone))} at ${clockOf(instant, timeZone)}`
+  return translate('booking.summary.dateAtTime', {
+    date: formatDayHeading(dayKeyOf(instant, timeZone)),
+    time: clockOf(instant, timeZone),
+  })
 }
 
 /**
@@ -173,8 +183,12 @@ function at(instant: string, timeZone: string): string {
 function retryWindow(error: unknown): string {
   const seconds = problemMember(error, 'retryAfterSeconds')
   if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) {
-    return 'a few minutes'
+    return translate('booking.failure.retryVague')
   }
-  if (seconds < 90) return `${Math.ceil(seconds)} seconds`
-  return `${Math.ceil(seconds / 60)} minutes`
+  // Plural keys rather than a bare "s": French counts 0 with the singular, and a
+  // one-second window is a real answer the old template got wrong in English too.
+  if (seconds < 90) {
+    return translate('booking.failure.retrySeconds', { count: Math.ceil(seconds) })
+  }
+  return translate('booking.failure.retryMinutes', { count: Math.ceil(seconds / 60) })
 }

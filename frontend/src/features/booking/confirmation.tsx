@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { BookingSummary } from '@/features/booking/booking-summary'
 import { manageUrlFor } from '@/features/booking/manage-url'
 import type { PublicBooking, PublicBusiness, PublicService } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type ConfirmationProps = {
   booking: PublicBooking
@@ -31,6 +32,7 @@ type ConfirmationProps = {
  * somebody screenshotting this screen in a panic.
  */
 export function Confirmation({ booking, business, service, staffName }: ConfirmationProps) {
+  const { t } = useTranslation()
   const manageUrl = manageUrlFor(booking.cancellationToken)
 
   return (
@@ -44,10 +46,10 @@ export function Confirmation({ booking, business, service, staffName }: Confirma
               question had. A confirmation announced only by a paragraph is a
               screen a keyboard user has to go looking for. */}
           <h1 className="font-display text-display-sm text-foreground tracking-display leading-tight">
-            You are booked
+            {t('booking.confirmation.title')}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {business.name} has your appointment. Nothing else to do.
+            {t('booking.confirmation.subtitle', { business: business.name })}
           </p>
         </div>
       </div>
@@ -65,20 +67,16 @@ export function Confirmation({ booking, business, service, staffName }: Confirma
       />
 
       <section className="border-border bg-card rounded-md border p-5">
-        <h2 className="text-foreground text-base font-medium">Your link to this booking</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Keep this. It is the only way back to this appointment — to check it or to cancel it — and
-          it does not expire.
-        </p>
+        <h2 className="text-foreground text-base font-medium">
+          {t('booking.confirmation.linkHeading')}
+        </h2>
+        <p className="text-muted-foreground mt-1 text-sm">{t('booking.confirmation.linkBody')}</p>
 
-        <CopyText className="mt-4" value={manageUrl} label="Your booking link" />
+        <CopyText className="mt-4" value={manageUrl} label={t('booking.confirmation.linkLabel')} />
 
         <p className="text-muted-foreground mt-4 flex items-start gap-2 text-sm">
           <Mail className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <span>
-            The same link is in the confirmation email we have just sent, along with a calendar file
-            you can add to your own calendar.
-          </span>
+          <span>{t('booking.confirmation.emailNote')}</span>
         </p>
 
         <div className="mt-5 flex flex-wrap gap-3">
@@ -86,10 +84,14 @@ export function Confirmation({ booking, business, service, staffName }: Confirma
             {/* `Link`, not `<a href>`: a plain anchor reloads the document and
                 throws away the query cache to move between two routes of the
                 same app. */}
-            <Link to={`/booking/${booking.cancellationToken}`}>Manage this booking</Link>
+            <Link to={`/booking/${booking.cancellationToken}`}>
+              {t('booking.confirmation.manage')}
+            </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link to={`/b/${business.slug}`}>Back to {business.name}</Link>
+            <Link to={`/b/${business.slug}`}>
+              {t('booking.confirmation.backTo', { business: business.name })}
+            </Link>
           </Button>
         </div>
       </section>

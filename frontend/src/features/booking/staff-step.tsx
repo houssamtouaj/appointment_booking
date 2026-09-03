@@ -10,6 +10,7 @@ import { ANYONE } from '@/features/booking/booking-params'
 import { useStaffForService } from '@/features/booking/public-queries'
 import { StaffSkeleton } from '@/features/booking/skeletons'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n'
 
 type StaffStepProps = {
   slug: string
@@ -34,6 +35,7 @@ type StaffStepProps = {
  * to balance the work across the team.
  */
 export function StaffStep({ slug, serviceId, onChoose, servicesHref }: StaffStepProps) {
+  const { t } = useTranslation()
   const { data, isPending, isError, error, refetch } = useStaffForService(slug, serviceId)
   const onlyOne = data?.length === 1
 
@@ -56,7 +58,7 @@ export function StaffStep({ slug, serviceId, onChoose, servicesHref }: StaffStep
     return (
       <>
         <p role="status" className="sr-only">
-          Loading who is available
+          {t('booking.staffStep.loading')}
         </p>
         <StaffSkeleton />
       </>
@@ -66,7 +68,7 @@ export function StaffStep({ slug, serviceId, onChoose, servicesHref }: StaffStep
   if (isError) {
     return (
       <ErrorState
-        title="The team could not be loaded"
+        title={t('booking.staffStep.errorTitle')}
         description={describeError(error)}
         requestId={requestIdOf(error)}
         onRetry={() => void refetch()}
@@ -80,11 +82,11 @@ export function StaffStep({ slug, serviceId, onChoose, servicesHref }: StaffStep
     return (
       <EmptyState
         icon={Users}
-        title="Nobody is set up to perform this service"
-        description="It cannot be booked at the moment. Another service may still be available."
+        title={t('booking.staffStep.emptyTitle')}
+        description={t('booking.staffStep.emptyBody')}
         action={
           <Button asChild variant="outline">
-            <Link to={servicesHref}>Choose another service</Link>
+            <Link to={servicesHref}>{t('booking.staffStep.chooseAnother')}</Link>
           </Button>
         }
       />
@@ -94,8 +96,8 @@ export function StaffStep({ slug, serviceId, onChoose, servicesHref }: StaffStep
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <StaffOption
-        label="Anyone"
-        description="First available — usually the most times"
+        label={t('booking.staffStep.anyone')}
+        description={t('booking.staffStep.anyoneNote')}
         icon={<Users className="size-4" aria-hidden="true" />}
         onClick={() => onChoose(ANYONE)}
         recommended

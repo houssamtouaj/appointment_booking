@@ -2,6 +2,7 @@ import { ExternalLink, Loader } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import type { PublicBooking } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * A `PENDING` booking, and what a customer can do about it.
@@ -25,14 +26,13 @@ export function PaymentSection({
   onCheckAgain: () => void
   refetching: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <section className="border-border bg-card mt-8 rounded-md border p-5">
-      <h2 className="text-foreground text-base font-medium">The deposit</h2>
+      <h2 className="text-foreground text-base font-medium">{t('booking.payment.heading')}</h2>
 
       {booking.depositRefundable ? null : (
-        <p className="text-muted-foreground mt-1 text-sm">
-          Deposits are not refunded if you cancel.
-        </p>
+        <p className="text-muted-foreground mt-1 text-sm">{t('booking.payment.notRefunded')}</p>
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -42,7 +42,7 @@ export function PaymentSection({
                 right here where `Link` is wrong: this is not a route of this
                 app. */}
             <a href={booking.checkoutUrl}>
-              Pay the deposit
+              {t('booking.payment.pay')}
               <ExternalLink className="size-4" aria-hidden="true" />
             </a>
           </Button>
@@ -51,17 +51,15 @@ export function PaymentSection({
         {polling ? (
           <p role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader className="size-4 animate-spin" aria-hidden="true" />
-            Checking for your payment…
+            {t('booking.payment.polling')}
           </p>
         ) : null}
 
         {gaveUp ? (
           <div className="flex flex-wrap items-center gap-3">
-            <p className="text-muted-foreground text-sm">
-              Still not confirmed. If you have paid, it may take another moment.
-            </p>
+            <p className="text-muted-foreground text-sm">{t('booking.payment.gaveUp')}</p>
             <Button variant="outline" size="sm" onClick={onCheckAgain} disabled={refetching}>
-              {refetching ? 'Checking…' : 'Check again'}
+              {refetching ? t('booking.payment.checking') : t('booking.payment.checkAgain')}
             </Button>
           </div>
         ) : null}
