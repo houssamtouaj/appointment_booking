@@ -127,7 +127,7 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={update.isPending}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="staff-form" disabled={update.isPending}>
             {update.isPending ? t('team.edit.saving') : t('team.edit.save')}

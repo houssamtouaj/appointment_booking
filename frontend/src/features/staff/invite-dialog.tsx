@@ -105,7 +105,7 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
             >
               {t('team.invite.inviteAnother')}
             </Button>
-            <Button onClick={onClose}>Done</Button>
+            <Button onClick={onClose}>{t('common.done')}</Button>
           </>
         }
       >

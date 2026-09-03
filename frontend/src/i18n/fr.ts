@@ -17,6 +17,13 @@ export const fr = {
   common: {
     cancel: 'Annuler',
     back: 'Retour',
+    previous: 'Précédent',
+    next: 'Suivant',
+    today: "Aujourd'hui",
+    done: 'Terminé',
+    edit: 'Modifier',
+    deactivate: 'Désactiver',
+    reactivate: 'Réactiver',
     signIn: 'Connexion',
     signOut: 'Déconnexion',
     signingOut: 'Déconnexion…',
@@ -237,6 +244,7 @@ export const fr = {
   },
   calendar: {
     title: 'Agenda',
+    description: "Tous les rendez-vous de {business}, à l'heure de {city}.",
     columnLabel: '{weekday} {date}, {count}',
     columnLabelToday: "{weekday} {date}, {count}, aujourd'hui",
     appointmentCount: { one: '{count} rendez-vous', other: '{count} rendez-vous' },
@@ -447,6 +455,11 @@ export const fr = {
     performsNothing: 'Ne réalise encore aucune prestation',
     loadingPerformed: 'Chargement de ses prestations…',
     resendInvitation: "Renvoyer l'invitation",
+    editAction: 'Modifier',
+    deactivate: 'Désactiver',
+    reactivate: 'Réactiver',
+    performs: 'Réalise :',
+    andMore: { one: 'et {count} autre', other: 'et {count} autres' },
     inviteColleague: 'Inviter un collègue',
     loading: 'Chargement de votre équipe',
     standing: {

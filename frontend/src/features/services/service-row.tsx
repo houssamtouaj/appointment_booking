@@ -43,6 +43,7 @@ export function ServiceRow({
   onAssign,
   busy,
 }: ServiceRowProps) {
+  const { t } = useTranslation()
   const bookability = bookabilityOf(service, lookups)
   const performers = performersOf(service, lookups)
 
@@ -82,7 +83,7 @@ export function ServiceRow({
         <div className="flex shrink-0 items-center gap-1">
           <Button variant="ghost" size="sm" onClick={() => onEdit(service)} disabled={busy}>
             <Pencil aria-hidden="true" />
-            Edit
+            {t('common.edit')}
             <span className="sr-only"> {service.name}</span>
           </Button>
 
@@ -97,13 +98,13 @@ export function ServiceRow({
               // bookings reference services forever (backend D15).
             >
               <Archive aria-hidden="true" />
-              Deactivate
+              {t('common.deactivate')}
               <span className="sr-only"> {service.name}</span>
             </Button>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => onReactivate(service)} disabled={busy}>
               <RotateCcw aria-hidden="true" />
-              Reactivate
+              {t('common.reactivate')}
               <span className="sr-only"> {service.name}</span>
             </Button>
           )}

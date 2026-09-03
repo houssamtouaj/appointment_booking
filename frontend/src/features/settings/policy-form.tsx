@@ -127,7 +127,7 @@ export function PolicyForm({ policy }: { policy: Policy }) {
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField
             label={t('settings.policy.minLeadTime')}
-            hint={POLICY_HINTS.minLeadTimeHours}
+            hint={t(POLICY_HINTS.minLeadTimeHours)}
             error={message(errors.minLeadTimeHours?.message)}
           >
             {(control) => (
@@ -143,7 +143,7 @@ export function PolicyForm({ policy }: { policy: Policy }) {
 
           <FormField
             label={t('settings.policy.maxAdvance')}
-            hint={POLICY_HINTS.maxAdvanceDays}
+            hint={t(POLICY_HINTS.maxAdvanceDays)}
             error={message(errors.maxAdvanceDays?.message)}
           >
             {(control) => (
@@ -159,7 +159,7 @@ export function PolicyForm({ policy }: { policy: Policy }) {
 
           <FormField
             label={t('settings.policy.cutoff')}
-            hint={POLICY_HINTS.cancellationCutoffHours}
+            hint={t(POLICY_HINTS.cancellationCutoffHours)}
             error={message(errors.cancellationCutoffHours?.message)}
           >
             {(control) => (
@@ -175,7 +175,7 @@ export function PolicyForm({ policy }: { policy: Policy }) {
 
           <FormField
             label={t('settings.policy.slotStep')}
-            hint={POLICY_HINTS.slotGranularityMinutes}
+            hint={t(POLICY_HINTS.slotGranularityMinutes)}
             error={message(errors.slotGranularityMinutes?.message)}
           >
             {(control) => (

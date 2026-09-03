@@ -219,7 +219,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="service-form" disabled={pending}>
             {pending

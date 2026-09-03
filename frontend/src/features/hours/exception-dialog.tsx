@@ -167,7 +167,7 @@ export function ExceptionDialog({
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={create.isPending}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="exception-form" disabled={create.isPending}>
             {create.isPending ? t('hours.dialog.saving') : t('hours.dialog.save')}

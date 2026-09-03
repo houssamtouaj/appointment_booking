@@ -40,12 +40,13 @@ type ToolbarProps = {
 }
 
 export function CalendarToolbar({ params, view, lookups, weekUnavailable }: ToolbarProps) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-wrap items-center gap-2">
       <StepControl params={params} view={view} />
       {params.isCurrentWeek ? null : (
         <Button variant="outline" size="sm" onClick={() => params.setDate(params.currentWeek.from)}>
-          Today
+          {t('common.today')}
         </Button>
       )}
       <ViewSwitch params={params} weekUnavailable={weekUnavailable} />

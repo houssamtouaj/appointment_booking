@@ -131,6 +131,7 @@ function Pager({
   pageIndex: number
   onPage: (page: number) => void
 }) {
+  const { t } = useTranslation()
   if (page.totalPages <= 1) return null
 
   return (
@@ -145,7 +146,7 @@ function Pager({
           disabled={pageIndex === 0}
           onClick={() => onPage(pageIndex - 1)}
         >
-          Previous
+          {t('common.previous')}
         </Button>
         <Button
           variant="outline"
@@ -153,7 +154,7 @@ function Pager({
           disabled={pageIndex >= page.totalPages - 1}
           onClick={() => onPage(pageIndex + 1)}
         >
-          Next
+          {t('common.next')}
         </Button>
       </div>
     </div>

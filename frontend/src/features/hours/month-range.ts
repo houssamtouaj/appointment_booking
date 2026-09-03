@@ -1,4 +1,5 @@
 import type { DayKey, DayRange } from '@/lib/time'
+import { currentLocale } from '@/i18n'
 
 /**
  * The month the exceptions panel is showing, and the `from`/`to` it turns into.
@@ -61,10 +62,18 @@ export function shiftMonth(month: MonthKey, delta: number): MonthKey {
   return `${moved.getUTCFullYear()}-${String(moved.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-/** `September 2026`. Noon UTC so the label cannot slide a day either way. */
+/**
+ * `September 2026`, `septembre 2026`. Noon UTC so the label cannot slide a day
+ * either way.
+ *
+ * The `locale` default follows the language store, like every formatter in
+ * `lib/` (F23). It was missed in the wave that moved those, because it lives in
+ * a feature folder rather than in `lib/time.ts` — and the month name showing in
+ * English on an otherwise French page is what found it.
+ */
 export function formatMonth(month: MonthKey, locale?: string): string {
   const { from } = monthRange(month)
-  return new Date(`${from}T12:00:00Z`).toLocaleDateString(locale, {
+  return new Date(`${from}T12:00:00Z`).toLocaleDateString(locale ?? currentLocale(), {
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC',

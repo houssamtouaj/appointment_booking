@@ -17,6 +17,14 @@ export const en = {
   common: {
     cancel: 'Cancel',
     back: 'Back',
+    /** Pagination and one-word actions, shared once they were needed twice. */
+    previous: 'Previous',
+    next: 'Next',
+    today: 'Today',
+    done: 'Done',
+    edit: 'Edit',
+    deactivate: 'Deactivate',
+    reactivate: 'Reactivate',
     signIn: 'Log in',
     signOut: 'Sign out',
     signingOut: 'Signing out…',
@@ -315,6 +323,8 @@ export const en = {
   },
   calendar: {
     title: 'Calendar',
+    /** `{business}` is tenant data; `{city}` is an IANA city name. Neither is prose. */
+    description: 'Every appointment at {business}, in {city} time.',
     /**
      * A column's spoken name: the weekday, the date, how full it is, and whether
      * it is today. The count is *only* in the label — seven counts across the top
@@ -539,6 +549,12 @@ export const en = {
     performsNothing: 'Performs no services yet',
     loadingPerformed: 'Loading what they perform…',
     resendInvitation: 'Resend invitation',
+    editAction: 'Edit',
+    deactivate: 'Deactivate',
+    reactivate: 'Reactivate',
+    performs: 'Performs:',
+    /** The tail of a truncated service list. `Intl.PluralRules` picks the form. */
+    andMore: { one: 'and {count} more', other: 'and {count} more' },
     inviteColleague: 'Invite colleague',
     loading: 'Loading your team',
     standing: {

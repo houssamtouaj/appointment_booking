@@ -250,7 +250,10 @@ function Calendar({ user }: { user: MeResponse }) {
       <PageHeader
         eyebrow={t('admin.eyebrow')}
         title={t('calendar.title')}
-        description={`Every appointment at ${user.business.name}, in ${zoneCity(timeZone)} time.`}
+        description={t('calendar.description', {
+          business: user.business.name,
+          city: zoneCity(timeZone),
+        })}
         actions={
           <CalendarToolbar
             params={params}

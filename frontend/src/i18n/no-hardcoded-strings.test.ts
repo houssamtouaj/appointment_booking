@@ -22,11 +22,41 @@ const TRANSLATED = ['src']
 const PROSE_PROPS = /(aria-label|placeholder|hint|title|eyebrow)="([^"]{4,})"/g
 
 /**
+ * The same props, given a **template literal** instead of a string.
+ *
+ * A gap the first version of this scan had, and a real string got through it:
+ * `calendar-page.tsx` passed `` description={`Every appointment at ${name}, in
+ * ${city} time.`} ``, which is neither a quoted prop nor JSX text. A template
+ * with prose in it is exactly the shape a sentence takes when somebody needs to
+ * interpolate a value, which is the shape most likely to need a key.
+ *
+ * `description` and `label` join the list here where they cannot above: as
+ * quoted props they are given a variable often enough to be noise, but a
+ * *template* with two words of prose in it is copy every time.
+ */
+const PROSE_TEMPLATES =
+  /(aria-label|placeholder|hint|title|eyebrow|description|label)=\{`([^`]*[A-Za-z]{2,}\s+[A-Za-z]{2,}[^`]*)`\}/g
+
+/**
  * A run of JSX text: at least two words, at least one lowercase letter, no
  * braces. Two words because a one-word run is usually a variable's neighbour
  * (`· `, `/`, `—`) and the false-positive rate at one word is not worth it.
  */
 const JSX_TEXT = />\s*([A-Za-z][^<>{}]*\s+[^<>{}]*[a-z][^<>{}]*)\s*</g
+
+/**
+ * A single capitalised word that is an element's whole content.
+ *
+ * The two-word rule above is right for a *run* of text — a one-word run is
+ * usually a variable's neighbour, a `·` or a `/`. But a lone capitalised word
+ * between an opening and a closing tag is a button, and this is how "Edit",
+ * "Deactivate" and "Reactivate" survived every pass of wave 10 until somebody
+ * looked at the team page in French.
+ *
+ * Three letters minimum, and a trailing colon allowed for a label like
+ * "Performs:". The wordmark is in `ALLOWED`.
+ */
+const LONE_WORD = />\s*([A-Z][a-zA-Z]{2,}:?)\s*</g
 
 /**
  * A match that is TypeScript rather than copy.
@@ -104,6 +134,20 @@ describe('the translated surface', () => {
     const found = [...source.matchAll(PROSE_PROPS)]
       .map((match) => match[2] ?? '')
       .filter((value) => !ALLOWED.has(value) && /\s/.test(value))
+    expect(found).toEqual([])
+  })
+
+  it.each(files)('%s has no prose in a template-literal prop', (_path, source) => {
+    const found = [...stripComments(source).matchAll(PROSE_TEMPLATES)]
+      .map((match) => (match[2] ?? '').trim())
+      .filter((value) => !ALLOWED.has(value))
+    expect(found).toEqual([])
+  })
+
+  it.each(files)('%s has no lone capitalised word as an element’s content', (_path, source) => {
+    const found = [...stripComments(source).matchAll(LONE_WORD)]
+      .map((match) => (match[1] ?? '').trim())
+      .filter((value) => !ALLOWED.has(value))
     expect(found).toEqual([])
   })
 

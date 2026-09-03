@@ -164,7 +164,7 @@ function SheetActions({
 
   return (
     <footer className="border-rule border-t px-5 py-4">
-      <p className="text-muted-foreground mb-2 text-xs">{styleOf(booking.status).meaning}</p>
+      <p className="text-muted-foreground mb-2 text-xs">{t(styleOf(booking.status).meaning)}</p>
 
       <div className="flex flex-wrap gap-2">
         {blocked.map(({ target, reason }) => (

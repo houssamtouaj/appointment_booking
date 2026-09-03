@@ -14,7 +14,7 @@ import { lastOwnerReason, standingOf, type StaffState } from '@/features/staff/s
 import type { Lookups } from '@/hooks/use-lookups'
 import { cn } from '@/lib/utils'
 import type { Staff } from '@/types'
-import { useTranslation } from '@/i18n'
+import { translate, useTranslation } from '@/i18n'
 
 /**
  * One colleague, as a row: who they are, what they can do, what state their
@@ -122,7 +122,7 @@ export function StaffRow({
               <span className="italic">{t('team.performsNothing')}</span>
             ) : (
               <>
-                <span className="text-foreground">Performs:</span> {services.join(', ')}
+                <span className="text-foreground">{t('team.performs')}</span> {services.join(', ')}
               </>
             )}
           </p>
@@ -131,7 +131,7 @@ export function StaffRow({
         <div className="flex shrink-0 flex-wrap items-center gap-1">
           <Button variant="ghost" size="sm" onClick={() => onEdit(person)} disabled={busy}>
             <Pencil aria-hidden="true" />
-            Edit
+            {t('team.editAction')}
             <span className="sr-only"> {person.fullName}</span>
           </Button>
 
@@ -146,7 +146,7 @@ export function StaffRow({
           {standing.action === 'reactivate' ? (
             <Button variant="ghost" size="sm" onClick={() => onReactivate(person)} disabled={busy}>
               <RotateCcw aria-hidden="true" />
-              Reactivate
+              {t('team.reactivate')}
               <span className="sr-only"> {person.fullName}</span>
             </Button>
           ) : null}
@@ -166,7 +166,7 @@ export function StaffRow({
               aria-describedby={cannotDeactivate ? `${person.id}-last-owner` : undefined}
             >
               <UserMinus aria-hidden="true" />
-              Deactivate
+              {t('team.deactivate')}
               <span className="sr-only"> {person.fullName}</span>
             </Button>
           ) : null}
@@ -206,5 +206,8 @@ function performedServices(person: Staff, lookups: Lookups): string[] | null {
     .map((service) => (service.active ? service.name : `${service.name} (archived)`))
 
   if (names.length <= SERVICES_SHOWN) return names
-  return [...names.slice(0, SERVICES_SHOWN), `and ${names.length - SERVICES_SHOWN} more`]
+  return [
+    ...names.slice(0, SERVICES_SHOWN),
+    translate('team.andMore', { count: names.length - SERVICES_SHOWN }),
+  ]
 }
