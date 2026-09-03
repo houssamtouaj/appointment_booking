@@ -120,7 +120,7 @@ around the writes instead, never a self-invoked `@Transactional` private method.
 **Rate limits are a filter, not an annotation.** `common/web/RateLimitFilter` runs bucket4j buckets
 keyed by client IP and sits *ahead* of BCrypt on `POST /api/auth/login` — that ordering is the point,
 so a password-spray never reaches the slow hash. Budgets are config, not code
-(`slotflow.rate-limit.*` in `application.yml`). Which address the bucket keys on depends on
+(`app.rate-limit.*` in `application.yml`). Which address the bucket keys on depends on
 `FORWARD_HEADERS_STRATEGY`: `none` locally, `framework` only behind a proxy that *overwrites*
 `X-Forwarded-For` rather than appending to a caller's.
 
