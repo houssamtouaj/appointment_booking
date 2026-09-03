@@ -7,6 +7,7 @@ import {
 } from '@/features/booking/booking-params'
 import { useStaffForService } from '@/features/booking/public-queries'
 import type { PublicBusiness, PublicService, PublicStaff } from '@/types'
+import { useTranslation } from '@/i18n'
 
 export type EffectiveBookingParams = {
   /** The raw URL parameters, and the setter for them. */
@@ -57,6 +58,7 @@ export function useEffectiveBookingParams(
   const service = business.services.find((candidate) => candidate.id === params.serviceId)
 
   const { data: staffList } = useStaffForService(slug, service?.id)
+  const { t } = useTranslation()
   const onlyStaff = staffList?.length === 1 ? staffList[0] : undefined
 
   /**
@@ -78,7 +80,7 @@ export function useEffectiveBookingParams(
       ? // When one person is the only candidate the step answered itself, so the
         // stepper names them rather than saying "Anyone" — which would read as a
         // choice the customer did not make.
-        (onlyStaff?.displayName ?? 'Anyone')
+        (onlyStaff?.displayName ?? t('booking.staffStep.anyone'))
       : staffList?.find((member) => member.id === effective.staff)?.displayName
 
   return {
