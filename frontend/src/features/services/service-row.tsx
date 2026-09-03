@@ -9,6 +9,7 @@ import type { Lookups } from '@/hooks/use-lookups'
 import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import type { Service } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * One service, as a row.
@@ -152,8 +153,13 @@ function Performers({
 }: {
   performers: readonly { id: string; fullName: string; active: boolean }[]
 }) {
+  const { t } = useTranslation()
   if (performers.length === 0) {
-    return <p className="text-muted-foreground shrink-0 text-xs italic sm:w-28">Nobody assigned</p>
+    return (
+      <p className="text-muted-foreground shrink-0 text-xs italic sm:w-28">
+        {t('services.row.nobodyAssigned')}
+      </p>
+    )
   }
 
   const shown = performers.slice(0, AVATARS_SHOWN)

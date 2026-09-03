@@ -1,4 +1,5 @@
 import type { Staff } from '@/types'
+import { translate, type TKey } from '@/i18n'
 
 /**
  * `active`, `accepted` and `invitationPending` are three independent booleans,
@@ -32,9 +33,9 @@ export type StaffState = 'active' | 'invited' | 'lapsed' | 'deactivated'
 export type StaffStanding = {
   state: StaffState
   /** The chip's word. */
-  label: string
+  label: TKey
   /** One sentence under the row: what this state means. */
-  note: string
+  note: TKey
   /** Which of the two row actions applies, if either. */
   action: 'resend' | 'reactivate' | 'none'
 }
@@ -43,8 +44,8 @@ export function standingOf(person: Staff): StaffStanding {
   if (person.active) {
     return {
       state: 'active',
-      label: 'Active',
-      note: 'Can sign in and take appointments.',
+      label: 'team.standing.active',
+      note: 'team.standing.activeNote',
       action: 'none',
     }
   }
@@ -52,11 +53,11 @@ export function standingOf(person: Staff): StaffStanding {
   if (person.accepted) {
     return {
       state: 'deactivated',
-      label: 'Deactivated',
+      label: 'team.standing.deactivated',
       // Says the thing an owner is most likely to be wrong about. Deactivating
       // somebody does not cancel their appointments, and the alert that appears
       // at the time is the only other place this is stated.
-      note: 'Cannot sign in. Any appointments they already had are still in the calendar.',
+      note: 'team.standing.deactivatedNote',
       action: 'reactivate',
     }
   }
@@ -64,16 +65,16 @@ export function standingOf(person: Staff): StaffStanding {
   if (person.invitationPending) {
     return {
       state: 'invited',
-      label: 'Invited — awaiting acceptance',
-      note: 'They have a link valid for seven days and choose their own password.',
+      label: 'team.standing.invited',
+      note: 'team.standing.invitedNote',
       action: 'resend',
     }
   }
 
   return {
     state: 'lapsed',
-    label: 'Invitation lapsed',
-    note: 'Their invitation ran out before they used it. Sending a fresh one is the only way in.',
+    label: 'team.standing.lapsed',
+    note: 'team.standing.lapsedNote',
     action: 'resend',
   }
 }
@@ -107,8 +108,7 @@ export function activeOwnerCount(team: readonly Staff[]): number {
  * adds is the *why*, which is the half an owner is entitled to before being told
  * no.
  */
-export const LAST_OWNER_COPY =
-  'A business must always have one active owner, or nobody could manage it. Promote another colleague to owner first.'
+export const LAST_OWNER_COPY: TKey = 'team.lastOwnerCopy'
 
 /**
  * Why this person cannot be deactivated or demoted, or `undefined` when they can.
@@ -118,8 +118,10 @@ export const LAST_OWNER_COPY =
  * and the explanation has to reach a screen reader too, not only a pointer.
  */
 export function lastOwnerReason(person: Staff, team: readonly Staff[]): string | undefined {
+  // `translate`, not a key: the two call sites feed it to a `title` and to a
+  // toast description, both of which want prose.
   if (person.role !== 'OWNER' || !person.active) return undefined
   if (activeOwnerCount(team) > 1) return undefined
 
-  return LAST_OWNER_COPY
+  return translate(LAST_OWNER_COPY)
 }

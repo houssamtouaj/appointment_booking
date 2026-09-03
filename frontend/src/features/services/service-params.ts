@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import type { ServiceQuery } from '@/api/catalog'
+import type { TKey } from '@/i18n'
 
 /**
  * Which tab of the catalogue is open, and which page of it — both in the URL.
@@ -19,10 +20,10 @@ export const TABS = ['active', 'archived', 'all'] as const
 
 export type ServiceTab = (typeof TABS)[number]
 
-export const TAB_LABEL: Record<ServiceTab, string> = {
-  active: 'Active',
-  archived: 'Archived',
-  all: 'All',
+export const TAB_LABEL: Record<ServiceTab, TKey> = {
+  active: 'services.tabs.active',
+  archived: 'services.tabs.archived',
+  all: 'services.tabs.all',
 }
 
 /**

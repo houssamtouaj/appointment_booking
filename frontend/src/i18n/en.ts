@@ -425,6 +425,204 @@ export const en = {
     tooManyTitle: 'This week has more appointments than the calendar can show',
     weekErrorTitle: 'This week could not be loaded',
   },
+  services: {
+    title: 'Services',
+    /** `{business}` is tenant data and is not translated. */
+    description: 'What {business} sells, how long each one takes and who performs it.',
+    errorTitle: 'Your services could not be loaded',
+    filterLabel: 'Filter services',
+    newService: 'New service',
+    loading: 'Loading your services',
+    firstPage: 'First page',
+    backToActive: 'Back to active services',
+    lookupsWarning:
+      'Your team could not be loaded, so these rows cannot show who performs each service.',
+    lookupsRetry: 'Try again',
+    tabs: {
+      active: 'Active',
+      archived: 'Archived',
+      all: 'All',
+    },
+    empty: {
+      offPageTitle: 'There is nothing on this page',
+      offPageBody: 'The list is shorter than it was. Go back to the first page.',
+      archivedTitle: 'Nothing is archived',
+      archivedBody:
+        'Services you deactivate land here. They keep their bookings and can be brought back.',
+      activeTitle: 'No services yet',
+      allTitle: 'Your catalogue is empty',
+      body: 'A service is one thing you sell: what it is called, how long it takes and what it costs. Nothing can be booked until there is one.',
+    },
+    bookability: {
+      archived: 'Archived',
+      bookable: 'Bookable',
+      unbookable: 'Not bookable',
+      /** The chip's spoken name: the state, then why, then what pressing it does. */
+      chipHint: '. {reason} Open to fix it.',
+      assignStaff: 'Assign staff',
+      reactivateColleague: 'Reactivate a colleague',
+      noneAssigned: 'Nobody is assigned to perform it, so it offers no times on your booking page.',
+      assignActive:
+        'It offers no times on your booking page. Assign a colleague who is still active.',
+      /** `{names}` is a list of people's own names and is not translated. */
+      onlyPersonGone: '{names} is the only person assigned to it, and they have been deactivated.',
+      everyoneGone: 'Everyone assigned to it has been deactivated: {names}.',
+    },
+    row: {
+      nobodyAssigned: 'Nobody assigned',
+    },
+    form: {
+      editTitle: 'Edit service',
+      newTitle: 'New service',
+      editDescription: 'Changing a price or a duration never touches an existing booking.',
+      newDescription: 'What you sell, how long it takes and who performs it.',
+      save: 'Save changes',
+      create: 'Create service',
+      saving: 'Saving…',
+      name: 'Name',
+      descriptionLabel: 'Description',
+      descriptionHint: 'Shown to customers on your booking page. Optional.',
+      duration: 'Duration',
+      /** `{min}`, `{max}` and `{step}` come from the schema's own constants. */
+      durationHint: 'In minutes. {min}–{max}, in steps of {step}.',
+      price: 'Price ({currency})',
+      priceHintEditing:
+        'Existing bookings keep the price they were taken at. Changing this only affects new ones.',
+      buffers: 'Buffers',
+      before: 'Before',
+      after: 'After',
+      blockPrompt: 'Enter a duration to see how much of the calendar one appointment takes.',
+      /** `{duration}` is already worded by `i18n/duration.ts`. */
+      blockTotal: 'One appointment blocks {duration} of the calendar.',
+      performers: 'Who performs it',
+      performersNote: 'A service with nobody assigned offers no times, however it is priced.',
+      buffersNote:
+        'Setup and cleanup time. Blocks the calendar, is not charged, and is what stops the next appointment starting too early.',
+      nobodyTitle: 'Nobody is assigned to perform this',
+      nobodyBody:
+        'It will be listed on your booking page and offer no times at all, with nothing on the page to say why. Tick a colleague above, or save it anyway and fix it from the row.',
+      saveAnyway: 'Save without anyone assigned',
+      loadingTeam: 'Loading your team…',
+      noTeamYet: 'You have not invited anyone yet.',
+      staffGone:
+        'One of those colleagues is no longer part of this business. Reload the page and pick again.',
+      /** The Zod messages. Keys, not sentences: a module-scope schema captures
+          the language at import time and then never updates. */
+      nameRequired: 'Give the service a name',
+      nameTooShort: 'Use at least two characters',
+      nameTooLong: 'Keep it under 120 characters',
+      descriptionTooLong: 'Keep it under 2000 characters',
+      durationRequired: 'Enter how long the appointment takes',
+      durationWhole: 'Enter a whole number of minutes',
+      durationRange: 'Between {min} and {max} minutes',
+      durationStep: 'Use a multiple of {step} minutes',
+      priceRequired: 'Enter a price',
+      priceShape: 'Enter a price like 12.50',
+      bufferWhole: 'Enter a whole number of minutes, or leave it blank for none',
+      bufferMax: 'At most {maxBuffer} minutes',
+    },
+  },
+  team: {
+    title: 'Team',
+    descriptionLoading: 'Who performs the work, and what each of them can do.',
+    /** Two counts in one sentence, both plural-aware. */
+    description:
+      '{people}, {ownership}. Deactivated colleagues and outstanding invitations are listed too.',
+    peopleCount: { one: '{count} person can sign in', other: '{count} people can sign in' },
+    ownerCount: { one: 'one of them an owner', other: '{count} of them owners' },
+    errorTitle: 'Your team could not be loaded',
+    emptyTitle: 'Nobody here yet',
+    emptyBody:
+      'Invite the people who take appointments. They get an email, choose their own password, and appear on the calendar.',
+    owner: 'Owner',
+    staff: 'Staff',
+    performsNothing: 'Performs no services yet',
+    loadingPerformed: 'Loading what they perform…',
+    resendInvitation: 'Resend invitation',
+    inviteColleague: 'Invite colleague',
+    loading: 'Loading your team',
+    standing: {
+      active: 'Active',
+      activeNote: 'Can sign in and take appointments.',
+      deactivated: 'Deactivated',
+      deactivatedNote:
+        'Cannot sign in. Any appointments they already had are still in the calendar.',
+      invited: 'Invited — awaiting acceptance',
+      invitedNote: 'They have a link valid for seven days and choose their own password.',
+      lapsed: 'Invitation lapsed',
+      lapsedNote:
+        'Their invitation ran out before they used it. Sending a fresh one is the only way in.',
+    },
+    lastOwnerTitle: 'That is the only active owner.',
+    lastOwnerCopy:
+      'A business must always have one active owner, or nobody could manage it. Promote another colleague to owner first.',
+    /** `{name}` is a person's own name. */
+    reactivated: '{name} can sign in again.',
+    deactivated: '{name} is deactivated.',
+    deactivatedNote: 'They have no appointments ahead of them and cannot sign in.',
+    resentNote: 'It is valid for seven days. Any earlier link no longer works.',
+    warning: {
+      /** `{count}` decides the plural; `{when}` is a day and clock on the salon's clock. */
+      headline: '{name} has {appointments}, the next on {when}.',
+      appointmentCount: {
+        one: '{count} upcoming appointment',
+        other: '{count} upcoming appointments',
+      },
+      body: 'They stay in the calendar and are not cancelled. Nobody has been told. Move them to a colleague, or bring {name} back.',
+      seeAppointments: 'See their appointments',
+      undo: 'Undo — reactivate them',
+      undoing: 'Reactivating…',
+      dismiss: 'Dismiss',
+    },
+    invite: {
+      title: 'Invite a colleague',
+      description: 'They get an email with a link and choose their own password.',
+      send: 'Send invitation',
+      sending: 'Sending…',
+      fullName: 'Full name',
+      email: 'Email address',
+      emailHint: 'Where the invitation goes. It becomes how they sign in.',
+      role: 'Role',
+      roleHint:
+        'An owner can edit the catalogue, the team and the business settings. A staff member takes appointments and sees the calendar.',
+      roleStaff: 'Staff',
+      roleOwner: 'Owner',
+      emailTaken:
+        'That address already has an account. One person can only belong to one business, so they will need a different address.',
+      sentTitle: 'Invitation sent',
+      inviteAnother: 'Invite someone else',
+      /** `{email}` is the address that was typed. */
+      sentBody: 'An email is on its way to {email} with a link that is valid for seven days.',
+      sentPassword:
+        'They choose their own password when they follow it — you never set one and cannot see it. Until then their row shows Invited, and you can send a fresh link from it at any time. Doing so cancels the old one.',
+      /**
+       * Only rendered under `import.meta.env.DEV`, and translated anyway: it is
+       * inline in a shipped file, so leaving it English would mean an exception
+       * in the hardcoded-string scan, and an exception costs more than two keys.
+       */
+      sentDevNote:
+        'Running locally, that mail is not sent anywhere: Compose delivers it to MailHog on {host}.',
+      /** `{name}` is a person's own name; `{role}` is `roleWordOwner`/`roleWordStaff`. */
+      sentDescription: '{name} has been added to your team as {role}.',
+      roleWordOwner: 'an owner',
+      roleWordStaff: 'a staff member',
+      sentValidity: 'The link is valid for seven days.',
+      sentUntil:
+        'Until then their row shows Invited, and you can send a fresh link from it at any time.',
+    },
+    edit: {
+      title: 'Edit colleague',
+      /** `{email}` is the person's own address. */
+      description: '{email} — their name as it appears on the calendar, and what they can do.',
+      save: 'Save changes',
+      saving: 'Saving…',
+      fullName: 'Full name',
+      nameRequired: 'Enter their name',
+      nameTooLong: 'Keep it under 120 characters',
+      roleDelay:
+        'Their new role takes effect the next time their session refreshes, within fifteen minutes.',
+    },
+  },
   components: {
     copyText: {
       copy: 'Copy',

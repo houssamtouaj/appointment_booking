@@ -14,6 +14,7 @@ import { FormAlert } from '@/components/form-alert'
 import { lastOwnerReason, LAST_OWNER_COPY } from '@/features/staff/staff-state'
 import { useUpdateStaff } from '@/features/staff/team-queries'
 import type { Role, Staff } from '@/types'
+import { useTranslation, type TKey } from '@/i18n'
 
 /**
  * Name and role. Deactivation is not here — it is on the row.
@@ -36,7 +37,14 @@ type StaffFormValues = {
 }
 
 const staffFormSchema = z.object({
-  fullName: z.string().trim().min(1, 'Enter their name').max(120, 'Keep it under 120 characters'),
+  // Keys, not sentences: this schema is built at module scope, so a sentence
+  // would be captured in whatever language the tab was loaded in and would then
+  // survive a switch. The render resolves them.
+  fullName: z
+    .string()
+    .trim()
+    .min(1, 'team.edit.nameRequired' satisfies TKey)
+    .max(120, 'team.edit.nameTooLong' satisfies TKey),
   role: roleSchema,
 })
 
@@ -48,6 +56,7 @@ type StaffEditDialogProps = {
 }
 
 export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps) {
+  const { t } = useTranslation()
   const update = useUpdateStaff()
 
   const form = useForm<StaffFormValues>({
@@ -84,10 +93,7 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
             // support question. The target's current access token carries the old
             // role until it is refreshed, which the backend documents rather than
             // papers over.
-            description:
-              patch.role !== undefined
-                ? 'Their new role takes effect the next time their session refreshes, within fifteen minutes.'
-                : undefined,
+            description: patch.role !== undefined ? t('team.edit.roleDelay') : undefined,
           })
           onClose()
         },
@@ -116,15 +122,15 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
       onOpenChange={(next) => {
         if (!next && !update.isPending) onClose()
       }}
-      title="Edit colleague"
-      description={`${person.email} — their name as it appears on the calendar, and what they can do.`}
+      title={t('team.edit.title')}
+      description={t('team.edit.description', { email: person.email })}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={update.isPending}>
             Cancel
           </Button>
           <Button type="submit" form="staff-form" disabled={update.isPending}>
-            {update.isPending ? 'Saving…' : 'Save changes'}
+            {update.isPending ? t('team.edit.saving') : t('team.edit.save')}
           </Button>
         </>
       }
@@ -132,7 +138,10 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
       {alert ? <FormAlert {...alert} /> : null}
 
       <form id="staff-form" noValidate onSubmit={form.handleSubmit(submit)} className="grid gap-5">
-        <FormField label="Full name" error={errors.fullName?.message}>
+        <FormField
+          label={t('team.edit.fullName')}
+          error={errors.fullName?.message ? t(errors.fullName.message as TKey) : undefined}
+        >
           {(control) => (
             <Input
               {...control}
@@ -144,11 +153,8 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
         </FormField>
 
         <FormField
-          label="Role"
-          hint={
-            cannotDemote ??
-            'An owner can edit the catalogue, the team and the business settings. A staff member takes appointments and sees the calendar.'
-          }
+          label={t('team.invite.role')}
+          hint={cannotDemote ?? t('team.invite.roleHint')}
           error={errors.role?.message}
         >
           {(control) => (
@@ -164,8 +170,8 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
               disabled={cannotDemote !== undefined}
               className="border-input bg-card text-foreground h-9 w-full rounded-sm border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="STAFF">Staff</option>
-              <option value="OWNER">Owner</option>
+              <option value="STAFF">{t('team.invite.roleStaff')}</option>
+              <option value="OWNER">{t('team.invite.roleOwner')}</option>
             </select>
           )}
         </FormField>

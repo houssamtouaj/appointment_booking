@@ -540,7 +540,10 @@ describe('inviting', () => {
     const dialog = screen.getByRole('dialog')
     expect(within(dialog).getByText(/seven days/)).toBeInTheDocument()
     expect(within(dialog).getByText(/choose their own password/i)).toBeInTheDocument()
-    expect(within(dialog).getByText('sam@example.com')).toBeInTheDocument()
+    // The address is inside the sentence now rather than in its own span —
+    // wave 10 made it one key with a placeholder, because French does not break
+    // where English does. It is still shown back, which is what this checks.
+    expect(within(dialog).getByText(/sam@example\.com/)).toBeInTheDocument()
   })
 
   it('gives 409 EMAIL_TAKEN its own copy, on the email field', async () => {

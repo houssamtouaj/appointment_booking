@@ -19,6 +19,7 @@ import { activeOwnerCount, LAST_OWNER_COPY } from '@/features/staff/staff-state'
 import { useResendInvitation, useTeam, useUpdateStaff } from '@/features/staff/team-queries'
 import { useLookups } from '@/hooks/use-lookups'
 import type { DeactivationWarning as Warning, MeResponse, Staff } from '@/types'
+import { translate, useTranslation } from '@/i18n'
 
 /**
  * Screen 8's first half: who performs the work.
@@ -46,6 +47,7 @@ export function TeamPage() {
 }
 
 function Team({ user }: { user: MeResponse }) {
+  const { t } = useTranslation()
   const team = useTeam()
   const lookups = useLookups()
   const update = useUpdateStaff()
@@ -87,10 +89,10 @@ function Team({ user }: { user: MeResponse }) {
           // already changed to match.
           if (active) {
             setWarned((current) => (current?.person.id === person.id ? null : current))
-            toast.success(`${result.staff.fullName} can sign in again.`)
+            toast.success(translate('team.reactivated', { name: result.staff.fullName }))
           } else {
-            toast.success(`${result.staff.fullName} is deactivated.`, {
-              description: 'They have no appointments ahead of them and cannot sign in.',
+            toast.success(translate('team.deactivated', { name: result.staff.fullName }), {
+              description: translate('team.deactivatedNote'),
             })
           }
         },
@@ -100,7 +102,9 @@ function Team({ user }: { user: MeResponse }) {
           // reaching this means the list was stale — two tabs, or a colleague
           // demoted a moment ago — and the sentence has to stand on its own.
           if (isApiError(error, 'LAST_OWNER')) {
-            toast.error('That is the only active owner.', { description: LAST_OWNER_COPY })
+            toast.error(translate('team.lastOwnerTitle'), {
+              description: translate(LAST_OWNER_COPY),
+            })
             return
           }
           toast.error(describeError(error), {
@@ -114,13 +118,13 @@ function Team({ user }: { user: MeResponse }) {
   return (
     <Container className="pb-12">
       <PageHeader
-        eyebrow="Admin"
-        title="Team"
+        eyebrow={t('admin.eyebrow')}
+        title={t('team.title')}
         description={describeTeam(rows, team.isPending)}
         actions={
           <Button onClick={() => setInviting(true)}>
             <UserPlus aria-hidden="true" />
-            Invite colleague
+            {t('team.inviteColleague')}
           </Button>
         }
       />
@@ -140,7 +144,7 @@ function Team({ user }: { user: MeResponse }) {
         <TeamSkeleton />
       ) : team.error && team.data === undefined ? (
         <ErrorState
-          title="Your team could not be loaded"
+          title={t('team.errorTitle')}
           description={describeError(team.error)}
           requestId={requestIdOf(team.error)}
           onRetry={() => void team.refetch()}
@@ -152,12 +156,12 @@ function Team({ user }: { user: MeResponse }) {
         // nothing behind.
         <EmptyState
           icon={Users}
-          title="Nobody here yet"
-          description="Invite the people who take appointments. They get an email, choose their own password, and appear on the calendar."
+          title={t('team.emptyTitle')}
+          description={t('team.emptyBody')}
           action={
             <Button onClick={() => setInviting(true)}>
               <UserPlus aria-hidden="true" />
-              Invite colleague
+              {t('team.inviteColleague')}
             </Button>
           }
         />
@@ -201,22 +205,28 @@ function Team({ user }: { user: MeResponse }) {
  * header is how somebody works out why.
  */
 function describeTeam(team: readonly Staff[], loading: boolean): string {
-  if (loading) return 'Who performs the work, and what each of them can do.'
+  if (loading) return translate('team.descriptionLoading')
 
   const active = team.filter((person) => person.active).length
   const owners = activeOwnerCount(team)
 
-  const people = `${active} ${active === 1 ? 'person' : 'people'} can sign in`
-  const ownership = owners === 1 ? 'one of them an owner' : `${owners} of them owners`
-  return `${people}, ${ownership}. Deactivated colleagues and outstanding invitations are listed too.`
+  // Both halves are plural keys. French counts 0 with the singular, which the
+  // `=== 1` ternaries this replaced could not express — and a business with no
+  // active owner is a state the last-owner guard exists to prevent but the
+  // sentence still has to render.
+  return translate('team.description', {
+    people: translate('team.peopleCount', { count: active }),
+    ownership: translate('team.ownerCount', { count: owners }),
+  })
 }
 
 /** The shape of the roster, not a spinner (F20). */
 function TeamSkeleton() {
+  const { t } = useTranslation()
   return (
     <div className="grid gap-2">
       <span className="sr-only" role="status">
-        Loading your team
+        {t('team.loading')}
       </span>
       {Array.from({ length: 3 }, (_, index) => (
         <div key={index} className="border-border bg-card rounded-md border px-4 py-3">

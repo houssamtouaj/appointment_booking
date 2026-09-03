@@ -7,6 +7,7 @@ import { fetchTeam, referenceKeys } from '@/api/reference'
 import { inviteStaff, resendInvitation, updateStaff } from '@/api/staff'
 import { REFERENCE_STALE_TIME } from '@/hooks/use-lookups'
 import type { InviteStaffRequest, Staff, StaffUpdateResponse, UpdateStaffRequest } from '@/types'
+import { translate } from '@/i18n'
 
 /**
  * The team screen's read and its three writes.
@@ -79,7 +80,7 @@ export function useResendInvitation() {
     onSuccess: (person) => {
       invalidateTeam(client)
       toast.success(`A fresh invitation is on its way to ${person.email}.`, {
-        description: 'It is valid for seven days. Any earlier link no longer works.',
+        description: translate('team.resentNote'),
       })
     },
     onError: (error) => {

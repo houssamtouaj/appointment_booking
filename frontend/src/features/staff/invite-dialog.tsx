@@ -14,6 +14,7 @@ import { FormAlert } from '@/components/form-alert'
 import { useInviteStaff } from '@/features/staff/team-queries'
 import { IS_DEV } from '@/lib/env'
 import type { InviteStaffRequest, Staff } from '@/types'
+import { useTranslation, type TKey } from '@/i18n'
 
 /**
  * "Invite a colleague" — and then, in words, what that actually did.
@@ -36,6 +37,7 @@ type InviteDialogProps = {
 }
 
 export function InviteDialog({ onClose }: InviteDialogProps) {
+  const { t } = useTranslation()
   const invite = useInviteStaff()
   /** The colleague the API created, once it has. Switches the dialog's body. */
   const [invited, setInvited] = useState<Staff | null>(null)
@@ -62,8 +64,7 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
             'email',
             {
               type: 'server',
-              message:
-                'That address already has an account. One person can only belong to one business, so they will need a different address.',
+              message: t('team.invite.emailTaken'),
             },
             { shouldFocus: true },
           )
@@ -85,8 +86,11 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
         onOpenChange={(next) => {
           if (!next) onClose()
         }}
-        title="Invitation sent"
-        description={`${invited.fullName} has been added to your team as ${roleWord(invited.role)}.`}
+        title={t('team.invite.sentTitle')}
+        description={t('team.invite.sentDescription', {
+          name: invited.fullName,
+          role: t(roleWord(invited.role)),
+        })}
         footer={
           <>
             <Button
@@ -99,7 +103,7 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
                 form.reset({ fullName: '', email: '', role: invited.role })
               }}
             >
-              Invite someone else
+              {t('team.invite.inviteAnother')}
             </Button>
             <Button onClick={onClose}>Done</Button>
           </>
@@ -110,23 +114,11 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
             <MailCheck className="size-5" aria-hidden="true" />
           </span>
           <div className="text-sm">
-            <p className="text-foreground">
-              An email is on its way to{' '}
-              <span className="font-medium break-all">{invited.email}</span> with a link that is
-              valid for <strong className="font-medium">seven days</strong>.
-            </p>
-            <p className="text-muted-foreground mt-2">
-              They choose their own password when they follow it — you never set one and cannot see
-              it. Until then their row shows <em>Invited</em>, and you can send a fresh link from it
-              at any time. Doing so cancels the old one.
-            </p>
+            <p className="text-foreground">{t('team.invite.sentBody', { email: invited.email })}</p>
+            <p className="text-muted-foreground mt-2">{t('team.invite.sentPassword')}</p>
             {IS_DEV ? (
               <p className="text-muted-foreground border-rule mt-3 border-t pt-3 text-xs">
-                Running locally, that mail is not sent anywhere: Compose delivers it to MailHog on{' '}
-                <code className="text-foreground bg-muted rounded-xs px-1 py-0.5 font-mono">
-                  localhost:8025
-                </code>
-                .
+                {t('team.invite.sentDevNote', { host: 'localhost:8025' })}
               </p>
             ) : null}
           </div>
@@ -141,15 +133,15 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
       onOpenChange={(next) => {
         if (!next && !invite.isPending) onClose()
       }}
-      title="Invite a colleague"
-      description="They get an email with a link and choose their own password."
+      title={t('team.invite.title')}
+      description={t('team.invite.description')}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={invite.isPending}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" form="invite-form" disabled={invite.isPending}>
-            {invite.isPending ? 'Sending…' : 'Send invitation'}
+            {invite.isPending ? t('team.invite.sending') : t('team.invite.send')}
           </Button>
         </>
       }
@@ -157,7 +149,7 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
       {alert ? <FormAlert {...alert} /> : null}
 
       <form id="invite-form" noValidate onSubmit={form.handleSubmit(submit)} className="grid gap-5">
-        <FormField label="Full name" error={errors.fullName?.message}>
+        <FormField label={t('team.invite.fullName')} error={errors.fullName?.message}>
           {(control) => (
             <Input
               {...control}
@@ -169,8 +161,8 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
         </FormField>
 
         <FormField
-          label="Email address"
-          hint="Where the invitation goes. It becomes how they sign in."
+          label={t('team.invite.email')}
+          hint={t('team.invite.emailHint')}
           error={errors.email?.message}
         >
           {(control) => (
@@ -179,8 +171,8 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
         </FormField>
 
         <FormField
-          label="Role"
-          hint="An owner can edit the catalogue, the team and the business settings. A staff member takes appointments and sees the calendar."
+          label={t('team.invite.role')}
+          hint={t('team.invite.roleHint')}
           error={errors.role?.message}
         >
           {(control) => (
@@ -192,8 +184,8 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
               {...form.register('role')}
               className="border-input bg-card text-foreground h-9 w-full rounded-sm border px-3 text-sm"
             >
-              <option value="STAFF">Staff</option>
-              <option value="OWNER">Owner</option>
+              <option value="STAFF">{t('team.invite.roleStaff')}</option>
+              <option value="OWNER">{t('team.invite.roleOwner')}</option>
             </select>
           )}
         </FormField>
@@ -203,6 +195,6 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
 }
 
 /** "an owner" / "a staff member" — for the middle of a sentence. */
-function roleWord(role: Staff['role']): string {
-  return role === 'OWNER' ? 'an owner' : 'a staff member'
+function roleWord(role: Staff['role']): TKey {
+  return role === 'OWNER' ? 'team.invite.roleWordOwner' : 'team.invite.roleWordStaff'
 }

@@ -9,6 +9,7 @@ import {
 } from '@/api/schemas/catalog'
 import { isAmountInput, toAmountInput, toMinorUnits } from '@/lib/money'
 import type { Service, ServiceRequest, ServiceUpdateRequest } from '@/types'
+import { translate, type TKey } from '@/i18n'
 
 /**
  * The service dialog's own shape, and the two conversions in and out of it.
@@ -48,27 +49,62 @@ const wholeMinutes = /^\d+$/
  * again and its 422 still lands on the field through `applyFieldErrors` — rule 1
  * holds, and this is a courtesy rather than the correctness.
  */
+/**
+ * A validation message, as a **dictionary key** rather than a sentence.
+ *
+ * This schema is built once at module scope. A sentence here would be captured
+ * in whatever language the tab was loaded in and would then survive a language
+ * switch unchanged — the same trap `reset-password-page.tsx` describes. The key
+ * travels through react-hook-form's `message` field, which is typed `string`,
+ * and {@link resolveServiceMessage} turns it back into prose at render.
+ *
+ * Identity, so that a reader following a message from schema to screen sees the
+ * key at both ends rather than a helper that appears to do something.
+ */
+function message(key: TKey): string {
+  return key
+}
+
+/**
+ * Every variable a message in this schema can name.
+ *
+ * All four are module constants, so one map covers every message and no call
+ * site has to know which message wants which. `interpolate` ignores a variable
+ * a template does not mention, which is what makes that safe.
+ */
+const MESSAGE_VARS = {
+  min: SERVICE_MIN_MINUTES,
+  max: SERVICE_MAX_MINUTES,
+  step: SERVICE_STEP_MINUTES,
+  maxBuffer: MAX_BUFFER_MINUTES,
+}
+
+/** A `formState.errors.<field>.message` from this schema, in the reader's language. */
+export function resolveServiceMessage(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey, MESSAGE_VARS) : undefined
+}
+
 export const serviceFormSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, 'Give the service a name')
+    .min(1, message('services.form.nameRequired'))
     // `@Size(min = 2)` on the server. Split from the blank check because "at
     // least two characters" is a strange thing to say to somebody who typed
     // nothing at all.
-    .min(2, 'Use at least two characters')
-    .max(120, 'Keep it under 120 characters'),
+    .min(2, message('services.form.nameTooShort'))
+    .max(120, message('services.form.nameTooLong')),
 
-  description: z.string().trim().max(2000, 'Keep it under 2000 characters'),
+  description: z.string().trim().max(2000, message('services.form.descriptionTooLong')),
 
   durationMinutes: z
     .string()
     .trim()
-    .min(1, 'Enter how long the appointment takes')
-    .regex(wholeMinutes, 'Enter a whole number of minutes')
+    .min(1, message('services.form.durationRequired'))
+    .regex(wholeMinutes, message('services.form.durationWhole'))
     .refine(
       (value) => Number(value) >= SERVICE_MIN_MINUTES && Number(value) <= SERVICE_MAX_MINUTES,
-      `Between ${SERVICE_MIN_MINUTES} and ${SERVICE_MAX_MINUTES} minutes`,
+      message('services.form.durationRange'),
     )
     // The server's third message, and the one people actually hit: it validates
     // the multiple separately precisely because "must be between 5 and 480 and a
@@ -76,16 +112,16 @@ export const serviceFormSchema = z.object({
     // got wrong.
     .refine(
       (value) => Number(value) % SERVICE_STEP_MINUTES === 0,
-      `Use a multiple of ${SERVICE_STEP_MINUTES} minutes`,
+      message('services.form.durationStep'),
     ),
 
   price: z
     .string()
     .trim()
-    .min(1, 'Enter a price')
+    .min(1, message('services.form.priceRequired'))
     // `isAmountInput` and not `Number.isFinite(Number(text))`: `Number('')` is 0,
     // so the lax check turns a blank price field into a free service.
-    .refine(isAmountInput, 'Enter a price like 12.50'),
+    .refine(isAmountInput, message('services.form.priceShape')),
 
   bufferBeforeMinutes: bufferField(),
   bufferAfterMinutes: bufferField(),
@@ -104,11 +140,11 @@ function bufferField() {
     .trim()
     .refine(
       (value) => value === '' || wholeMinutes.test(value),
-      'Enter a whole number of minutes, or leave it blank for none',
+      message('services.form.bufferWhole'),
     )
     .refine(
       (value) => value === '' || Number(value) <= MAX_BUFFER_MINUTES,
-      `At most ${MAX_BUFFER_MINUTES} minutes`,
+      message('services.form.bufferMax'),
     )
 }
 

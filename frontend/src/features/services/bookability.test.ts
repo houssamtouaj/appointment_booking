@@ -63,7 +63,9 @@ describe('the three row states', () => {
     // One is a decision. The other is a service the owner believes is selling.
     const archived = bookabilityOf(service({ active: false, bookable: false }), lookups([]))
     expect(archived.state).toBe('archived')
-    expect(archived.label).toBe('Archived')
+    // A dictionary key from wave 10, not a word: the chip translates it. This
+    // asserts the label the table chose, which is the part this module owns.
+    expect(archived.label).toBe('services.bookability.archived')
     // No reason: the row's Reactivate button is the whole story.
     expect(archived.reason).toBeUndefined()
 

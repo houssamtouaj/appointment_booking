@@ -14,6 +14,7 @@ import { lastOwnerReason, standingOf, type StaffState } from '@/features/staff/s
 import type { Lookups } from '@/hooks/use-lookups'
 import { cn } from '@/lib/utils'
 import type { Staff } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * One colleague, as a row: who they are, what they can do, what state their
@@ -76,6 +77,7 @@ export function StaffRow({
   onReactivate,
   busy,
 }: StaffRowProps) {
+  const { t } = useTranslation()
   const standing = standingOf(person)
   const StateIcon = STATE_ICON[standing.state]
   const cannotDeactivate = lastOwnerReason(person, team)
@@ -99,25 +101,25 @@ export function StaffRow({
             {/* The role, as plain text rather than a second chip. Two chips on a
                 row compete, and the state is the one that needs the attention. */}
             <span className="text-muted-foreground text-xs">
-              {person.role === 'OWNER' ? 'Owner' : 'Staff'}
+              {t(person.role === 'OWNER' ? 'team.owner' : 'team.staff')}
             </span>
 
             <span className={cn(CHIP_BASE, STATE_STYLE[standing.state])}>
               <StateIcon className="size-3.5" aria-hidden="true" />
-              {standing.label}
+              {t(standing.label)}
             </span>
           </div>
 
           <p className="text-muted-foreground mt-1 truncate text-xs">{person.email}</p>
-          <p className="text-muted-foreground mt-1 text-xs">{standing.note}</p>
+          <p className="text-muted-foreground mt-1 text-xs">{t(standing.note)}</p>
 
           <p className="text-muted-foreground mt-1.5 text-xs">
             {services === null ? (
               // The lookups have not answered. Says so rather than claiming
               // "performs nothing", which is a different and alarming fact.
-              <span className="italic">Loading what they perform…</span>
+              <span className="italic">{t('team.loadingPerformed')}</span>
             ) : services.length === 0 ? (
-              <span className="italic">Performs no services yet</span>
+              <span className="italic">{t('team.performsNothing')}</span>
             ) : (
               <>
                 <span className="text-foreground">Performs:</span> {services.join(', ')}
@@ -136,7 +138,7 @@ export function StaffRow({
           {standing.action === 'resend' ? (
             <Button variant="ghost" size="sm" onClick={() => onResend(person)} disabled={busy}>
               <Send aria-hidden="true" />
-              Resend invitation
+              {t('team.resendInvitation')}
               <span className="sr-only"> to {person.fullName}</span>
             </Button>
           ) : null}

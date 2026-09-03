@@ -7,6 +7,7 @@ import { assignableTo } from '@/features/services/bookability'
 import type { Lookups } from '@/hooks/use-lookups'
 import { cn } from '@/lib/utils'
 import type { Service } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * The row's status chip — three values, and one of them does something.
@@ -67,13 +68,14 @@ export function BookableChip({
   onAssign,
   assigning,
 }: BookableChipProps) {
+  const { t } = useTranslation()
   const Icon = CHIP_ICON[bookability.state]
 
   if (bookability.state !== 'unbookable') {
     return (
       <span className={cn(CHIP_BASE, CHIP_STYLE[bookability.state])}>
         <Icon className="size-3.5" aria-hidden="true" />
-        {bookability.label}
+        {t(bookability.label)}
       </span>
     )
   }
@@ -90,11 +92,13 @@ export function BookableChip({
         )}
       >
         <Icon className="size-3.5" aria-hidden="true" />
-        {bookability.label}
+        {t(bookability.label)}
         {/* The reason, in the accessible name. A person using a screen reader
             hears "Not bookable. Nobody is assigned…" on arrival rather than
             having to open a panel to find out there was one. */}
-        <span className="sr-only">. {bookability.reason} Open to fix it.</span>
+        <span className="sr-only">
+          {t('services.bookability.chipHint', { reason: bookability.reason ?? '' })}
+        </span>
       </Popover.Trigger>
 
       <Popover.Portal>
@@ -106,13 +110,15 @@ export function BookableChip({
             'w-[min(20rem,calc(100vw-2rem))] rounded-md border p-4',
           )}
         >
-          <p className="text-foreground text-sm font-medium">Not bookable</p>
+          <p className="text-foreground text-sm font-medium">
+            {t('services.bookability.unbookable')}
+          </p>
           <p className="text-muted-foreground mt-1 text-xs">{bookability.reason}</p>
 
           {candidates.length > 0 ? (
             <>
               <p className="text-muted-foreground text-2xs tracking-eyebrow mt-4 mb-2 font-mono uppercase">
-                Assign staff
+                {t('services.bookability.assignStaff')}
               </p>
               <ul className="-mx-1 grid gap-0.5">
                 {candidates.map((person) => (
@@ -144,7 +150,7 @@ export function BookableChip({
             <p className="text-muted-foreground mt-4 text-xs">
               Nobody on your team is active, so there is no one to assign.{' '}
               <Link to="/team" className="text-primary underline underline-offset-4">
-                Reactivate a colleague
+                {t('services.bookability.reactivateColleague')}
               </Link>{' '}
               or invite someone new.
             </p>

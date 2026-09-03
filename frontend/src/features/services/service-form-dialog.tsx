@@ -31,11 +31,13 @@ import {
   totalBlockPreview,
   toUpdatePatch,
   type ServiceFormValues,
+  resolveServiceMessage,
 } from '@/features/services/service-form'
 import type { Lookups } from '@/hooks/use-lookups'
 import { currencyDigits } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import type { Service, Staff } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * One dialog for create and for edit, because there is one service.
@@ -70,6 +72,7 @@ type ServiceFormDialogProps = {
 }
 
 export function ServiceFormDialog({ service, lookups, currency, onClose }: ServiceFormDialogProps) {
+  const { t } = useTranslation()
   const editing = service !== undefined
   const staffFieldId = useId()
 
@@ -189,8 +192,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
     if (isApiError(error, 'STAFF_NOT_IN_BUSINESS')) {
       form.setError('staffIds', {
         type: 'server',
-        message:
-          'One of those colleagues is no longer part of this business. Reload the page and pick again.',
+        message: t('services.form.staffGone'),
       })
       clear()
       return
@@ -208,11 +210,11 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
       onOpenChange={(next) => {
         if (!next && !pending) onClose()
       }}
-      title={editing ? 'Edit service' : 'New service'}
+      title={t(editing ? 'services.form.editTitle' : 'services.form.newTitle')}
       description={
         editing
           ? `What ${service.name} is, how long it takes and who performs it.`
-          : 'What you sell, how long it takes and who performs it.'
+          : t('services.form.newDescription')
       }
       footer={
         <>
@@ -220,7 +222,9 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
             Cancel
           </Button>
           <Button type="submit" form="service-form" disabled={pending}>
-            {pending ? 'Saving…' : editing ? 'Save changes' : 'Create service'}
+            {pending
+              ? t('services.form.saving')
+              : t(editing ? 'services.form.save' : 'services.form.create')}
           </Button>
         </>
       }
@@ -233,15 +237,18 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
         onSubmit={form.handleSubmit((formValues) => save(formValues))}
         className="grid gap-5"
       >
-        <FormField label="Name" error={errors.name?.message}>
+        <FormField
+          label={t('services.form.name')}
+          error={resolveServiceMessage(errors.name?.message)}
+        >
           {(control) => (
             <Input {...control} {...form.register('name')} autoComplete="off" data-first-field />
           )}
         </FormField>
 
         <FormField
-          label="Description"
-          hint="Shown to customers on your booking page. Optional."
+          label={t('services.form.descriptionLabel')}
+          hint={t('services.form.descriptionHint')}
           error={errors.description?.message}
         >
           {(control) => <Textarea {...control} {...form.register('description')} rows={3} />}
@@ -249,8 +256,12 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
 
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField
-            label="Duration"
-            hint={`In minutes. ${SERVICE_MIN_MINUTES}–${SERVICE_MAX_MINUTES}, in steps of ${SERVICE_STEP_MINUTES}.`}
+            label={t('services.form.duration')}
+            hint={t('services.form.durationHint', {
+              min: SERVICE_MIN_MINUTES,
+              max: SERVICE_MAX_MINUTES,
+              step: SERVICE_STEP_MINUTES,
+            })}
             error={errors.durationMinutes?.message}
           >
             {(control) => (
@@ -271,12 +282,8 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
             // as a symbol glued to the input: `Intl` puts the symbol before or
             // after the number depending on who is reading, and an input cannot
             // be punctuated two ways.
-            label={`Price (${currency})`}
-            hint={
-              editing
-                ? 'Existing bookings keep the price they were taken at. Changing this only affects new ones.'
-                : undefined
-            }
+            label={t('services.form.price', { currency })}
+            hint={editing ? t('services.form.priceHintEditing') : undefined}
             error={errors.price?.message}
           >
             {(control) => (
@@ -294,14 +301,16 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
         </div>
 
         <fieldset className="grid gap-3">
-          <legend className="text-foreground text-sm font-medium">Buffers</legend>
-          <p className="text-muted-foreground -mt-1 text-xs">
-            Setup and cleanup time. Blocks the calendar, is not charged, and is what stops the next
-            appointment starting too early.
-          </p>
+          <legend className="text-foreground text-sm font-medium">
+            {t('services.form.buffers')}
+          </legend>
+          <p className="text-muted-foreground -mt-1 text-xs">{t('services.form.buffersNote')}</p>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Before" error={errors.bufferBeforeMinutes?.message}>
+            <FormField
+              label={t('services.form.before')}
+              error={resolveServiceMessage(errors.bufferBeforeMinutes?.message)}
+            >
               {(control) => (
                 <Input
                   {...control}
@@ -315,7 +324,10 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
                 />
               )}
             </FormField>
-            <FormField label="After" error={errors.bufferAfterMinutes?.message}>
+            <FormField
+              label={t('services.form.after')}
+              error={resolveServiceMessage(errors.bufferAfterMinutes?.message)}
+            >
               {(control) => (
                 <Input
                   {...control}
@@ -336,8 +348,8 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
               being a number that silently moves for anyone not watching it. */}
           <p role="status" className="text-muted-foreground text-xs">
             {blockMinutes === undefined
-              ? 'Enter a duration to see how much of the calendar one appointment takes.'
-              : `One appointment blocks ${formatDurationText(blockMinutes)} of the calendar.`}
+              ? t('services.form.blockPrompt')
+              : t('services.form.blockTotal', { duration: formatDurationText(blockMinutes) })}
           </p>
         </fieldset>
 
@@ -363,12 +375,9 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
           >
             <p className="flex items-start gap-2 font-medium">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              Nobody is assigned to perform this
+              {t('services.form.nobodyTitle')}
             </p>
-            <p className="text-muted-foreground mt-1 text-xs">
-              It will be listed on your booking page and offer no times at all, with nothing on the
-              page to say why. Tick a colleague above, or save it anyway and fix it from the row.
-            </p>
+            <p className="text-muted-foreground mt-1 text-xs">{t('services.form.nobodyBody')}</p>
             <Button
               type="button"
               variant="outline"
@@ -377,7 +386,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
               disabled={pending}
               onClick={form.handleSubmit((formValues) => save(formValues, { acceptNoStaff: true }))}
             >
-              Save without anyone assigned
+              {t('services.form.saveAnyway')}
             </Button>
           </div>
         ) : null}
@@ -425,19 +434,20 @@ function StaffPicker({
   error?: string
   onToggle: (staffId: string, on: boolean) => void
 }) {
+  const { t } = useTranslation()
   const team = orderedTeam(lookups)
   const errorId = `${fieldId}-error`
 
   return (
     <fieldset aria-describedby={error ? errorId : undefined}>
-      <legend className="text-foreground text-sm font-medium">Who performs it</legend>
-      <p className="text-muted-foreground mt-1 text-xs">
-        A service with nobody assigned offers no times, however it is priced.
-      </p>
+      <legend className="text-foreground text-sm font-medium">
+        {t('services.form.performers')}
+      </legend>
+      <p className="text-muted-foreground mt-1 text-xs">{t('services.form.performersNote')}</p>
 
       {team.length === 0 ? (
         <p className="text-muted-foreground mt-3 text-sm">
-          {lookups.isLoading ? 'Loading your team…' : 'You have not invited anyone yet.'}
+          {t(lookups.isLoading ? 'services.form.loadingTeam' : 'services.form.noTeamYet')}
         </p>
       ) : (
         <ul className="mt-3 grid gap-1">

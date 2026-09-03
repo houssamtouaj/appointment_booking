@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { clockOf, dayKeyOf, formatDayHeading } from '@/lib/time'
 import type { DeactivationWarning as Warning, Staff } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * "You have just deactivated somebody with four appointments still ahead of
@@ -49,6 +50,7 @@ export function DeactivationWarning({
   undoing,
   onDismiss,
 }: DeactivationWarningProps) {
+  const { t } = useTranslation()
   const day = dayKeyOf(warning.nextBookingAt, timeZone)
   const count = warning.upcomingBookings
 
@@ -65,12 +67,17 @@ export function DeactivationWarning({
             {/* The **full** name, not the first word of it. A great many people's
                 family name comes first, and an interface that greets somebody by
                 the wrong half of their name is worse than one that is formal. */}
-            {person.fullName} has {count} upcoming {count === 1 ? 'appointment' : 'appointments'},
-            the next on {formatDayHeading(day)} at {clockOf(warning.nextBookingAt, timeZone)}.
+            {t('team.warning.headline', {
+              name: person.fullName,
+              appointments: t('team.warning.appointmentCount', { count }),
+              when: t('booking.summary.dateAtTime', {
+                date: formatDayHeading(day),
+                time: clockOf(warning.nextBookingAt, timeZone),
+              }),
+            })}
           </p>
           <p className="text-muted-foreground mt-1 text-sm">
-            They stay in the calendar and are not cancelled. Nobody has been told. Move them to a
-            colleague, or bring {person.fullName} back.
+            {t('team.warning.body', { name: person.fullName })}
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -78,16 +85,23 @@ export function DeactivationWarning({
               {/* Straight to the week those appointments are in, filtered to this
                   person — the calendar reads both from the URL, which is why that
                   screen put them there. */}
-              <Link to={`/calendar?date=${day}&staff=${person.id}`}>See their appointments</Link>
+              <Link to={`/calendar?date=${day}&staff=${person.id}`}>
+                {t('team.warning.seeAppointments')}
+              </Link>
             </Button>
             <Button variant="outline" size="sm" onClick={onUndo} disabled={undoing}>
               <Undo2 aria-hidden="true" />
-              {undoing ? 'Reactivating…' : 'Undo — reactivate them'}
+              {undoing ? t('team.warning.undoing') : t('team.warning.undo')}
             </Button>
           </div>
         </div>
 
-        <Button variant="ghost" size="icon-sm" onClick={onDismiss} aria-label="Dismiss">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onDismiss}
+          aria-label={t('team.warning.dismiss')}
+        >
           <X aria-hidden="true" />
         </Button>
       </div>

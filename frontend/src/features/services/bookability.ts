@@ -1,5 +1,6 @@
 import type { Lookups } from '@/hooks/use-lookups'
 import type { Service, Staff } from '@/types'
+import { translate, type TKey } from '@/i18n'
 
 /**
  * The three states a catalogue row can be in, and the reason for the awkward one.
@@ -24,7 +25,7 @@ export type BookableState = 'bookable' | 'unbookable' | 'archived'
 export type Bookability = {
   state: BookableState
   /** The chip's own word. Sentence case, because it sits in a row of prose. */
-  label: string
+  label: TKey
   /**
    * Why it is not bookable, in one sentence, or `undefined` for the two states
    * that need no explanation.
@@ -49,19 +50,19 @@ export function bookabilityOf(service: Service, lookups: Lookups): Bookability {
   if (!service.active) {
     return {
       state: 'archived',
-      label: 'Archived',
+      label: 'services.bookability.archived',
       // No reason: this one is not a problem. It is a decision, and the row's
       // Reactivate button is the whole story.
     }
   }
 
   if (service.bookable) {
-    return { state: 'bookable', label: 'Bookable' }
+    return { state: 'bookable', label: 'services.bookability.bookable' }
   }
 
   return {
     state: 'unbookable',
-    label: 'Not bookable',
+    label: 'services.bookability.unbookable',
     reason: unbookableReason(service, lookups),
   }
 }
@@ -77,7 +78,7 @@ export function bookabilityOf(service: Service, lookups: Lookups): Bookability {
  */
 function unbookableReason(service: Service, lookups: Lookups): string {
   if (service.staffIds.length === 0) {
-    return 'Nobody is assigned to perform it, so it offers no times on your booking page.'
+    return translate('services.bookability.noneAssigned')
   }
 
   const assigned = performersOf(service, lookups)
@@ -90,13 +91,13 @@ function unbookableReason(service: Service, lookups: Lookups): string {
   // colleague that is simply untrue. So this says what is certainly true and no
   // more.
   if (assigned.length !== service.staffIds.length || departed.length !== assigned.length) {
-    return 'It offers no times on your booking page. Assign a colleague who is still active.'
+    return translate('services.bookability.assignActive')
   }
 
   const names = departed.map((person) => person.fullName).join(', ')
   return departed.length === 1
-    ? `${names} is the only person assigned to it, and they have been deactivated.`
-    : `Everyone assigned to it has been deactivated: ${names}.`
+    ? translate('services.bookability.onlyPersonGone', { names })
+    : translate('services.bookability.everyoneGone', { names })
 }
 
 /**

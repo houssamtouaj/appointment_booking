@@ -27,6 +27,7 @@ import { ServiceRow } from '@/features/services/service-row'
 import { useLookups } from '@/hooks/use-lookups'
 import { cn } from '@/lib/utils'
 import type { MeResponse, Service, ServicePage } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * Screen 7: what the business sells, and why something is not bookable.
@@ -55,6 +56,7 @@ export function ServicesPage() {
 }
 
 function Services({ user }: { user: MeResponse }) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const params = useServiceParams()
   const lookups = useLookups()
@@ -79,13 +81,13 @@ function Services({ user }: { user: MeResponse }) {
   return (
     <Container className="pb-12">
       <PageHeader
-        eyebrow="Admin"
-        title="Services"
-        description={`What ${user.business.name} sells, how long each one takes and who performs it.`}
+        eyebrow={t('admin.eyebrow')}
+        title={t('services.title')}
+        description={t('services.description', { business: user.business.name })}
         actions={
           <Button onClick={() => setEditing(null)}>
             <Plus aria-hidden="true" />
-            New service
+            {t('services.newService')}
           </Button>
         }
       />
@@ -107,15 +109,13 @@ function Services({ user }: { user: MeResponse }) {
           role="alert"
           className="border-warning/50 bg-warning-wash text-foreground mb-4 flex flex-wrap items-center gap-3 rounded-sm border px-4 py-3 text-sm"
         >
-          <p className="flex-1">
-            Your team could not be loaded, so these rows cannot show who performs each service.
-          </p>
+          <p className="flex-1">{t('services.lookupsWarning')}</p>
           <Button
             variant="outline"
             size="sm"
             onClick={() => void queryClient.invalidateQueries({ queryKey: referenceKeys.all })}
           >
-            Try again
+            {t('services.lookupsRetry')}
           </Button>
         </div>
       ) : null}
@@ -124,7 +124,7 @@ function Services({ user }: { user: MeResponse }) {
         <CatalogSkeleton />
       ) : services.error && page === undefined ? (
         <ErrorState
-          title="Your services could not be loaded"
+          title={t('services.errorTitle')}
           description={describeError(services.error)}
           requestId={requestIdOf(services.error)}
           onRetry={() => void services.refetch()}
@@ -187,8 +187,9 @@ function Services({ user }: { user: MeResponse }) {
  * matters.
  */
 function Tabs({ tab, onTab }: { tab: ServiceTab; onTab: (tab: ServiceTab) => void }) {
+  const { t } = useTranslation()
   return (
-    <nav aria-label="Filter services" className="border-rule mb-4 flex gap-1 border-b">
+    <nav aria-label={t('services.filterLabel')} className="border-rule mb-4 flex gap-1 border-b">
       {TABS.map((candidate) => {
         const current = candidate === tab
         return (
@@ -204,7 +205,7 @@ function Tabs({ tab, onTab }: { tab: ServiceTab; onTab: (tab: ServiceTab) => voi
                 : 'text-muted-foreground hover:text-foreground border-transparent',
             )}
           >
-            {TAB_LABEL[candidate]}
+            {t(TAB_LABEL[candidate])}
           </button>
         )
       })}
@@ -231,15 +232,16 @@ function CatalogEmpty({
   params: { setTab: (tab: ServiceTab) => void; setPage: (page: number) => void }
   onCreate: () => void
 }) {
+  const { t } = useTranslation()
   if (page > 0) {
     return (
       <EmptyState
         icon={Tag}
-        title="There is nothing on this page"
-        description="The list is shorter than it was. Go back to the first page."
+        title={t('services.empty.offPageTitle')}
+        description={t('services.empty.offPageBody')}
         action={
           <Button variant="outline" size="sm" onClick={() => params.setPage(0)}>
-            First page
+            {t('services.firstPage')}
           </Button>
         }
       />
@@ -250,11 +252,11 @@ function CatalogEmpty({
     return (
       <EmptyState
         icon={Archive}
-        title="Nothing is archived"
-        description="Services you deactivate land here. They keep their bookings and can be brought back."
+        title={t('services.empty.archivedTitle')}
+        description={t('services.empty.archivedBody')}
         action={
           <Button variant="outline" size="sm" onClick={() => params.setTab('active')}>
-            Back to active services
+            {t('services.backToActive')}
           </Button>
         }
       />
@@ -264,14 +266,14 @@ function CatalogEmpty({
   return (
     <EmptyState
       icon={Tag}
-      title={tab === 'active' ? 'No services yet' : 'Your catalogue is empty'}
-      description="A service is one thing you sell: what it is called, how long it takes and what it costs. Nothing can be booked until there is one."
+      title={t(tab === 'active' ? 'services.empty.activeTitle' : 'services.empty.allTitle')}
+      description={t('services.empty.body')}
       action={
         // The same action as the header's button, in the place somebody looking
         // at an empty screen is actually looking.
         <Button onClick={onCreate}>
           <Plus aria-hidden="true" />
-          New service
+          {t('services.newService')}
         </Button>
       }
     />
@@ -321,10 +323,11 @@ function Pager({
  * list, short enough that a two-service tenant does not watch the page shrink.
  */
 function CatalogSkeleton() {
+  const { t } = useTranslation()
   return (
     <div className="grid gap-2">
       <span className="sr-only" role="status">
-        Loading your services
+        {t('services.loading')}
       </span>
       {Array.from({ length: Math.min(5, CATALOG_PAGE_SIZE) }, (_, index) => (
         <div key={index} className="border-border bg-card rounded-md border px-4 py-3">

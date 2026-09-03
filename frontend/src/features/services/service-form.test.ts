@@ -8,6 +8,7 @@ import {
   toCreateRequest,
   totalBlockPreview,
   toUpdatePatch,
+  resolveServiceMessage,
   type ServiceFormValues,
 } from '@/features/services/service-form'
 import type { Service } from '@/types'
@@ -170,9 +171,14 @@ describe('serviceFormSchema', () => {
     // nothing about which half they got wrong.
     const result = serviceFormSchema.safeParse({ ...base, durationMinutes: '47' })
     expect(result.success).toBe(false)
+    // The message is a dictionary key from wave 10 — a module-scope schema
+    // cannot hold a sentence without freezing the language it was imported in.
+    // What matters here is unchanged: the multiple gets its *own* message rather
+    // than being folded into the range one.
     expect(result.error?.issues.map((issue) => issue.message)).toContain(
-      'Use a multiple of 5 minutes',
+      'services.form.durationStep',
     )
+    expect(resolveServiceMessage('services.form.durationStep')).toBe('Use a multiple of 5 minutes')
   })
 
   it.each(['0', '4', '485', '', 'sixty', '30.5'])('rejects the duration %j', (duration) => {
