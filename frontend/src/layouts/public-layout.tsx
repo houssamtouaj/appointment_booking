@@ -1,6 +1,7 @@
 import { Link, Outlet } from 'react-router-dom'
 
 import { Container } from '@/components/container'
+import { LanguageToggle } from '@/components/language-toggle'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { SessionMenu } from '@/features/auth/session-menu'
 
@@ -29,6 +30,10 @@ export function PublicLayout() {
           </Link>
           <div className="flex items-center gap-2">
             <SessionMenu />
+            {/* Identity first, then the two display preferences as a cluster at
+                the edge. Language before theme because it is the one a visitor
+                may actually need in order to read the rest of the header. */}
+            <LanguageToggle />
             <ThemeToggle />
           </div>
         </Container>
