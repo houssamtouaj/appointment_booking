@@ -13,6 +13,7 @@ import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
 import type { ForgotPasswordRequest } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * `/forgot-password`. The screen whose whole job is to say the same thing
@@ -29,6 +30,7 @@ import type { ForgotPasswordRequest } from '@/types'
  * in the box and reveals nothing about who has an account.
  */
 export function ForgotPasswordPage() {
+  const { t } = useTranslation()
   const [sent, setSent] = useState(false)
 
   const form = useForm<ForgotPasswordRequest>({
@@ -54,18 +56,18 @@ export function ForgotPasswordPage() {
 
   return (
     <AuthLayout
-      eyebrow="Account"
-      title="Reset your password"
-      description={sent ? undefined : 'We will email you a link. It works once and lasts an hour.'}
+      eyebrow={t('auth.eyebrow')}
+      title={t('auth.forgot.title')}
+      description={sent ? undefined : t('auth.forgot.description')}
       footer={
         <Link to="/login" className="text-primary underline underline-offset-4">
-          Back to log in
+          {t('auth.forgot.backToLogin')}
         </Link>
       }
     >
       {sent ? (
         <div role="status" className="border-border bg-card rounded-sm border px-4 py-4 text-sm">
-          <p className="text-foreground font-medium">Check your inbox</p>
+          <p className="text-foreground font-medium">{t('auth.forgot.sentTitle')}</p>
           <p className="text-muted-foreground mt-1">
             If <span className="text-foreground">{form.getValues('email')}</span> has an account, a
             reset link is on its way. It expires in an hour and can be used once.
@@ -84,7 +86,7 @@ export function ForgotPasswordPage() {
             className="grid gap-4"
             onSubmit={form.handleSubmit((values) => request.mutate(values))}
           >
-            <FormField label="Email" error={form.formState.errors.email?.message}>
+            <FormField label={t('auth.forgot.email')} error={form.formState.errors.email?.message}>
               {(control) => (
                 <Input
                   {...control}
@@ -96,7 +98,7 @@ export function ForgotPasswordPage() {
             </FormField>
 
             <Button type="submit" size="lg" className="mt-1 w-full" disabled={request.isPending}>
-              {request.isPending ? 'Sending…' : 'Send the link'}
+              {request.isPending ? t('auth.forgot.submitting') : t('auth.forgot.submit')}
             </Button>
           </form>
         </>

@@ -147,6 +147,113 @@ export const en = {
    * promotion to `common` happens on the second use, which is what keeps a rename
    * local.
    */
+  /**
+   * The five account screens. Namespaced by screen rather than by meaning, so a
+   * label that reads the same on two of them stays two keys until somebody has a
+   * reason to share one — a shared key is a rename that reaches further than it
+   * looks.
+   *
+   * `AuthLayout` takes `eyebrow`, `title` and `description` as props and is
+   * translated at the call site, not inside itself: the layout does not know
+   * which screen it is wrapping, and pushing keys into it would make it a switch
+   * statement over its own callers.
+   */
+  auth: {
+    /** The eyebrow above all five. One key, because it genuinely is one word. */
+    eyebrow: 'Account',
+    login: {
+      title: 'Log in',
+      description: 'Manage your calendar, services and team.',
+      noAccount: 'No account yet?',
+      createBusiness: 'Create a business',
+      demo: 'Log in as demo admin',
+      demoNote:
+        'Signs you into a seeded business with services, staff and bookings. Nothing you do to it is permanent.',
+      /** The rule between the demo button and the form. Lower case on purpose. */
+      or: 'or',
+      email: 'Email',
+      password: 'Password',
+      submit: 'Log in',
+      submitting: 'Signing in…',
+      forgot: 'Forgot your password?',
+      /** `{name}` is the person's own, from the response. */
+      welcome: 'Signed in as {name}',
+    },
+    register: {
+      title: 'Create a business',
+      description:
+        'One step. You get an owner account, an empty calendar and a public booking page.',
+      businessName: 'Business name',
+      slug: 'Booking page address',
+      slugHint:
+        'Letters, digits and hyphens. This is permanent — it is the URL customers bookmark.',
+      slugTaken: 'That address is taken. Try another.',
+      timezone: 'Timezone',
+      timezoneHint: 'Every time in the product is shown in it.',
+      currency: 'Currency',
+      currencyHint: 'Three letters, ISO 4217.',
+      fullName: 'Your name',
+      email: 'Email',
+      emailTaken: 'An account already exists for this address.',
+      password: 'Password',
+      passwordHint: 'At least 8 characters.',
+      submit: 'Create business',
+      submitting: 'Creating…',
+    },
+    forgot: {
+      title: 'Reset your password',
+      description: 'We will email you a link. It works once and lasts an hour.',
+      backToLogin: 'Back to log in',
+      sentTitle: 'Check your inbox',
+      email: 'Email',
+      submit: 'Send the link',
+      submitting: 'Sending…',
+    },
+    reset: {
+      title: 'Choose a new password',
+      description: 'Setting it signs you out everywhere else — that is what a reset is for.',
+      askAgain: 'Ask for a new one',
+      password: 'New password',
+      passwordHint: 'At least 8 characters.',
+      confirm: 'Confirm it',
+      /**
+       * The Zod refinement's message, and a **key** rather than a sentence: a
+       * schema built at module scope captures the language at import time and
+       * then never updates. `ResetPasswordPage` translates it at render.
+       */
+      mismatch: 'The two passwords do not match',
+      submit: 'Set the password',
+      submitting: 'Saving…',
+      done: 'Your password was changed. Sign in with it.',
+    },
+    invitation: {
+      title: 'Join the team',
+      loading: 'Loading the invitation',
+      consumedTitle: 'This invitation has already been used',
+      invalidTitle: 'This invitation is not valid',
+      consumedBody:
+        'Invitations work once and expire after seven days. Ask an owner of the business to send a new one.',
+      goToLogin: 'Go to log in',
+      /**
+       * One sentence with two placeholders, not three fragments joined in JSX.
+       * French puts the verb elsewhere, and a joined string cannot express that.
+       */
+      invitedBy: '{business} invited {email}. Choose a password to activate the account.',
+      fullName: 'Your name',
+      password: 'Password',
+      passwordHint: 'At least 8 characters.',
+      submit: 'Join the team',
+      submitting: 'Joining…',
+      done: 'Your account is ready. Sign in with your new password.',
+    },
+    guards: {
+      restoring: 'Restoring your session',
+      ownerOnly: 'That page is for owners. Your account has staff access.',
+    },
+    session: {
+      logIn: 'Log in',
+    },
+  },
   components: {
     copyText: {
       copy: 'Copy',

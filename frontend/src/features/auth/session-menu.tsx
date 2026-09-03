@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useSignOut } from '@/hooks/use-sign-out'
+import { useTranslation } from '@/i18n'
 
 /**
  * The right-hand end of the public header: who is signed in, and the way out.
@@ -17,6 +18,7 @@ import { useSignOut } from '@/hooks/use-sign-out'
  * be somewhere.
  */
 export function SessionMenu() {
+  const { t } = useTranslation()
   const { status, user } = useAuth()
   const location = useLocation()
   const { leave, leaving } = useSignOut()
@@ -30,7 +32,7 @@ export function SessionMenu() {
     if (location.pathname === '/login') return null
     return (
       <Button asChild variant="ghost" size="sm">
-        <Link to="/login">Log in</Link>
+        <Link to="/login">{t('auth.session.logIn')}</Link>
       </Button>
     )
   }
@@ -42,7 +44,7 @@ export function SessionMenu() {
         <span className="text-muted-foreground"> · {user?.business.name}</span>
       </span>
       <Button variant="ghost" size="sm" disabled={leaving} onClick={() => void leave()}>
-        {leaving ? 'Signing out…' : 'Sign out'}
+        {leaving ? t('common.signingOut') : t('common.signOut')}
       </Button>
     </div>
   )

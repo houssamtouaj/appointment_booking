@@ -15,6 +15,7 @@ import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
 import { useAuth } from '@/hooks/use-auth'
 import type { RegisterRequest } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * `/register` (F17). Self-registration ships so that a reviewer can have their
@@ -26,6 +27,7 @@ import type { RegisterRequest } from '@/types'
  * and signs them in — so this screen has no "now log in" step.
  */
 export function RegisterPage() {
+  const { t } = useTranslation()
   const { status, adoptSession } = useAuth()
 
   const form = useForm<RegisterRequest>({
@@ -59,7 +61,7 @@ export function RegisterPage() {
       if (isApiError(error, 'SLUG_TAKEN')) {
         form.setError(
           'slug',
-          { type: 'server', message: 'That address is taken. Try another.' },
+          { type: 'server', message: t('auth.register.slugTaken') },
           { shouldFocus: true },
         )
         clear()
@@ -68,7 +70,7 @@ export function RegisterPage() {
       if (isApiError(error, 'EMAIL_TAKEN')) {
         form.setError(
           'email',
-          { type: 'server', message: 'An account already exists for this address.' },
+          { type: 'server', message: t('auth.register.emailTaken') },
           { shouldFocus: true },
         )
         clear()
@@ -100,9 +102,9 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      eyebrow="Account"
-      title="Create a business"
-      description="One step. You get an owner account, an empty calendar and a public booking page."
+      eyebrow={t('auth.eyebrow')}
+      title={t('auth.register.title')}
+      description={t('auth.register.description')}
       footer={
         <>
           Already have an account?{' '}
@@ -119,7 +121,7 @@ export function RegisterPage() {
         className="grid gap-4"
         onSubmit={form.handleSubmit((values) => create.mutate(values))}
       >
-        <FormField label="Business name" error={errors.businessName?.message}>
+        <FormField label={t('auth.register.businessName')} error={errors.businessName?.message}>
           {(control) => (
             <Input
               {...control}
@@ -147,8 +149,8 @@ export function RegisterPage() {
         </FormField>
 
         <FormField
-          label="Booking page address"
-          hint="Letters, digits and hyphens. This is permanent — it is the URL customers bookmark."
+          label={t('auth.register.slug')}
+          hint={t('auth.register.slugHint')}
           error={errors.slug?.message}
         >
           {(control) => (
@@ -166,16 +168,16 @@ export function RegisterPage() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
-            label="Timezone"
-            hint="Every time in the product is shown in it."
+            label={t('auth.register.timezone')}
+            hint={t('auth.register.timezoneHint')}
             error={errors.timezone?.message}
           >
             {(control) => <Input {...control} {...form.register('timezone')} autoComplete="off" />}
           </FormField>
 
           <FormField
-            label="Currency"
-            hint="Three letters, ISO 4217."
+            label={t('auth.register.currency')}
+            hint={t('auth.register.currencyHint')}
             error={errors.currency?.message}
           >
             {(control) => (
@@ -190,17 +192,21 @@ export function RegisterPage() {
           </FormField>
         </div>
 
-        <FormField label="Your name" error={errors.fullName?.message}>
+        <FormField label={t('auth.register.fullName')} error={errors.fullName?.message}>
           {(control) => <Input {...control} {...form.register('fullName')} autoComplete="name" />}
         </FormField>
 
-        <FormField label="Email" error={errors.email?.message}>
+        <FormField label={t('auth.register.email')} error={errors.email?.message}>
           {(control) => (
             <Input {...control} {...form.register('email')} type="email" autoComplete="username" />
           )}
         </FormField>
 
-        <FormField label="Password" hint="At least 8 characters." error={errors.password?.message}>
+        <FormField
+          label={t('auth.register.password')}
+          hint={t('auth.register.passwordHint')}
+          error={errors.password?.message}
+        >
           {(control) => (
             <Input
               {...control}
@@ -212,7 +218,7 @@ export function RegisterPage() {
         </FormField>
 
         <Button type="submit" size="lg" className="mt-1 w-full" disabled={pending}>
-          {pending ? 'Creating…' : 'Create business'}
+          {pending ? t('auth.register.submitting') : t('auth.register.submit')}
         </Button>
       </form>
     </AuthLayout>

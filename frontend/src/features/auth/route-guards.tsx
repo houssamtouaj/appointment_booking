@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Container } from '@/components/container'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/hooks/use-auth'
+import { translate, useTranslation } from '@/i18n'
 
 /**
  * The two route guards (F19). Layout routes, so they wrap a whole branch of the
@@ -78,7 +79,12 @@ export function RequireOwner() {
   // URLs in a row is one sentence worth saying, not three.
   useEffect(() => {
     if (explain) {
-      toast.error('That page is for owners. Your account has staff access.', {
+      // `translate`, not the hook's `t`: `t` is a new function per language, so
+      // it would have to join this effect's dependency list and a language
+      // switch would re-fire the toast for a refusal that already happened.
+      // The module store is read when the toast is written, which is the moment
+      // that matters.
+      toast.error(translate('auth.guards.ownerOnly'), {
         id: 'owner-only',
       })
     }
@@ -99,11 +105,13 @@ export function RequireOwner() {
  * this only has to hold the geometry of the page body.
  */
 function SessionPending() {
+  const { t } = useTranslation()
+
   return (
     <Container className="py-8">
       {/* The live region a screen reader hears. The blocks below are aria-hidden. */}
       <span className="sr-only" role="status">
-        Restoring your session
+        {t('auth.guards.restoring')}
       </span>
       <Skeleton className="h-3 w-24" />
       <Skeleton className="mt-3 h-9 w-64" />

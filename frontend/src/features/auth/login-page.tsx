@@ -17,11 +17,13 @@ import { FormAlert } from '@/components/form-alert'
 import { safeNextPath } from '@/features/auth/next-path'
 import { useAuth } from '@/hooks/use-auth'
 import type { AuthResponse, LoginRequest } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * `/login`. Two ways in, and the second one is the one the brief names.
  */
 export function LoginPage() {
+  const { t } = useTranslation()
   const { status, adoptSession } = useAuth()
   const [params] = useSearchParams()
   const next = safeNextPath(params.get('next'))
@@ -41,7 +43,7 @@ export function LoginPage() {
       variables === 'demo' ? demoLogin() : login(variables),
     onSuccess: (auth: AuthResponse) => {
       adoptSession(auth)
-      toast.success(`Signed in as ${auth.user.fullName}`)
+      toast.success(t('auth.login.welcome', { name: auth.user.fullName }))
       // No `navigate` here: `adoptSession` flips the status, and the redirect
       // below is the single place that decides where a signed-in visitor to
       // this route goes.
@@ -73,14 +75,14 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      eyebrow="Account"
-      title="Log in"
-      description="Manage your calendar, services and team."
+      eyebrow={t('auth.eyebrow')}
+      title={t('auth.login.title')}
+      description={t('auth.login.description')}
       footer={
         <>
-          No account yet?{' '}
+          {t('auth.login.noAccount')}{' '}
           <Link to="/register" className="text-primary underline underline-offset-4">
-            Create a business
+            {t('auth.login.createBusiness')}
           </Link>
         </>
       }
@@ -98,17 +100,14 @@ export function LoginPage() {
         disabled={pending}
         onClick={() => signIn.mutate('demo')}
       >
-        Log in as demo admin
+        {t('auth.login.demo')}
       </Button>
-      <p className="text-muted-foreground mt-2 text-xs">
-        Signs you into a seeded business with services, staff and bookings. Nothing you do to it is
-        permanent.
-      </p>
+      <p className="text-muted-foreground mt-2 text-xs">{t('auth.login.demoNote')}</p>
 
       <div className="my-7 flex items-center gap-3" aria-hidden="true">
         <span className="bg-rule h-px flex-1" />
         <span className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
-          or
+          {t('auth.login.or')}
         </span>
         <span className="bg-rule h-px flex-1" />
       </div>
@@ -118,13 +117,13 @@ export function LoginPage() {
         className="grid gap-4"
         onSubmit={form.handleSubmit((values) => signIn.mutate(values))}
       >
-        <FormField label="Email" error={form.formState.errors.email?.message}>
+        <FormField label={t('auth.login.email')} error={form.formState.errors.email?.message}>
           {(control) => (
             <Input {...control} {...form.register('email')} type="email" autoComplete="username" />
           )}
         </FormField>
 
-        <FormField label="Password" error={form.formState.errors.password?.message}>
+        <FormField label={t('auth.login.password')} error={form.formState.errors.password?.message}>
           {(control) => (
             <Input
               {...control}
@@ -142,13 +141,13 @@ export function LoginPage() {
           className="mt-1 w-full"
           disabled={pending}
         >
-          {pending ? 'Signing in…' : 'Log in'}
+          {pending ? t('auth.login.submitting') : t('auth.login.submit')}
         </Button>
       </form>
 
       <p className="mt-4 text-sm">
         <Link to="/forgot-password" className="text-muted-foreground underline underline-offset-4">
-          Forgot your password?
+          {t('auth.login.forgot')}
         </Link>
       </p>
     </AuthLayout>

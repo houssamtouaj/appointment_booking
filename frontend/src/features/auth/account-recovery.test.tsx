@@ -142,8 +142,13 @@ describe('accepting an invitation', () => {
 
     renderAt(`/accept-invitation/${TOKEN}`)
 
-    expect(await screen.findByText('Belle Époque')).toBeInTheDocument()
-    expect(screen.getByText('amelie@slotflow.app')).toBeInTheDocument()
+    // Both names, in one sentence rather than in two emphasised spans: wave 10
+    // made this one dictionary key with two placeholders, because French does
+    // not put the verb where English does and a sentence joined out of three JSX
+    // fragments cannot be translated at all. What the test is actually about —
+    // that the page says which business invited which address — is unchanged, and
+    // asserting the whole sentence checks it more closely than two spans did.
+    expect(await screen.findByText(/Belle Époque invited amelie@slotflow\.app/)).toBeInTheDocument()
     // The token goes in the path, encoded — it is a credential, not a search term.
     expect(requests.map((request) => request.url)).toContain(`/api/public/invitations/${TOKEN}`)
   })

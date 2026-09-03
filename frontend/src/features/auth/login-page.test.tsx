@@ -11,6 +11,8 @@ import { endSessionQuietly, getAccessToken } from '@/api/session'
 import { resetBootstrap } from '@/api/bootstrap'
 import { AuthProvider } from '@/features/auth/auth-provider'
 import { routes } from '@/routes'
+import { fr } from '@/i18n/fr'
+import { resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -86,6 +88,8 @@ beforeEach(() => {
   resetInFlightRefresh()
   resetBootstrap()
   endSessionQuietly()
+  localStorage.clear()
+  resetLanguageStoreForTests()
 })
 
 describe('the login screen', () => {
@@ -165,5 +169,16 @@ describe('the login screen', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Log in as demo admin' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
+  })
+
+  it('renders in French when French is chosen', async () => {
+    // The dictionary having the key is what `i18n.test.ts` checks. This checks
+    // the other half: that a screen actually turns over when the store changes.
+    handler = (config) => fail(401, 'UNAUTHENTICATED', config)
+    setLanguage('fr')
+    renderLogin()
+
+    expect(await screen.findByRole('button', { name: fr.auth.login.submit })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: fr.auth.login.demo })).toBeInTheDocument()
   })
 })

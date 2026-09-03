@@ -17,6 +17,7 @@ import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
 import type { AcceptInvitationRequest } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * `/accept-invitation/:token` — another route the backend names (F12).
@@ -33,6 +34,7 @@ import type { AcceptInvitationRequest } from '@/types'
  * anyone arrives here twice.
  */
 export function AcceptInvitationPage() {
+  const { t } = useTranslation()
   const { token = '' } = useParams()
   const navigate = useNavigate()
 
@@ -58,7 +60,7 @@ export function AcceptInvitationPage() {
       // 204 and no session: accepting sets a password, it does not sign anyone
       // in. Sending them to the login screen with their new password is the
       // shortest honest path.
-      toast.success('Your account is ready. Sign in with your new password.')
+      toast.success(t('auth.invitation.done'))
       navigate('/login', { replace: true })
     },
     onError: (error) => {
@@ -71,9 +73,9 @@ export function AcceptInvitationPage() {
 
   if (invitation.isPending) {
     return (
-      <AuthLayout eyebrow="Account" title="Join the team">
+      <AuthLayout eyebrow={t('auth.eyebrow')} title={t('auth.invitation.title')}>
         <span className="sr-only" role="status">
-          Loading the invitation
+          {t('auth.invitation.loading')}
         </span>
         <Skeleton className="h-16 w-full" />
         <Skeleton className="mt-4 h-9 w-full" />
@@ -85,14 +87,12 @@ export function AcceptInvitationPage() {
   if (invitation.isError) {
     const consumed = isApiError(invitation.error, 'INVITATION_CONSUMED')
     return (
-      <AuthLayout eyebrow="Account" title="Join the team">
+      <AuthLayout eyebrow={t('auth.eyebrow')} title={t('auth.invitation.title')}>
         <ErrorState
-          title={
-            consumed ? 'This invitation has already been used' : 'This invitation is not valid'
-          }
+          title={consumed ? t('auth.invitation.consumedTitle') : t('auth.invitation.invalidTitle')}
           description={
             consumed
-              ? 'Invitations work once and expire after seven days. Ask an owner of the business to send a new one.'
+              ? t('auth.invitation.consumedBody')
               : describeError(invitation.error, {
                   NOT_FOUND: 'errors.invitationUnrecognised',
                 })
@@ -101,7 +101,7 @@ export function AcceptInvitationPage() {
         />
         <p className="mt-6 text-center text-sm">
           <Link to="/login" className="text-primary underline underline-offset-4">
-            Go to log in
+            {t('auth.invitation.goToLogin')}
           </Link>
         </p>
       </AuthLayout>
@@ -110,15 +110,16 @@ export function AcceptInvitationPage() {
 
   return (
     <AuthLayout
-      eyebrow="Account"
-      title="Join the team"
-      description={
-        <>
-          <span className="text-foreground font-medium">{invitation.data.businessName}</span>{' '}
-          invited <span className="text-foreground">{invitation.data.email}</span>. Choose a
-          password to activate the account.
-        </>
-      }
+      eyebrow={t('auth.eyebrow')}
+      title={t('auth.invitation.title')}
+      // One key with two placeholders rather than three fragments joined in JSX:
+      // French does not put the verb where English does, and a joined string
+      // cannot express that. The cost is losing the two emphasis spans, which
+      // was decoration on a sentence that names both values anyway.
+      description={t('auth.invitation.invitedBy', {
+        business: invitation.data.businessName,
+        email: invitation.data.email,
+      })}
     >
       {alert ? <FormAlert {...alert} /> : null}
 
@@ -127,13 +128,16 @@ export function AcceptInvitationPage() {
         className="grid gap-4"
         onSubmit={form.handleSubmit((values) => accept.mutate(values))}
       >
-        <FormField label="Your name" error={form.formState.errors.fullName?.message}>
+        <FormField
+          label={t('auth.invitation.fullName')}
+          error={form.formState.errors.fullName?.message}
+        >
           {(control) => <Input {...control} {...form.register('fullName')} autoComplete="name" />}
         </FormField>
 
         <FormField
-          label="Password"
-          hint="At least 8 characters."
+          label={t('auth.invitation.password')}
+          hint={t('auth.invitation.passwordHint')}
           error={form.formState.errors.password?.message}
         >
           {(control) => (
@@ -147,7 +151,7 @@ export function AcceptInvitationPage() {
         </FormField>
 
         <Button type="submit" size="lg" className="mt-1 w-full" disabled={accept.isPending}>
-          {accept.isPending ? 'Joining…' : 'Join the team'}
+          {accept.isPending ? t('auth.invitation.submitting') : t('auth.invitation.submit')}
         </Button>
       </form>
     </AuthLayout>

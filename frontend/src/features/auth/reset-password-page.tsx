@@ -13,6 +13,7 @@ import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
 import { z } from 'zod'
+import { useTranslation, type TKey } from '@/i18n'
 
 /**
  * `/reset-password/:token` — a route named by the backend (F12). `FrontendLinks`
@@ -33,12 +34,15 @@ const formSchema = z
   // for a second email.
   .refine((values) => values.password === values.confirm, {
     path: ['confirm'],
-    message: 'The two passwords do not match',
+    // A **key**, not a sentence. A schema built at module scope captures the
+    // language at import time and then never updates; the render translates it.
+    message: 'auth.reset.mismatch' satisfies TKey,
   })
 
 type FormValues = z.infer<typeof formSchema>
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation()
   const { token = '' } = useParams()
   const navigate = useNavigate()
 
@@ -52,7 +56,7 @@ export function ResetPasswordPage() {
   const submit = useMutation({
     mutationFn: (values: FormValues) => resetPassword({ token, password: values.password }),
     onSuccess: () => {
-      toast.success('Your password was changed. Sign in with it.')
+      toast.success(t('auth.reset.done'))
       navigate('/login', { replace: true })
     },
     onError: (error) => {
@@ -74,14 +78,14 @@ export function ResetPasswordPage() {
 
   return (
     <AuthLayout
-      eyebrow="Account"
-      title="Choose a new password"
-      description="Setting it signs you out everywhere else — that is what a reset is for."
+      eyebrow={t('auth.eyebrow')}
+      title={t('auth.reset.title')}
+      description={t('auth.reset.description')}
       footer={
         <>
           Link expired?{' '}
           <Link to="/forgot-password" className="text-primary underline underline-offset-4">
-            Ask for a new one
+            {t('auth.reset.askAgain')}
           </Link>
         </>
       }
@@ -94,8 +98,8 @@ export function ResetPasswordPage() {
         onSubmit={form.handleSubmit((values) => submit.mutate(values))}
       >
         <FormField
-          label="New password"
-          hint="At least 8 characters."
+          label={t('auth.reset.password')}
+          hint={t('auth.reset.passwordHint')}
           error={form.formState.errors.password?.message}
         >
           {(control) => (
@@ -108,7 +112,17 @@ export function ResetPasswordPage() {
           )}
         </FormField>
 
-        <FormField label="Confirm it" error={form.formState.errors.confirm?.message}>
+        <FormField
+          label={t('auth.reset.confirm')}
+          // The message on this field is a dictionary key the schema wrote, not
+          // prose. react-hook-form types `message` as `string` and the value is
+          // ours, so the cast says what the type cannot.
+          error={
+            form.formState.errors.confirm?.message
+              ? t(form.formState.errors.confirm.message as TKey)
+              : undefined
+          }
+        >
           {(control) => (
             <Input
               {...control}
@@ -120,7 +134,7 @@ export function ResetPasswordPage() {
         </FormField>
 
         <Button type="submit" size="lg" className="mt-1 w-full" disabled={submit.isPending}>
-          {submit.isPending ? 'Saving…' : 'Set the password'}
+          {submit.isPending ? t('auth.reset.submitting') : t('auth.reset.submit')}
         </Button>
       </form>
     </AuthLayout>
