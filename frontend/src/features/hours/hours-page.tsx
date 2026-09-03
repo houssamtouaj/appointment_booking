@@ -14,6 +14,7 @@ import { WeeklyGrid } from '@/features/hours/weekly-grid'
 import { useLookups } from '@/hooks/use-lookups'
 import { zoneCity } from '@/lib/time'
 import type { MeResponse } from '@/types'
+import { translate, useTranslation } from '@/i18n'
 
 /**
  * Screen 8's second half: one colleague's weekly template and their one-off
@@ -50,7 +51,10 @@ function Hours({ user, staffId }: { user: MeResponse; staffId: string }) {
   // what keeps `StrictMode`'s double mount to one message.
   useEffect(() => {
     if (refused) {
-      toast.error('You can only edit your own working hours.', { id: 'hours-self-only' })
+      // `translate`, not the hook's `t`: `t` is a new function per language and
+      // would have to join this effect's dependency list, re-firing the toast on
+      // a switch for a refusal that already happened.
+      toast.error(translate('hours.selfOnly'), { id: 'hours-self-only' })
     }
   }, [refused])
 
@@ -60,6 +64,7 @@ function Hours({ user, staffId }: { user: MeResponse; staffId: string }) {
 }
 
 function HoursFor({ user, staffId, own }: { user: MeResponse; staffId: string; own: boolean }) {
+  const { t } = useTranslation()
   const hours = useWorkingHours(staffId)
   const lookups = useLookups()
 
@@ -74,20 +79,23 @@ function HoursFor({ user, staffId, own }: { user: MeResponse; staffId: string; o
    */
   const staffName = own
     ? user.fullName
-    : (lookups.staffById.get(staffId)?.fullName ?? 'This colleague')
+    : (lookups.staffById.get(staffId)?.fullName ?? t('hours.thisColleague'))
 
   return (
     <Container className="pb-16">
       <PageHeader
-        eyebrow="Availability"
-        title={own ? 'Your working hours' : `${staffName}’s working hours`}
-        description={`When ${own ? 'you are' : 'they are'} available to be booked, in ${zoneCity(user.business.timezone)} time. These are wall-clock hours: nine o'clock stays nine o'clock when the clocks change.`}
+        eyebrow={t('hours.eyebrow')}
+        title={own ? t('hours.ownTitle') : t('hours.otherTitle', { name: staffName })}
+        description={t('hours.description', {
+          who: t(own ? 'hours.descriptionYou' : 'hours.descriptionThey'),
+          city: zoneCity(user.business.timezone),
+        })}
       />
 
       {hours.isPending ? (
         <div className="grid gap-2">
           <span className="sr-only" role="status">
-            Loading the weekly hours
+            {t('hours.loading')}
           </span>
           {Array.from({ length: 7 }, (_, index) => (
             <Skeleton key={index} className="h-12" />
@@ -95,7 +103,7 @@ function HoursFor({ user, staffId, own }: { user: MeResponse; staffId: string; o
         </div>
       ) : hours.error && hours.data === undefined ? (
         <ErrorState
-          title="These working hours could not be loaded"
+          title={t('hours.errorTitle')}
           description={describeError(hours.error, {
             NOT_FOUND: 'errors.hoursColleagueNotYours',
             ACCESS_DENIED: 'errors.hoursOnlyYourOwn',

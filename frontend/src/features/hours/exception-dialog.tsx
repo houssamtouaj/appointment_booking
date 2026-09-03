@@ -12,6 +12,7 @@ import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { FormAlert } from '@/components/form-alert'
 import { useCreateOverride } from '@/features/hours/hours-queries'
 import type { OverrideRequest } from '@/types'
+import { translate, useTranslation, type TKey } from '@/i18n'
 
 /**
  * Adding one override, at whichever of the two levels the session is allowed to
@@ -31,29 +32,43 @@ import type { OverrideRequest } from '@/types'
  * A 422 is still handled. The form is an affordance and the server is the rule.
  */
 
+/**
+ * A validation message, as a dictionary key — see `services/service-form.ts` for
+ * the argument. Identity, so a reader following a message from schema to screen
+ * sees the key at both ends.
+ */
+function key(k: TKey): string {
+  return k
+}
+
+/** One of those keys, back as prose, at render. */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
+}
+
 const SCHEMA = z
   .object({
-    date: z.string().min(1, 'Pick a date'),
+    date: z.string().min(1, key('hours.dialog.dateRequired')),
     scope: z.enum(['staff', 'business']),
     type: z.enum(['BLOCKED', 'EXTRA']),
     wholeDay: z.boolean(),
     startTime: z.string(),
     endTime: z.string(),
-    reason: z.string().max(200, 'Keep it under 200 characters'),
+    reason: z.string().max(200, key('hours.dialog.reasonTooLong')),
   })
   .superRefine((values, context) => {
     if (values.wholeDay && values.type === 'BLOCKED') return
 
     for (const edge of ['startTime', 'endTime'] as const) {
       if (!values[edge]) {
-        context.addIssue({ code: 'custom', path: [edge], message: 'Both times are needed' })
+        context.addIssue({ code: 'custom', path: [edge], message: key('hours.dialog.bothTimes') })
       }
     }
     if (values.startTime && values.startTime === values.endTime) {
       context.addIssue({
         code: 'custom',
         path: ['endTime'],
-        message: 'Start and end must differ',
+        message: key('hours.dialog.timesDiffer'),
       })
     }
   })
@@ -77,6 +92,7 @@ export function ExceptionDialog({
   defaultDate,
   onClose,
 }: ExceptionDialogProps) {
+  const { t } = useTranslation()
   const create = useCreateOverride()
 
   const form = useForm<ExceptionFormValues>({
@@ -123,8 +139,8 @@ export function ExceptionDialog({
         onSuccess: () => {
           toast.success(
             values.scope === 'business'
-              ? 'The business is closed on that date for everybody.'
-              : `${staffName}'s availability is updated for that date.`,
+              ? t('hours.dialog.savedBusiness')
+              : t('hours.dialog.savedStaff', { name: staffName }),
           )
           onClose()
         },
@@ -146,15 +162,15 @@ export function ExceptionDialog({
     <Modal
       open
       onOpenChange={(next) => !next && !create.isPending && onClose()}
-      title="Add an override"
-      description="A one-off change to a single date, on top of the weekly hours."
+      title={t('hours.dialog.title')}
+      description={t('hours.dialog.description')}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={create.isPending}>
             Cancel
           </Button>
           <Button type="submit" form="exception-form" disabled={create.isPending}>
-            {create.isPending ? 'Saving…' : 'Add it'}
+            {create.isPending ? t('hours.dialog.saving') : t('hours.dialog.save')}
           </Button>
         </>
       }
@@ -167,7 +183,7 @@ export function ExceptionDialog({
         onSubmit={form.handleSubmit(submit)}
         className="grid gap-5"
       >
-        <FormField label="Date" error={errors.date?.message}>
+        <FormField label={t('hours.dialog.date')} error={message(errors.date?.message)}>
           {(control) => (
             <Input type="date" {...control} {...form.register('date')} data-first-field />
           )}
@@ -177,15 +193,15 @@ export function ExceptionDialog({
             row legible six weeks from now. "Closed" with no reason is a mystery
             an owner has to reconstruct. */}
         <FormField
-          label="Reason"
-          hint="Shown on this list and nowhere a customer can see. “Public holiday”, “training”, “late opening”."
+          label={t('hours.dialog.reason')}
+          hint={t('hours.dialog.reasonHint')}
           error={errors.reason?.message}
         >
           {(control) => <Input {...control} {...form.register('reason')} maxLength={200} />}
         </FormField>
 
         {canCloseBusiness ? (
-          <FormField label="Applies to" error={errors.scope?.message}>
+          <FormField label={t('hours.dialog.scope')} error={message(errors.scope?.message)}>
             {(control) => (
               <select
                 {...control}
@@ -198,21 +214,19 @@ export function ExceptionDialog({
                 })}
                 className="border-input bg-card text-foreground h-9 w-full rounded-sm border px-3 text-sm"
               >
-                <option value="staff">{staffName} only</option>
-                <option value="business">The whole business — everybody is closed</option>
+                <option value="staff">{t('hours.dialog.scopeStaff', { name: staffName })}</option>
+                <option value="business">{t('hours.dialog.scopeBusiness')}</option>
               </select>
             )}
           </FormField>
         ) : null}
 
         <FormField
-          label="Effect"
-          hint={
-            type === 'BLOCKED'
-              ? 'Takes availability away. Nothing can be booked in it.'
-              : 'Adds hours outside the weekly template — a late evening, a Saturday opening.'
-          }
-          error={errors.type?.message}
+          label={t('hours.dialog.effect')}
+          hint={t(
+            type === 'BLOCKED' ? 'hours.dialog.effectBlockedHint' : 'hours.dialog.effectExtraHint',
+          )}
+          error={message(errors.type?.message)}
         >
           {(control) => (
             <select
@@ -221,8 +235,10 @@ export function ExceptionDialog({
               disabled={scope === 'business'}
               className="border-input bg-card text-foreground h-9 w-full rounded-sm border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="BLOCKED">Blocked — remove time</option>
-              {scope === 'business' ? null : <option value="EXTRA">Extra — add time</option>}
+              <option value="BLOCKED">{t('hours.dialog.optionBlocked')}</option>
+              {scope === 'business' ? null : (
+                <option value="EXTRA">{t('hours.dialog.optionExtra')}</option>
+              )}
             </select>
           )}
         </FormField>
@@ -230,16 +246,16 @@ export function ExceptionDialog({
         {type === 'BLOCKED' ? (
           <label className="flex items-center gap-2 text-sm">
             <Checkbox {...form.register('wholeDay')} />
-            The whole day
+            {t('hours.dialog.wholeDay')}
           </label>
         ) : null}
 
         {wholeDay ? null : (
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="From" error={errors.startTime?.message}>
+            <FormField label={t('hours.dialog.from')} error={message(errors.startTime?.message)}>
               {(control) => <Input type="time" {...control} {...form.register('startTime')} />}
             </FormField>
-            <FormField label="To" error={errors.endTime?.message}>
+            <FormField label={t('hours.dialog.to')} error={message(errors.endTime?.message)}>
               {(control) => <Input type="time" {...control} {...form.register('endTime')} />}
             </FormField>
           </div>

@@ -623,6 +623,125 @@ export const en = {
         'Their new role takes effect the next time their session refreshes, within fifteen minutes.',
     },
   },
+  hours: {
+    eyebrow: 'Availability',
+    ownTitle: 'Your working hours',
+    /** `{name}` is a colleague's own name. */
+    otherTitle: '{name}’s working hours',
+    /** `{who}` is `descriptionYou`/`descriptionThey`; `{city}` is an IANA city name. */
+    description:
+      'When {who} available to be booked, in {city} time. These are wall-clock hours: nine o’clock stays nine o’clock when the clocks change.',
+    descriptionYou: 'you are',
+    descriptionThey: 'they are',
+    thisColleague: 'This colleague',
+    selfOnly: 'You can only edit your own working hours.',
+    loading: 'Loading the weekly hours',
+    errorTitle: 'These working hours could not be loaded',
+    weekly: {
+      heading: 'Weekly hours',
+      copyWeekdays: 'Copy Monday to weekdays',
+      copyAll: 'Copy Monday to all days',
+      /** Two sentences, so the bolded first half survives translation as its own key. */
+      replacesLead: 'Saving replaces the whole week.',
+      replacesBody:
+        'Every day is sent together, so a day switched off here loses its hours — this form does not edit one day at a time.',
+      fixMarked: 'Fix the marked rows before saving.',
+      unsaved: 'Unsaved changes. Saving sends all seven days.',
+      inSync: 'Everything here matches what is saved.',
+      discard: 'Discard changes',
+      save: 'Save the week',
+      saving: 'Saving…',
+      /** `{name}` is a colleague's own name. */
+      saved: '{name}’s week is saved.',
+      /**
+       * `{days}` is a comma-joined list of weekday names. The verb agrees with
+       * the count through `Intl.PluralRules` — this was `removals.length === 1
+       * ? 'has' : 'have'`, and French agrees the verb differently and at a
+       * different boundary.
+       */
+      removed: { one: '{days} now has no hours.', other: '{days} now have no hours.' },
+    },
+    day: {
+      closed: 'Closed — no hours worked',
+      /** `{shift}` is the shift's own ordinal label. */
+      start: '{shift} start',
+      end: '{shift} end',
+      remove: 'Remove {shift}',
+      add: 'Add a shift',
+      addHint: 'for a split shift or a break',
+      overlap:
+        'These hours overlap something else in the week. Two ranges cannot claim the same minute.',
+    },
+    removal: {
+      /** `{day}` is one weekday name; `{count}` decides the plural. */
+      oneTitle: '{day} will no longer be worked',
+      manyTitle: '{count} days will no longer be worked',
+      body: {
+        one: 'Saving replaces the whole week, so {days} will have no hours at all and nothing can be booked on it. Existing appointments stay in the calendar.',
+        other:
+          'Saving replaces the whole week, so {days} will have no hours at all and nothing can be booked on them. Existing appointments stay in the calendar.',
+      },
+      goBack: 'Go back',
+      confirm: 'Save and remove',
+    },
+    leave: {
+      title: 'Leave without saving these hours?',
+      body: 'The weekly grid has changes that have not been sent. Leaving now discards them and the saved template stays as it was.',
+      keep: 'Keep editing',
+      discard: 'Discard changes',
+    },
+    overrides: {
+      heading: 'Overrides',
+      eyebrow: 'One-off changes',
+      subheading: 'Holidays, days off and extra hours, on top of the weekly template.',
+      add: 'Add an override',
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
+      thisMonth: 'This month',
+      loading: 'Loading overrides',
+      errorTitle: 'These overrides could not be loaded',
+      /** `{month}` is a formatted month name. */
+      emptyTitle: 'Nothing changes in {month}',
+      emptyBody:
+        '{name} works the weekly hours above, every day of this month. Add an override for a holiday, a day off or a late opening.',
+      blocked: 'Blocked',
+      extra: 'Extra hours',
+      wholeBusiness: 'Whole business',
+      /** `{date}` is a formatted day heading. */
+      remove: 'Remove the override on {date}',
+      setByOwner: 'Set by an owner',
+    },
+    dialog: {
+      title: 'Add an override',
+      description: 'A one-off change to a single date, on top of the weekly hours.',
+      save: 'Add it',
+      saving: 'Saving…',
+      date: 'Date',
+      reason: 'Reason',
+      reasonHint:
+        'Shown on this list and nowhere a customer can see. “Public holiday”, “training”, “late opening”.',
+      scope: 'Applies to',
+      scopeBusiness: 'The whole business — everybody is closed',
+      scopeStaff: '{name} only',
+      effect: 'Effect',
+      effectBlockedHint: 'Takes availability away. Nothing can be booked in it.',
+      effectExtraHint:
+        'Adds hours outside the weekly template — a late evening, a Saturday opening.',
+      optionBlocked: 'Blocked — remove time',
+      optionExtra: 'Extra — add time',
+      wholeDay: 'The whole day',
+      from: 'From',
+      to: 'To',
+      savedBusiness: 'The business is closed on that date for everybody.',
+      /** `{name}` is a colleague's own name. */
+      savedStaff: '{name}’s availability is updated for that date.',
+      /** The Zod messages, as keys — see `services/service-form.ts` for why. */
+      dateRequired: 'Pick a date',
+      reasonTooLong: 'Keep it under 200 characters',
+      bothTimes: 'Both times are needed',
+      timesDiffer: 'Start and end must differ',
+    },
+  },
   components: {
     copyText: {
       copy: 'Copy',

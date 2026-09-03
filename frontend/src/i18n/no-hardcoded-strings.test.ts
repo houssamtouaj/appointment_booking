@@ -21,6 +21,7 @@ const TRANSLATED = [
   'src/features/calendar',
   'src/features/services',
   'src/features/staff',
+  'src/features/hours',
 ]
 
 /**

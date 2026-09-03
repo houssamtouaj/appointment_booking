@@ -19,6 +19,7 @@ import {
 } from '@/features/hours/month-range'
 import { todayIn } from '@/lib/time'
 import type { MeResponse } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type ExceptionsPanelProps = {
   staffId: string
@@ -43,6 +44,7 @@ type ExceptionsPanelProps = {
  * owner editing Amélie's hours does not need Marc's holiday in the middle of it.
  */
 export function ExceptionsPanel({ staffId, staffName, user }: ExceptionsPanelProps) {
+  const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
   const [adding, setAdding] = useState(false)
 
@@ -76,15 +78,13 @@ export function ExceptionsPanel({ staffId, staffName, user }: ExceptionsPanelPro
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="exceptions" className="font-display text-foreground text-lg">
-            One-off changes
+            {t('hours.overrides.eyebrow')}
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Holidays, days off and extra hours, on top of the weekly template.
-          </p>
+          <p className="text-muted-foreground mt-1 text-sm">{t('hours.overrides.subheading')}</p>
         </div>
         <Button size="sm" onClick={() => setAdding(true)}>
           <Plus aria-hidden="true" />
-          Add an override
+          {t('hours.overrides.add')}
         </Button>
       </div>
 
@@ -92,7 +92,7 @@ export function ExceptionsPanel({ staffId, staffName, user }: ExceptionsPanelPro
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Previous month"
+          aria-label={t('hours.overrides.previousMonth')}
           onClick={() => goToMonth(shiftMonth(month, -1))}
         >
           <ChevronLeft aria-hidden="true" />
@@ -103,14 +103,14 @@ export function ExceptionsPanel({ staffId, staffName, user }: ExceptionsPanelPro
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Next month"
+          aria-label={t('hours.overrides.nextMonth')}
           onClick={() => goToMonth(shiftMonth(month, 1))}
         >
           <ChevronRight aria-hidden="true" />
         </Button>
         {month === thisMonth ? null : (
           <Button variant="outline" size="sm" onClick={() => goToMonth(thisMonth)}>
-            This month
+            {t('hours.overrides.thisMonth')}
           </Button>
         )}
       </div>
@@ -119,14 +119,14 @@ export function ExceptionsPanel({ staffId, staffName, user }: ExceptionsPanelPro
         {overrides.isPending ? (
           <div className="grid gap-2">
             <span className="sr-only" role="status">
-              Loading overrides
+              {t('hours.overrides.loading')}
             </span>
             <Skeleton className="h-14" />
             <Skeleton className="h-14" />
           </div>
         ) : overrides.error && overrides.data === undefined ? (
           <ErrorState
-            title="These overrides could not be loaded"
+            title={t('hours.overrides.errorTitle')}
             description={describeError(overrides.error)}
             requestId={requestIdOf(overrides.error)}
             onRetry={() => void overrides.refetch()}
@@ -134,11 +134,11 @@ export function ExceptionsPanel({ staffId, staffName, user }: ExceptionsPanelPro
         ) : rows.length === 0 ? (
           <EmptyState
             icon={CalendarOff}
-            title={`Nothing changes in ${formatMonth(month)}`}
-            description={`${staffName} works the weekly hours above, every day of this month. Add an override for a holiday, a day off or a late opening.`}
+            title={t('hours.overrides.emptyTitle', { month: formatMonth(month) })}
+            description={t('hours.overrides.emptyBody', { name: staffName })}
             action={
               <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
-                Add an override
+                {t('hours.overrides.add')}
               </Button>
             }
           />

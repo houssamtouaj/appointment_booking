@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { formatDayHeading, formatLocalTime } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { Override } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type ExceptionRowProps = {
   override: Override
@@ -28,6 +29,7 @@ type ExceptionRowProps = {
  * (backend D5).
  */
 export function ExceptionRow({ override, removable, busy, onRemove }: ExceptionRowProps) {
+  const { t } = useTranslation()
   const blocked = override.type === 'BLOCKED'
   const Icon = blocked ? CalendarMinus : CalendarPlus
 
@@ -62,7 +64,7 @@ export function ExceptionRow({ override, removable, busy, onRemove }: ExceptionR
         <p className="text-muted-foreground mt-0.5 text-xs">
           {/* The type in words as well as in colour — colour is never the only
               carrier of a distinction this load-bearing. */}
-          {blocked ? 'Blocked' : 'Extra hours'}
+          {t(blocked ? 'hours.overrides.blocked' : 'hours.overrides.extra')}
           {override.reason ? ` · ${override.reason}` : ''}
         </p>
       </div>
@@ -70,7 +72,7 @@ export function ExceptionRow({ override, removable, busy, onRemove }: ExceptionR
       {override.businessWide ? (
         <span className="border-border text-muted-foreground inline-flex items-center gap-1.5 rounded-xs border px-2 py-0.5 text-xs">
           <Building2 className="size-3" aria-hidden="true" />
-          Whole business
+          {t('hours.overrides.wholeBusiness')}
         </span>
       ) : null}
 
@@ -79,7 +81,7 @@ export function ExceptionRow({ override, removable, busy, onRemove }: ExceptionR
           variant="ghost"
           size="icon-sm"
           disabled={busy}
-          aria-label={`Remove the override on ${formatDayHeading(override.date)}`}
+          aria-label={t('hours.overrides.remove', { date: formatDayHeading(override.date) })}
           onClick={onRemove}
         >
           <Trash2 aria-hidden="true" />
@@ -87,7 +89,7 @@ export function ExceptionRow({ override, removable, busy, onRemove }: ExceptionR
       ) : (
         // A staff member sees the closure that is about to empty their Tuesday
         // and cannot lift it. Saying why is better than an absent button.
-        <span className="text-muted-foreground text-xs">Set by an owner</span>
+        <span className="text-muted-foreground text-xs">{t('hours.overrides.setByOwner')}</span>
       )}
     </li>
   )

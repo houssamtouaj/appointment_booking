@@ -3,6 +3,7 @@ import { AlertDialog } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 import { formatWeekday } from '@/lib/time'
 import type { DayOfWeek } from '@/types'
+import { currentLocale, useTranslation } from '@/i18n'
 
 /**
  * The two questions the working-hours grid has to ask before it does something
@@ -40,6 +41,7 @@ export function RemovalConfirm({
   onConfirm: () => void
   onCancel: () => void
 }) {
+  const { t } = useTranslation()
   const names = days.map((day) => formatWeekday(day))
 
   return (
@@ -49,25 +51,23 @@ export function RemovalConfirm({
         <AlertDialog.Content className={PANEL}>
           <AlertDialog.Title className="text-foreground text-xl font-medium">
             {names.length === 1
-              ? `${names[0]} will no longer be worked`
-              : `${names.length} days will no longer be worked`}
+              ? t('hours.removal.oneTitle', { day: names[0] ?? '' })
+              : t('hours.removal.manyTitle', { count: names.length })}
           </AlertDialog.Title>
 
           <AlertDialog.Description className="text-muted-foreground mt-2 text-sm">
-            Saving replaces the whole week, so {formatList(names)} will have no hours at all and
-            nothing can be booked on {names.length === 1 ? 'it' : 'them'}. Existing appointments
-            stay in the calendar.
+            {t('hours.removal.body', { count: names.length, days: formatList(names) })}
           </AlertDialog.Description>
 
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <AlertDialog.Cancel asChild>
-              <Button variant="outline">Go back</Button>
+              <Button variant="outline">{t('hours.removal.goBack')}</Button>
             </AlertDialog.Cancel>
             {/* No pending state of its own: confirming closes this dialog and
                 hands the wait to the Save button underneath, which is the one
                 place the request's progress is reported. */}
             <Button variant="danger" onClick={onConfirm}>
-              Save and remove
+              {t('hours.removal.confirm')}
             </Button>
           </div>
         </AlertDialog.Content>
@@ -90,26 +90,26 @@ export function UnsavedChangesConfirm({
   onDiscard: () => void
   onKeepEditing: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <AlertDialog.Root open onOpenChange={(next) => !next && onKeepEditing()}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="bg-scrim fixed inset-0 z-50" />
         <AlertDialog.Content className={PANEL}>
           <AlertDialog.Title className="text-foreground text-xl font-medium">
-            Leave without saving these hours?
+            {t('hours.leave.title')}
           </AlertDialog.Title>
 
           <AlertDialog.Description className="text-muted-foreground mt-2 text-sm">
-            The weekly grid has changes that have not been sent. Leaving now discards them and the
-            saved template stays as it was.
+            {t('hours.leave.body')}
           </AlertDialog.Description>
 
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <AlertDialog.Cancel asChild>
-              <Button variant="outline">Keep editing</Button>
+              <Button variant="outline">{t('hours.leave.keep')}</Button>
             </AlertDialog.Cancel>
             <Button variant="danger" onClick={onDiscard}>
-              Discard changes
+              {t('hours.leave.discard')}
             </Button>
           </div>
         </AlertDialog.Content>
@@ -119,7 +119,22 @@ export function UnsavedChangesConfirm({
 }
 
 /** `Monday`, `Monday and Tuesday`, `Monday, Tuesday and Saturday`. */
+/**
+ * `"Tuesday, Thursday and Friday"`, `"mardi, jeudi et vendredi"`.
+ *
+ * `Intl.ListFormat` rather than joining with `', '` and `' and '`, for the same
+ * reason `Intl.PluralRules` replaced the `=== 1` ternaries: the conjunction is
+ * the language's, not this file's, and French does not put a comma before it
+ * either. One formatter per locale, cached like every other in this codebase.
+ */
+const listFormatters = new Map<string, Intl.ListFormat>()
+
 function formatList(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? ''
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+  const locale = currentLocale()
+  let formatter = listFormatters.get(locale)
+  if (!formatter) {
+    formatter = new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' })
+    listFormatters.set(locale, formatter)
+  }
+  return formatter.format(names)
 }

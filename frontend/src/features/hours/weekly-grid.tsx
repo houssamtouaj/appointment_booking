@@ -26,6 +26,7 @@ import { useReplaceWorkingHours } from '@/features/hours/hours-queries'
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes'
 import { formatWeekday } from '@/lib/time'
 import type { DayOfWeek, WorkingHoursRange } from '@/types'
+import { translate, useTranslation } from '@/i18n'
 
 type WeeklyGridProps = {
   staffId: string
@@ -51,6 +52,7 @@ type WeeklyGridProps = {
  * the client's copy of a server rule is a mirror and a mirror can be wrong.
  */
 export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
+  const { t } = useTranslation()
   const replace = useReplaceWorkingHours(staffId)
 
   const baseline = useMemo(() => draftFrom(saved), [saved])
@@ -98,10 +100,17 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
         // agree today, and the day they do not, the grid should show what was
         // stored rather than what was sent.
         setDraft(draftFrom(result.ranges))
-        toast.success(`${staffName}'s week is saved.`, {
+        toast.success(translate('hours.weekly.saved', { name: staffName }), {
+          // The verb agrees with the count through `Intl.PluralRules`. This was
+          // `removals.length === 1 ? 'has' : 'have'`, which is the clearest case
+          // in the codebase for the rule: French agrees the verb differently and
+          // at a different boundary.
           description:
             removals.length > 0
-              ? `${removals.map((day) => formatWeekday(day)).join(', ')} now ${removals.length === 1 ? 'has' : 'have'} no hours.`
+              ? translate('hours.weekly.removed', {
+                  count: removals.length,
+                  days: removals.map((day) => formatWeekday(day)).join(', '),
+                })
               : undefined,
         })
       },
@@ -131,7 +140,7 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
     <section aria-labelledby="weekly-hours" className="mt-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 id="weekly-hours" className="font-display text-foreground text-lg">
-          Weekly hours
+          {t('hours.weekly.heading')}
         </h2>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -140,7 +149,7 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
             disabled={replace.isPending}
             onClick={() => edit(copyDay(draft, 'MONDAY', 'weekdays'))}
           >
-            Copy Monday to weekdays
+            {t('hours.weekly.copyWeekdays')}
           </Button>
           <Button
             variant="outline"
@@ -148,16 +157,15 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
             disabled={replace.isPending}
             onClick={() => edit(copyDay(draft, 'MONDAY', 'all'))}
           >
-            Copy Monday to all days
+            {t('hours.weekly.copyAll')}
           </Button>
         </div>
       </div>
 
       {/* The rule, stated where somebody is about to break it. */}
       <p className="border-info/40 bg-info-wash text-foreground mt-3 rounded-sm border px-3 py-2 text-sm">
-        <strong className="font-medium">Saving replaces the whole week.</strong> Every day is sent
-        together, so a day switched off here loses its hours — this form does not edit one day at a
-        time.
+        <strong className="font-medium">{t('hours.weekly.replacesLead')}</strong>{' '}
+        {t('hours.weekly.replacesBody')}
       </p>
 
       <ul className="border-rule mt-2 border-t">
@@ -179,10 +187,10 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-muted-foreground text-xs" aria-live="polite">
           {blocked
-            ? 'Fix the marked rows before saving.'
+            ? t('hours.weekly.fixMarked')
             : dirty
-              ? 'Unsaved changes. Saving sends all seven days.'
-              : 'Everything here matches what is saved.'}
+              ? t('hours.weekly.unsaved')
+              : t('hours.weekly.inSync')}
         </p>
         <div className="flex gap-2">
           <Button
@@ -190,13 +198,13 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
             disabled={!dirty || replace.isPending}
             onClick={() => edit(baseline)}
           >
-            Discard changes
+            {t('hours.weekly.discard')}
           </Button>
           <Button
             disabled={!dirty || blocked || replace.isPending}
             onClick={() => (removals.length > 0 ? setConfirming(removals) : save())}
           >
-            {replace.isPending ? 'Saving…' : 'Save the week'}
+            {replace.isPending ? t('hours.weekly.saving') : t('hours.weekly.save')}
           </Button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { rangeProblem, type ClockTime, type DraftDay } from '@/features/hours/hours-model'
 import { formatWeekday } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n'
 
 type DayRowProps = {
   day: DraftDay
@@ -44,6 +45,7 @@ export function DayRow({
   onRemove,
   onChange,
 }: DayRowProps) {
+  const { t } = useTranslation()
   const label = formatWeekday(day.dayOfWeek)
   const closed = day.ranges.length === 0
 
@@ -76,7 +78,7 @@ export function DayRow({
       </div>
 
       {closed ? (
-        <p className="text-muted-foreground self-center text-sm">Closed — no hours worked</p>
+        <p className="text-muted-foreground self-center text-sm">{t('hours.day.closed')}</p>
       ) : (
         <div className="grid gap-2">
           {day.ranges.map((range, index) => {
@@ -94,7 +96,7 @@ export function DayRow({
                     tabular figures, since these sit in a row of six. */}
                 <Input
                   type="time"
-                  aria-label={`${shift} start`}
+                  aria-label={t('hours.day.start', { shift })}
                   aria-invalid={Boolean(problem) || overlapping}
                   value={range.start}
                   disabled={disabled}
@@ -106,7 +108,7 @@ export function DayRow({
                 </span>
                 <Input
                   type="time"
-                  aria-label={`${shift} end`}
+                  aria-label={t('hours.day.end', { shift })}
                   aria-invalid={Boolean(problem) || overlapping}
                   value={range.end}
                   disabled={disabled}
@@ -117,7 +119,7 @@ export function DayRow({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Remove ${shift}`}
+                  aria-label={t('hours.day.remove', { shift })}
                   disabled={disabled}
                   onClick={() => onRemove(range.key)}
                 >
@@ -136,19 +138,18 @@ export function DayRow({
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" disabled={disabled || full} onClick={onAdd}>
               <Plus aria-hidden="true" />
-              Add a shift
+              {t('hours.day.add')}
             </Button>
             {/* The lunch break, named. Somebody looking for "how do I say we
                 shut at midday" needs to be told the answer is a second row. */}
             {day.ranges.length === 1 ? (
-              <span className="text-muted-foreground text-xs">for a split shift or a break</span>
+              <span className="text-muted-foreground text-xs">{t('hours.day.addHint')}</span>
             ) : null}
           </div>
 
           {overlapping ? (
             <p role="alert" className="text-foreground text-xs">
-              These hours overlap something else in the week. Two ranges cannot claim the same
-              minute.
+              {t('hours.day.overlap')}
             </p>
           ) : null}
         </div>
