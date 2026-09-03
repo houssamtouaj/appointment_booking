@@ -287,6 +287,98 @@ own clock, labelled. It is also why the cancelled state offers no prefilled "boo
 link — there is no slug to build one from. Adding `businessSlug` and `timezone` to that
 response is a backend change and deliberately not made here.
 
+## French and English
+
+Every word this app writes itself exists in both languages, chosen by a control in the
+top right. Four decisions, F21 to F24.
+
+**A hand-written typed dictionary, not `react-i18next`, `react-intl` or Lingui** (F21).
+`src/i18n/en.ts` is the source of truth; `fr.ts` carries `satisfies Same<typeof en>`, and
+that one line is the whole argument. This app needs ~350 strings, two languages, no lazy
+namespace loading and no translation-management integration — which is most of what a
+library is for. What it does need is the thing the libraries are weakest at: **a missing
+French string must not compile.** i18next needs a declaration-merging block for key
+safety and still cannot see a key that is missing from the other language. `Same<T>`
+relaxes the leaves to `string` and keeps the structure, so it is a shape check rather
+than a value check; deleting a key from `fr.ts` is `TS2741`, adding one `en.ts` does not
+have is `TS2353`. Both were verified rather than assumed.
+
+The price of hand-writing it is that plurals and interpolation are ours. Both are under
+twenty lines because `Intl.PluralRules` exists — and it has to, because French counts 0
+with the singular and English with the plural. Every `${n} ${n === 1 ? 'x' : 'xs'}` in the
+codebase was that bug waiting for a translator.
+
+Two things `tsc` cannot see, so tests do: `i18n.test.ts` asserts both languages use the
+same `{placeholders}` — "Held until {time}" becoming "Réservé jusqu'à {heure}" is a silent
+miss and a brace on screen — and `error-copy.test.ts` walks `errorCodeSchema` so a code
+added to the backend cannot fall through to an English sentence in a French page.
+
+**The default language is derived from the browser and only an explicit choice is
+stored** (F22). No stored value means read `navigator.languages`; the toggle writes
+`slotflow-lang`. Exactly the three-state model the theme already uses, where the absence
+of the key means "follow the environment". There is no "Auto" item in the UI — with two
+languages a two-state toggle reads better than a three-state one, and the derived value
+is simply where you start. It also keeps the whole existing suite green without edits:
+Playwright pins `locale: 'en-GB'` and jsdom reports `en-US`, so both stay English.
+
+**`lib/time.ts` and `lib/money.ts` resolve their default locale from the language store,
+not from the browser** (F23). The `locale?: string` parameters stay and stay overridable;
+only what `undefined` means changed. Around thirty call sites already call
+`formatDayHeading(dayKey)` and `formatMoney(cents, currency)` with no locale, and
+threading one through thirty sites creates a thirty-first that forgets. Changing the
+default fixes every existing site at once and makes the forgotten-locale bug unavailable.
+`i18n/language.ts` imports nothing, which is what keeps `lib/ → i18n/` acyclic.
+
+What did _not_ move: the `'en-US'` inside `wallClockIn`, the `'en-CA'` day-key formatter
+and the `'en'` inside `money.ts`'s digit resolution. The first two are parsing formats
+whose output this code reads, and the third asks how many minor units a currency has —
+a property of the currency, not of the reader.
+
+`formatDuration` split rather than moved. It returned `"1 hr 30 min"`, the one place
+English was baked into a `lib/` monopoly. The arithmetic stayed as `splitDuration`, the
+wording went to the dictionary, and `i18n/duration.ts` composes the two — one place, for
+the six call sites the wave plan had counted as two, and a plain function rather than a
+hook because two of the six reach it from `describeBuffers` and `describeTiming`, which
+are not components.
+
+**Two switchers, no more** (F24): a two-letter button in `PublicLayout`'s header and a
+radio group inside `AccountMenu`. The routing makes this cheap — all five account screens
+and the whole booking flow nest under `PublicLayout`, and `AuthLayout` is an inner card
+with no chrome. The split mirrors the theme control and for the reason `account-menu.tsx`
+already records: the admin header carries a business name of arbitrary length, and a
+third control competing with it at 375 px is how a header stops being readable.
+
+The button says **`FR` while you are reading English** — the language you would get, not
+the one you are in. Three alternatives were rejected on purpose. A globe does not say
+_which_ language. A flag is a country, and French is not France. And a label reading the
+current state is the ambiguity `theme-toggle.tsx`'s `NEXT_LABEL` comment already argues
+against. Its accessible name is written in the language it leads to, because somebody
+stranded in a language they cannot read is exactly who needs to find it; in the admin menu
+the two options are named in their own language — "English" and "Français", never
+translated.
+
+`<html lang>` is stamped before first paint by a script in `index.html`, beside the theme
+one. There is no flash of the wrong language — there is no text until React mounts — but a
+screen reader picks its voice from that attribute at parse time and does not re-read it.
+The `slotflow-lang` string is duplicated there because the script runs before any module
+is evaluated, and a test fails if the two copies drift.
+
+**Not translated, deliberately.** Tenant data — business name, service names and
+descriptions, staff names, guest notes — is one business's own copy, in one language, in
+one column; translating it is a schema change and a product decision. Outbound email,
+which the backend writes. `zoneCity()`'s output, which is IANA city names rather than
+prose. Currency codes, which are ISO 4217. And the `errors[]` messages on a 422, which
+Bean Validation writes in English: `applyFieldErrors` now takes a `messageFor` map so a
+form can say what "wrong" means for a field it owns, and anything unpredicted keeps the
+server's sentence — a sentence in the wrong language still names the problem, where a
+blank does not.
+
+**The admin surface is Phase 2 and is not done.** Dashboard, calendar, services, team,
+hours and settings still write English. The `TRANSLATED` list in
+`src/i18n/no-hardcoded-strings.test.ts` is the honest record of how far this reaches;
+adding a folder to it is how a Phase 2 task declares itself finished. A French customer is
+the case that matters, and an owner reading their own admin in English is normal.
+
 ## Not built yet
 
 `/dashboard` and the other admin routes are still wave-1 placeholders — the business

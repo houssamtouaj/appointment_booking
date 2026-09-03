@@ -75,6 +75,7 @@ src/api/schemas/    hand-written source of truth for the contract (F3/F4)
 src/features/<x>/   a screen and everything only it uses, including <x>-queries.ts
 src/components/     shared pieces; components/ui/ is shadcn's generated atoms
 src/hooks/          cross-feature hooks (auth, theme, media query, unsaved changes, lookups)
+src/i18n/           en.ts, fr.ts and the typed t() — the fourth enforced monopoly
 src/lib/            time.ts, money.ts, env.ts, utils.ts — the things with enforced monopolies
 src/styles/         theme.css: the entire visual language, plus the test that guards it
 src/types/          nothing hand-written; every export is a z.infer re-export
@@ -143,6 +144,19 @@ order (`QueryClientProvider` → `AuthProvider` → router) is the one order tha
 - **Money.** Only `src/lib/money.ts` formats a price. It divides by the currency's own minor units
   (JPY has 0, BHD has 3), matching the backend's `Money.java`, and scales with string surgery so no
   `double` ever touches a price.
+- **Language.** Every string the app writes itself lives in `src/i18n/en.ts`, and `fr.ts` is
+  constrained to its shape by `Same<typeof en>` — a missing French key is a `tsc` failure, not an
+  English sentence in a French page (F21). `no-hardcoded-strings.test.ts` scans the translated
+  surface for literal JSX prose and literal `aria-label`/`placeholder`/`hint`/`title`/`eyebrow`
+  props; `i18n.test.ts` asserts both languages use the same `{placeholders}`, which `tsc` cannot
+  see; `error-copy.test.ts` walks `errorCodeSchema` and fails on a code with no copy. The chosen
+  language is a module store shaped exactly like `use-theme.ts`, including the `slotflow-lang` key
+  duplicated in `index.html`'s pre-paint script and the drift test that keeps the two equal.
+  `lib/time.ts` and `lib/money.ts` default their `locale` to that store rather than to the browser
+  (F23), so no call site passes one. Never build a sentence from two keys, and never wrap prose
+  around a `<span>` for emphasis — French word order is not English word order, so one key with
+  `{placeholders}` is the only shape that translates. Phase 2 (the admin features) is not done: the
+  `TRANSLATED` list in the scan is what says how far the wave has reached.
 
 ## Routing and access
 

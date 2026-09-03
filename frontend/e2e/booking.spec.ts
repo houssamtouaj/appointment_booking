@@ -26,7 +26,14 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 const SLUG = process.env.E2E_SLUG ?? 'demo-salon'
 const API = process.env.VITE_API_BASE_URL ?? 'http://localhost:8081'
 
-/** Must match `use.locale` in `playwright.config.ts` — see the chip locator below. */
+/**
+ * Must match `use.locale` in `playwright.config.ts` — see the chip locator below.
+ *
+ * It does double duty from wave 10: it fixes date formatting *and* it is what
+ * makes the interface English under test. The language store derives its default
+ * from `navigator.languages` when nothing is stored (F22), so a run under a
+ * French browser would answer every assertion below in French.
+ */
 const LOCALE = 'en-GB'
 
 type Slot = { start: string; end: string; staffIds: string[] }
@@ -238,6 +245,19 @@ test('a stranger books a slot, is confirmed, and cancels it again', async ({ pag
     const afterCancel = await availability(request, service.id, timeZone, monday)
     expect(afterCancel.some((slot) => slot.start === target.start)).toBe(true)
   }).toPass()
+})
+
+test('the language control switches the interface', async ({ page }) => {
+  await page.goto(`/b/${SLUG}`)
+  // The header control, named for where it leads (F24).
+  await page.getByRole('button', { name: 'Passer en français' }).click()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fr')
+  await expect(page.getByRole('button', { name: 'Switch to English' })).toBeVisible()
+
+  // It survives a reload, which is the half localStorage is responsible for —
+  // and the only proof that index.html's pre-paint script runs at all.
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fr')
 })
 
 async function cancelBooking(page: Page): Promise<void> {
