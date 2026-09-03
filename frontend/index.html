@@ -62,6 +62,35 @@
         }
       })()
     </script>
+
+    <!--
+      Document language, stamped before first paint.
+
+      Less urgent than the theme script above — there is no flash of the wrong
+      language, because there is no text until React mounts. It is here for the
+      two things that are read at parse time and not re-read later: a screen
+      reader chooses its voice from <html lang>, and the browser chooses
+      hyphenation and spell-checking from it.
+
+      The static lang="en" on <html> is the honest default for a document with a
+      stored preference of nothing and an English browser; this corrects it for
+      the other two cases. src/i18n/language.ts keeps it true after a switch.
+    -->
+    <script>
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('slotflow-lang')
+          if (stored === 'en' || stored === 'fr') {
+            document.documentElement.lang = stored
+            return
+          }
+        } catch (_) {
+          /* Private mode, or storage disabled. Fall through to the browser. */
+        }
+        var preferred = (navigator.language || 'en').toLowerCase()
+        if (preferred.indexOf('fr') === 0) document.documentElement.lang = 'fr'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
