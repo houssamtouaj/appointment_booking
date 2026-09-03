@@ -9,6 +9,7 @@ import {
 } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { Slot } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type SlotGridProps = {
   days: SlotDay[]
@@ -69,6 +70,7 @@ function SlotDaySection({
   selectedStart?: string
   onSelect: (slot: Slot) => void
 }) {
+  const { t } = useTranslation()
   const headingId = useId()
   const parts = splitByPartOfDay(day.slots, timeZone)
   const heading = formatDayHeading(day.dayKey)
@@ -135,7 +137,7 @@ function SlotDaySection({
       <h3 id={headingId} className="border-rule text-foreground border-b pb-2 text-sm font-medium">
         {heading}
         <span className="text-muted-foreground ml-2 font-mono text-xs">
-          {day.slots.length} {day.slots.length === 1 ? 'time' : 'times'}
+          {t('booking.slotCount', { count: day.slots.length })}
         </span>
       </h3>
 

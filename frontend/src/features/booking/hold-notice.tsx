@@ -3,6 +3,7 @@ import { Timer } from 'lucide-react'
 import { useRemaining } from '@/features/booking/hold-clock'
 import { clockOf, zoneAbbreviation } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { translate, useTranslation } from '@/i18n'
 
 type HoldNoticeProps = {
   /**
@@ -35,6 +36,7 @@ type HoldNoticeProps = {
  * Renders nothing at all without an `expiresAt`, which is the common case.
  */
 export function HoldNotice({ expiresAt, timeZone, className }: HoldNoticeProps) {
+  const { t } = useTranslation()
   const remaining = useRemaining(expiresAt)
 
   if (!expiresAt) return null
@@ -52,30 +54,38 @@ export function HoldNotice({ expiresAt, timeZone, className }: HoldNoticeProps) 
     >
       <Timer className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <span>
-        {expired ? (
-          <>This hold has expired. The slot has gone back into the calendar.</>
-        ) : (
-          <>
-            This slot is held until{' '}
-            <span className="font-mono">{clockOf(expiresAt, timeZone)}</span>{' '}
-            {/* The zone is named because this same deadline is quoted again on
-                the manage page after the Stripe round trip, and that page has
-                no business in its payload so it renders the viewer's own clock.
-                Two different numbers for one instant is only a contradiction
-                while neither of them says which clock it is on. */}
-            ({zoneAbbreviation(timeZone, new Date(expiresAt))})
-            {remaining === undefined ? null : <> — {describeRemaining(remaining)} left</>}.
-          </>
-        )}
+        {/* Two whole sentences rather than one assembled around a clock and a
+            countdown. The zone is named in both because this same deadline is
+            quoted again on the manage page after the Stripe round trip, and that
+            page has no business in its payload so it renders the viewer's own
+            clock — two different numbers for one instant is a contradiction only
+            while neither of them says which clock it is on. */}
+        {expired
+          ? t('booking.hold.expired')
+          : remaining === undefined
+            ? t('booking.hold.until', {
+                time: clockOf(expiresAt, timeZone),
+                zone: zoneAbbreviation(timeZone, new Date(expiresAt)),
+              })
+            : t('booking.hold.untilWithRemaining', {
+                time: clockOf(expiresAt, timeZone),
+                zone: zoneAbbreviation(timeZone, new Date(expiresAt)),
+                remaining: describeRemaining(remaining),
+              })}
       </span>
     </p>
   )
 }
 
-/** `"27 minutes"`, `"45 seconds"`. Never a bare number of milliseconds. */
+/**
+ * `"27 minutes"`, `"45 seconds"`. Never a bare number of milliseconds.
+ *
+ * `translate` and a plural key rather than `${n} second${n === 1 ? '' : 's'}`:
+ * French counts 0 with the singular and English with the plural, which is the
+ * rule a hand-rolled ternary cannot express. `Intl.PluralRules` knows it.
+ */
 function describeRemaining(ms: number): string {
   const seconds = Math.ceil(ms / 1000)
-  if (seconds < 90) return `${seconds} second${seconds === 1 ? '' : 's'}`
-  const minutes = Math.ceil(seconds / 60)
-  return `${minutes} minute${minutes === 1 ? '' : 's'}`
+  if (seconds < 90) return translate('booking.hold.seconds', { count: seconds })
+  return translate('booking.hold.minutes', { count: Math.ceil(seconds / 60) })
 }

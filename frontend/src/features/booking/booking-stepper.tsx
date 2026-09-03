@@ -9,12 +9,19 @@ import {
   type BookingStep,
 } from '@/features/booking/booking-params'
 import { cn } from '@/lib/utils'
+import { useTranslation, type TKey } from '@/i18n'
 
-const STEPS: { id: BookingStep; label: string }[] = [
-  { id: 'service', label: 'Service' },
-  { id: 'staff', label: 'Who' },
-  { id: 'slot', label: 'Time' },
-  { id: 'details', label: 'Details' },
+/**
+ * The four steps, in order, each naming its own dictionary key rather than a
+ * word. The labels feed an `aria-label` as well as the visible text, and a
+ * screen reader reading English step names inside a French page is worse than
+ * either language on its own.
+ */
+const STEPS: { id: BookingStep; label: TKey }[] = [
+  { id: 'service', label: 'booking.stepper.service' },
+  { id: 'staff', label: 'booking.stepper.staff' },
+  { id: 'slot', label: 'booking.stepper.slot' },
+  { id: 'details', label: 'booking.stepper.details' },
 ]
 
 type BookingStepperProps = {
@@ -53,11 +60,12 @@ type BookingStepperProps = {
  * information a person uses to decide whether to start.
  */
 export function BookingStepper({ slug, params, summary, note, locked }: BookingStepperProps) {
+  const { t } = useTranslation()
   const current = stepOf(params)
   const currentIndex = STEPS.findIndex((step) => step.id === current)
 
   return (
-    <nav aria-label="Booking steps" className="border-rule border-b pb-4">
+    <nav aria-label={t('booking.stepper.label')} className="border-rule border-b pb-4">
       <ol className="flex items-start gap-2 sm:gap-6">
         {STEPS.map((step, index) => {
           const done = index < currentIndex
@@ -88,7 +96,7 @@ export function BookingStepper({ slug, params, summary, note, locked }: BookingS
                     isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground',
                   )}
                 >
-                  {step.label}
+                  {t(step.label)}
                 </span>
                 {/* The chosen value, hidden at 375px where three columns of it
                     would wrap into an unreadable stack. */}

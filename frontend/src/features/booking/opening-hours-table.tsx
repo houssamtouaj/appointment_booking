@@ -1,6 +1,7 @@
 import { WEEKDAYS, formatLocalTime, formatWeekday, todayIn, weekdayOf } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { OpeningHours } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type OpeningHoursTableProps = {
   hours: readonly OpeningHours[]
@@ -21,12 +22,13 @@ type OpeningHoursTableProps = {
  * true: this is a timetable, and time is its axis.
  */
 export function OpeningHoursTable({ hours, timeZone }: OpeningHoursTableProps) {
+  const { t } = useTranslation()
   const byDay = new Map(hours.map((row) => [row.dayOfWeek, row]))
   const today = weekdayOf(todayIn(timeZone))
 
   return (
     <table className="w-full border-collapse text-sm">
-      <caption className="sr-only">Opening hours, shown in the business&apos;s local time</caption>
+      <caption className="sr-only">{t('booking.openingHours.caption')}</caption>
       <tbody>
         {WEEKDAYS.map((weekday) => {
           const row = byDay.get(weekday)
@@ -44,7 +46,7 @@ export function OpeningHoursTable({ hours, timeZone }: OpeningHoursTableProps) {
                 {formatWeekday(weekday)}
                 {isToday ? (
                   <span className="text-primary text-2xs tracking-eyebrow ml-2 font-mono uppercase">
-                    Today
+                    {t('booking.openingHours.today')}
                   </span>
                 ) : null}
               </th>
@@ -61,11 +63,13 @@ export function OpeningHoursTable({ hours, timeZone }: OpeningHoursTableProps) {
                         open past midnight, and without this the row reads as a
                         negative day. */}
                     {row.closesNextDay ? (
-                      <span className="text-muted-foreground ml-1 font-sans text-xs">next day</span>
+                      <span className="text-muted-foreground ml-1 font-sans text-xs">
+                        {t('booking.openingHours.nextDay')}
+                      </span>
                     ) : null}
                   </>
                 ) : (
-                  'Closed'
+                  t('booking.openingHours.closed')
                 )}
               </td>
             </tr>

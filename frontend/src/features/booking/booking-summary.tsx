@@ -2,6 +2,7 @@ import { formatDurationText } from '@/i18n/duration'
 import { formatMoney } from '@/lib/money'
 import { clockOf, dayKeyOf, formatDayHeading } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/i18n'
 
 type BookingSummaryProps = {
   serviceName: string
@@ -43,6 +44,7 @@ export function BookingSummary({
   currency,
   className,
 }: BookingSummaryProps) {
+  const { t } = useTranslation()
   return (
     <dl
       className={cn(
@@ -50,23 +52,28 @@ export function BookingSummary({
         className,
       )}
     >
-      <Row label="Service">
+      <Row label={t('booking.summary.service')}>
         {serviceName}
         <span className="text-muted-foreground"> · {formatDurationText(durationMinutes)}</span>
       </Row>
 
-      {staffName ? <Row label="With">{staffName}</Row> : null}
+      {staffName ? <Row label={t('booking.summary.with')}>{staffName}</Row> : null}
 
-      <Row label="When">
+      <Row label={t('booking.summary.when')}>
         {/* The day in the business's zone, and the clock in it too. Reading
             either through the viewer's zone puts a 01:40 Paris slot under the
             previous day for somebody in London. */}
-        {formatDayHeading(dayKeyOf(startsAt, timeZone))}
-        <span className="text-muted-foreground"> at </span>
-        <span className="font-mono">{clockOf(startsAt, timeZone)}</span>
+        {/* One key joining the two, not the word "at" in JSX between them:
+            French does not put it there and a joined string cannot say so. The
+            monospace on the clock goes with it — it was styling on half a
+            sentence. */}
+        {t('booking.summary.dateAtTime', {
+          date: formatDayHeading(dayKeyOf(startsAt, timeZone)),
+          time: clockOf(startsAt, timeZone),
+        })}
       </Row>
 
-      <Row label="Price">
+      <Row label={t('booking.summary.price')}>
         <span className="font-mono">{formatMoney(priceCents, currency)}</span>
       </Row>
     </dl>

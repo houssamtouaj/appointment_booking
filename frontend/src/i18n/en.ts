@@ -288,6 +288,81 @@ export const en = {
     groupLabel: 'Language',
   },
   booking: {
+    noServices: {
+      title: 'Nothing is bookable here yet',
+      body: 'This business has not published any services. Check back, or get in touch with them directly.',
+    },
+    notFound: {
+      eyebrow: 'Error 404',
+      title: 'No business here',
+      /**
+       * `{slug}` is echoed back because "demo-salón" and "demo-salon" are
+       * indistinguishable in a sentence and obvious side by side. One key rather
+       * than a sentence wrapped around a `<code>`: French does not break there.
+       */
+      body: 'Nothing is published at /b/{slug}. Check the link for a typo, or ask the business for a fresh one — some mail clients cut long links in half.',
+    },
+    timezoneNote: {
+      /** `{city}` from `zoneCity` and `{abbreviation}` from `Intl` — neither is prose. */
+      shownIn: 'Times shown in {city} time ({abbreviation}).',
+    },
+    checkout: {
+      cancelled:
+        'No problem — you did not pay, and your slot is still held. You can pick up where you left off below.',
+      paid: 'Thank you — your deposit came through.',
+      pending:
+        'Thanks. We are waiting for your bank to confirm the payment — this page updates itself.',
+    },
+    openingHours: {
+      caption: "Opening hours, shown in the business's local time",
+      today: 'Today',
+      closed: 'Closed',
+      /** The flag on a shift that runs past midnight. */
+      nextDay: 'next day',
+    },
+    summary: {
+      service: 'Service',
+      with: 'With',
+      when: 'When',
+      price: 'Price',
+      /** Joins a day and a clock. French does not put them in this order. */
+      dateAtTime: '{date} at {time}',
+    },
+    stepper: {
+      /** The nav's accessible name. A screen reader hears this before the steps. */
+      label: 'Booking steps',
+      service: 'Service',
+      staff: 'Who',
+      slot: 'Time',
+      details: 'Details',
+    },
+    emptyWeek: {
+      searchFailedTitle: 'The search could not be completed',
+      exhaustedTitle: 'Nothing is bookable in the next two months',
+      /** `{business}` is tenant data and stays in its own language. */
+      exhaustedBody:
+        '{business} has no openings for this service inside its booking window. Its opening hours are on the main page — you may have better luck with a shorter service.',
+      seeHours: 'See opening hours',
+      title: 'No times this week',
+      body: 'This week is fully booked or outside the opening hours. There may be something later.',
+      search: 'Find the next opening',
+      searching: 'Searching…',
+    },
+    hold: {
+      expired: 'This hold has expired. The slot has gone back into the calendar.',
+      /**
+       * One sentence, both cases, because the clock and the zone sit in the
+       * middle of it and French does not put them where English does. The zone
+       * is named because the manage page quotes the same deadline on the
+       * viewer's clock — two numbers for one instant is a contradiction only
+       * while neither says which clock it is on.
+       */
+      until: 'This slot is held until {time} ({zone}).',
+      untilWithRemaining: 'This slot is held until {time} ({zone}) — {remaining} left.',
+      /** `Intl.PluralRules` picks the form; French counts 0 with the singular. */
+      minutes: { one: '{count} minute', other: '{count} minutes' },
+      seconds: { one: '{count} second', other: '{count} seconds' },
+    },
     heldUntil: 'Held until {time}',
     slotCount: { one: '{count} time', other: '{count} times' },
   },

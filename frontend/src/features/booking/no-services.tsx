@@ -1,6 +1,7 @@
 import { CalendarPlus } from 'lucide-react'
 
 import { EmptyState } from '@/components/empty-state'
+import { useTranslation } from '@/i18n'
 
 /**
  * A business with an empty catalogue, said the same way on both screens that
@@ -17,12 +18,13 @@ import { EmptyState } from '@/components/empty-state'
  * is that this business has published nothing to book.
  */
 export function NoServices({ className }: { className?: string }) {
+  const { t } = useTranslation()
   return (
     <EmptyState
       className={className}
       icon={CalendarPlus}
-      title="Nothing is bookable here yet"
-      description="This business has not published any services. Check back, or get in touch with them directly."
+      title={t('booking.noServices.title')}
+      description={t('booking.noServices.body')}
     />
   )
 }

@@ -220,6 +220,63 @@ export const fr = {
     groupLabel: 'Langue',
   },
   booking: {
+    noServices: {
+      title: "Rien n'est encore réservable ici",
+      body: "Cette entreprise n'a publié aucune prestation. Revenez plus tard ou contactez-la directement.",
+    },
+    notFound: {
+      eyebrow: 'Erreur 404',
+      title: 'Aucune entreprise ici',
+      body: "Rien n'est publié à /b/{slug}. Vérifiez le lien, ou demandez-en un nouveau à l'entreprise — certains logiciels de messagerie coupent les liens longs en deux.",
+    },
+    timezoneNote: {
+      shownIn: 'Horaires affichés à l’heure de {city} ({abbreviation}).',
+    },
+    checkout: {
+      cancelled:
+        "Pas de souci — vous n'avez rien payé et votre créneau est toujours réservé. Vous pouvez reprendre ci-dessous.",
+      paid: 'Merci — votre acompte est bien arrivé.',
+      pending:
+        'Merci. Nous attendons la confirmation de votre banque — cette page se met à jour toute seule.',
+    },
+    openingHours: {
+      caption: "Heures d'ouverture, à l'heure locale de l'entreprise",
+      today: "Aujourd'hui",
+      closed: 'Fermé',
+      nextDay: 'le lendemain',
+    },
+    summary: {
+      service: 'Prestation',
+      with: 'Avec',
+      when: 'Quand',
+      price: 'Prix',
+      dateAtTime: '{date} à {time}',
+    },
+    stepper: {
+      label: 'Étapes de la réservation',
+      service: 'Prestation',
+      staff: 'Qui',
+      slot: 'Horaire',
+      details: 'Coordonnées',
+    },
+    emptyWeek: {
+      searchFailedTitle: "La recherche n'a pas abouti",
+      exhaustedTitle: "Rien n'est réservable dans les deux prochains mois",
+      exhaustedBody:
+        "{business} n'a aucune disponibilité pour cette prestation dans sa fenêtre de réservation. Ses heures d'ouverture sont sur la page principale — une prestation plus courte aura peut-être plus de chances.",
+      seeHours: "Voir les heures d'ouverture",
+      title: 'Aucun horaire cette semaine',
+      body: "Cette semaine est complète ou en dehors des heures d'ouverture. Il y a peut-être de la place plus tard.",
+      search: 'Trouver la prochaine disponibilité',
+      searching: 'Recherche…',
+    },
+    hold: {
+      expired: 'Cette réservation provisoire a expiré. Le créneau est retourné à l’agenda.',
+      until: 'Ce créneau est réservé jusqu’à {time} ({zone}).',
+      untilWithRemaining: 'Ce créneau est réservé jusqu’à {time} ({zone}) — il reste {remaining}.',
+      minutes: { one: '{count} minute', other: '{count} minutes' },
+      seconds: { one: '{count} seconde', other: '{count} secondes' },
+    },
     heldUntil: "Réservé jusqu'à {time}",
     slotCount: { one: '{count} horaire', other: '{count} horaires' },
   },

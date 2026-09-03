@@ -1,6 +1,7 @@
 import { Globe } from 'lucide-react'
 
 import { viewerTimeZone, zoneAbbreviation, zoneCity, zonesAgree } from '@/lib/time'
+import { useTranslation } from '@/i18n'
 
 type TimezoneNoteProps = {
   /** The business's zone. Every time on the screen is already in it. */
@@ -26,6 +27,7 @@ type TimezoneNoteProps = {
  * reader should meet it in reading order.
  */
 export function TimezoneNote({ timeZone, at = new Date() }: TimezoneNoteProps) {
+  const { t } = useTranslation()
   const viewer = viewerTimeZone()
   if (zonesAgree(viewer, timeZone, at)) return null
 
@@ -36,7 +38,10 @@ export function TimezoneNote({ timeZone, at = new Date() }: TimezoneNoteProps) {
     >
       <Globe className="size-4 shrink-0" aria-hidden="true" />
       <span>
-        Times shown in {zoneCity(timeZone)} time ({zoneAbbreviation(timeZone, at)}).
+        {t('booking.timezoneNote.shownIn', {
+          city: zoneCity(timeZone),
+          abbreviation: zoneAbbreviation(timeZone, at),
+        })}
       </span>
     </p>
   )

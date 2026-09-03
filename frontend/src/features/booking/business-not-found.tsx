@@ -1,6 +1,7 @@
 import { SearchX } from 'lucide-react'
 
 import { Container } from '@/components/container'
+import { useTranslation } from '@/i18n'
 
 type BusinessNotFoundProps = {
   slug: string
@@ -19,6 +20,7 @@ type BusinessNotFoundProps = {
  * indistinguishable in a sentence and obvious side by side.
  */
 export function BusinessNotFound({ slug }: BusinessNotFoundProps) {
+  const { t } = useTranslation()
   return (
     <Container width="copy">
       <div className="flex min-h-[60vh] flex-col items-center justify-center py-16 text-center">
@@ -26,18 +28,18 @@ export function BusinessNotFound({ slug }: BusinessNotFoundProps) {
           <SearchX className="size-5" aria-hidden="true" />
         </span>
         <p className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
-          Error 404
+          {t('booking.notFound.eyebrow')}
         </p>
         <h1 className="font-display text-display-md text-foreground tracking-display mt-2 leading-tight">
-          No business here
+          {t('booking.notFound.title')}
         </h1>
         <p className="text-muted-foreground max-w-copy mt-3 text-base">
-          Nothing is published at{' '}
-          <code className="text-foreground bg-muted rounded-xs px-1.5 py-0.5 font-mono text-sm break-all">
-            /b/{slug}
-          </code>
-          . Check the link for a typo, or ask the business for a fresh one — some mail clients cut
-          long links in half.
+          {/* One sentence with the slug inside it, rather than prose wrapped
+              around a <code>. French does not break where English does, and a
+              sentence assembled out of three JSX fragments cannot be translated
+              at all. The slug is still quoted — by the surrounding sentence's
+              `/b/` prefix rather than by a monospace box. */}
+          {t('booking.notFound.body', { slug })}
         </p>
       </div>
     </Container>

@@ -258,7 +258,10 @@ describe('the landing page', () => {
     renderAt('/b/unknown-slug')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'No business here' })).toBeVisible()
-    expect(screen.getByText('/b/unknown-slug')).toBeVisible()
+    // The slug is inside the sentence rather than in its own <code>: one key
+    // with a placeholder, because a sentence wrapped around an element cannot be
+    // translated. It is still echoed back, which is what this asserts.
+    expect(screen.getByText(/Nothing is published at \/b\/unknown-slug/)).toBeVisible()
   })
 
   it('offers a retry and the request id when the load fails', async () => {
@@ -564,9 +567,14 @@ describe('the details step', () => {
     // 09:35 is the Paris wall clock of a 07:35Z instant. Under any runner
     // timezone but Paris, finding it is the proof that the summary reads the
     // salon's clock rather than the reader's.
-    expect(await screen.findByText('09:35')).toBeVisible()
+    // Day and clock are one sentence now, not two elements with the word "at"
+    // between them — wave 10, because French does not join them the way English
+    // does. Matched as one string, which is a closer check than two: it also
+    // proves the two halves ended up in the same sentence.
+    expect(
+      await screen.findByText(`${formatDayHeading(dayKeyOf(slot.start, TZ))} at 09:35`),
+    ).toBeVisible()
     expect(screen.getByText(/72[.,]00/)).toBeVisible()
-    expect(screen.getByText(formatDayHeading(dayKeyOf(slot.start, TZ)))).toBeVisible()
   })
 
   it('says a deposit may be requested and never that one is (F5)', async () => {

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { availabilityRequest, nextOpeningRange } from '@/features/booking/public-queries'
 import { groupSlotsByDay, type DayKey } from '@/lib/time'
 import type { PublicBusiness } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * An empty week, and the state the brief calls out by name (§7).
@@ -43,6 +44,7 @@ export function EmptyWeek({
   today: DayKey
   onDateChange: (date: DayKey) => void
 }) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [searching, setSearching] = useState(false)
   const [exhausted, setExhausted] = useState(false)
@@ -77,7 +79,7 @@ export function EmptyWeek({
   if (searchError) {
     return (
       <ErrorState
-        title="The search could not be completed"
+        title={t('booking.emptyWeek.searchFailedTitle')}
         description={describeError(searchError)}
         requestId={requestIdOf(searchError)}
         onRetry={() => void findNextOpening()}
@@ -101,14 +103,14 @@ export function EmptyWeek({
     return (
       <EmptyState
         icon={CalendarSearch}
-        title="Nothing is bookable in the next two months"
-        description={`${business.name} has no openings for this service inside its booking window. Its opening hours are on the main page — you may have better luck with a shorter service.`}
+        title={t('booking.emptyWeek.exhaustedTitle')}
+        description={t('booking.emptyWeek.exhaustedBody', { business: business.name })}
         action={
           <Button variant="outline" asChild>
             {/* `Link`, not `<a href>`: a plain anchor reloads the document,
                 throws away the query cache and re-runs the auth bootstrap to
                 move between two routes of the same app. */}
-            <Link to={`/b/${slug}`}>See opening hours</Link>
+            <Link to={`/b/${slug}`}>{t('booking.emptyWeek.seeHours')}</Link>
           </Button>
         }
       />
@@ -118,11 +120,11 @@ export function EmptyWeek({
   return (
     <EmptyState
       icon={CalendarSearch}
-      title="No times this week"
-      description="This week is fully booked or outside the opening hours. There may be something later."
+      title={t('booking.emptyWeek.title')}
+      description={t('booking.emptyWeek.body')}
       action={
         <Button onClick={() => void findNextOpening()} disabled={searching}>
-          {searching ? 'Searching…' : 'Find the next opening'}
+          {searching ? t('booking.emptyWeek.searching') : t('booking.emptyWeek.search')}
         </Button>
       }
     />

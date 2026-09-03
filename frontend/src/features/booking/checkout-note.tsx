@@ -1,4 +1,5 @@
 import type { BookingStatus } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * The sentence Stripe's redirect earns, and the limit of what it earns.
@@ -17,6 +18,7 @@ export function CheckoutNote({
   status: BookingStatus
   holdExpired: boolean
 }) {
+  const { t } = useTranslation()
   if (checkout !== 'success' && checkout !== 'cancelled') return null
   // "Expired" is the case the paragraph above names and the one both sentences
   // below would get wrong: "your slot is still held" is false, and thanking
@@ -27,8 +29,7 @@ export function CheckoutNote({
     if (status !== 'PENDING') return null
     return (
       <p role="status" className="bg-muted text-foreground mb-6 rounded-sm px-3 py-2 text-sm">
-        No problem — you did not pay, and your slot is still held. You can pick up where you left
-        off below.
+        {t('booking.checkout.cancelled')}
       </p>
     )
   }
@@ -36,7 +37,7 @@ export function CheckoutNote({
   if (status === 'CONFIRMED') {
     return (
       <p role="status" className="bg-primary-wash text-primary mb-6 rounded-sm px-3 py-2 text-sm">
-        Thank you — your deposit came through.
+        {t('booking.checkout.paid')}
       </p>
     )
   }
@@ -44,7 +45,7 @@ export function CheckoutNote({
   if (status === 'PENDING') {
     return (
       <p role="status" className="bg-warning-wash text-warning mb-6 rounded-sm px-3 py-2 text-sm">
-        Thanks. We are waiting for your bank to confirm the payment — this page updates itself.
+        {t('booking.checkout.pending')}
       </p>
     )
   }
