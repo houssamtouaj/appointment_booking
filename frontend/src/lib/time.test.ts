@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
+import { resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
 import type { Slot } from '@/types'
 import {
   addDays,
@@ -9,7 +10,9 @@ import {
   daysBetween,
   daysOfWeek,
   dayKeyOf,
+  formatDayHeading,
   formatDuration,
+  formatWeekday,
   groupSlotsByDay,
   hourMarks,
   isDayKey,
@@ -453,5 +456,39 @@ describe('the seven columns of a week', () => {
       '2026-09-05',
       '2026-09-06',
     ])
+  })
+})
+
+describe('the default locale', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetLanguageStoreForTests()
+  })
+
+  it('follows the chosen language rather than the browser (F23)', () => {
+    // Thirty call sites pass no locale. Before this, they inherited the
+    // browser's, which after a switch to French is the wrong one.
+    //
+    // The English side is asserted against the browser's own English region
+    // rather than a literal: "Monday 2 March" (en-GB) and "Monday, March 2"
+    // (en-US) are both correct English, and which one a reader gets is the
+    // reader's region to decide, not this wave's. What this wave decides is the
+    // *language*, and that is what the French line pins.
+    expect(formatDayHeading('2026-03-02')).toContain('Monday')
+    expect(formatDayHeading('2026-03-02')).toBe(
+      formatDayHeading('2026-03-02', navigator.languages[0]),
+    )
+    setLanguage('fr')
+    expect(formatDayHeading('2026-03-02')).toBe('lundi 2 mars')
+  })
+
+  it('still lets a caller override it', () => {
+    setLanguage('fr')
+    expect(formatDayHeading('2026-03-02', 'en-GB')).toBe('Monday 2 March')
+  })
+
+  it('translates a weekday name', () => {
+    setLanguage('fr')
+    expect(formatWeekday('MONDAY')).toBe('lundi')
   })
 })

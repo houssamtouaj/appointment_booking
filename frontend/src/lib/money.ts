@@ -1,3 +1,5 @@
+import { currentLocale } from '@/i18n'
+
 /**
  * Minor units to something a customer can read (F3's sibling problem: the API
  * sends integers and the screen owes a person a price).
@@ -77,14 +79,19 @@ function toDecimalString(minorUnits: number, digits: number): `${number}` {
  *   tenant, not of the service and not of the viewer: `PublicBusinessResponse`
  *   carries one `currency` and each service carries only `priceCents`. Hard-coding
  *   `€` anywhere is a wave gate item.
- * @param locale who is reading. Defaults to the browser's, so a French visitor
- *   gets `120,00 €` and an English one `€120.00` — the same amount in the same
- *   currency, punctuated the way the reader expects. Only the separators move;
+ * @param locale who is reading. Defaults to **the language chosen in this app**
+ *   (F23), not to the browser's — a visitor who switches to French gets
+ *   `120,00 €` and an English one `€120.00`, the same amount in the same
+ *   currency, punctuated the way the reader asked for. Only the separators move;
  *   the currency never does.
  */
 export function formatMoney(minorUnits: number, currency: string, locale?: string): string {
   const digits = minorUnitDigits(currency)
-  return formatterFor(currency, digits, locale).format(toDecimalString(minorUnits, digits))
+  // Resolved here rather than inside `formatterFor`, so the cache is keyed by the
+  // locale actually used and a language switch cannot be served a stale entry.
+  return formatterFor(currency, digits, locale ?? currentLocale()).format(
+    toDecimalString(minorUnits, digits),
+  )
 }
 
 /**
@@ -92,14 +99,15 @@ export function formatMoney(minorUnits: number, currency: string, locale?: strin
  *
  * `Intl.NumberFormat` construction is the expensive half of formatting, and a
  * catalogue renders a price per card in a pass. Keyed by locale as well as
- * currency because `locale` is `undefined` in every call this app makes today —
- * it means "the browser's" — and a cache that ignored it would hand the second
- * caller the first one's punctuation the day a screen passes one explicitly.
+ * currency because a language switch changes it and both formatters then stay
+ * warm — before wave 10 this parameter was `undefined` at every call site and the
+ * note here said so. A cache that ignored the locale would hand a French reader
+ * the English reader's punctuation.
  */
 const formatters = new Map<string, Intl.NumberFormat>()
 
-function formatterFor(currency: string, digits: number, locale?: string): Intl.NumberFormat {
-  const key = `${currency}|${locale ?? ''}`
+function formatterFor(currency: string, digits: number, locale: string): Intl.NumberFormat {
+  const key = `${currency}|${locale}`
   const cached = formatters.get(key)
   if (cached) return cached
 

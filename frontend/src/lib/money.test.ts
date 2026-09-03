@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
+import { resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
 import {
   currencyDigits,
   formatMoney,
@@ -156,5 +157,25 @@ describe('currencyDigits', () => {
     expect(currencyDigits('EUR')).toBe(2)
     expect(currencyDigits('JPY')).toBe(0)
     expect(currencyDigits('BHD')).toBe(3)
+  })
+})
+
+describe('the default locale', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetLanguageStoreForTests()
+  })
+
+  it('formats a price in the chosen language', () => {
+    setLanguage('fr')
+    // French uses a comma and a narrow no-break space, and puts the symbol last.
+    // The digit count is still the currency's, not the locale's.
+    expect(formatMoney(4500, 'EUR')).toMatch(/45,00/)
+  })
+
+  it('keeps the currency minor units regardless of language', () => {
+    setLanguage('fr')
+    expect(formatMoney(4500, 'JPY')).toMatch(/4\s?500/)
+    expect(formatMoney(4500, 'JPY')).not.toMatch(/,00/)
   })
 })

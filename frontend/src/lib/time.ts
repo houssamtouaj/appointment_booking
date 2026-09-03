@@ -1,3 +1,4 @@
+import { currentLocale } from '@/i18n'
 import type { DayOfWeek, Slot } from '@/types'
 
 /**
@@ -23,6 +24,18 @@ import type { DayOfWeek, Slot } from '@/types'
  * system zone cannot participate in the answer. Recorded as a deviation in the
  * wave's decisions; the spirit of the instruction — never read a slot through
  * the viewer's zone — is what this whole file enforces.
+ *
+ * **The `locale` parameters default to the app's language, not the browser's**
+ * (F23). Around thirty call sites pass no locale; before wave 10 they inherited
+ * `navigator.language`, which is the wrong answer the moment somebody chooses a
+ * language. Threading a locale through thirty call sites would have created a
+ * thirty-first that forgot, so the default moved instead. `i18n/language.ts`
+ * imports nothing, which is what keeps this direction acyclic.
+ *
+ * Note what did *not* change: the `'en-US'` inside `wallClockIn` and the
+ * `'en-CA'` day-key formatter are parsing formats, not display formats. They are
+ * pinned because the code reads their output, and a locale-dependent parse is a
+ * bug in any language.
  */
 
 /**
@@ -529,7 +542,7 @@ export function splitByPartOfDay(
  * ends up one day away from the slots underneath it.
  */
 export function formatDayHeading(dayKey: DayKey, locale?: string): string {
-  return atUtcNoon(dayKey).toLocaleDateString(locale, {
+  return atUtcNoon(dayKey).toLocaleDateString(locale ?? currentLocale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -539,7 +552,7 @@ export function formatDayHeading(dayKey: DayKey, locale?: string): string {
 
 /** `"31 Aug"` — the compact form, for the week's range and the day tabs. */
 export function formatDayShort(dayKey: DayKey, locale?: string): string {
-  return atUtcNoon(dayKey).toLocaleDateString(locale, {
+  return atUtcNoon(dayKey).toLocaleDateString(locale ?? currentLocale(), {
     day: 'numeric',
     month: 'short',
     timeZone: 'UTC',
@@ -578,7 +591,7 @@ export function zoneCity(timeZone: string): string {
  */
 export function zoneAbbreviation(timeZone: string, at: Date = new Date(), locale?: string): string {
   const zone = usableZone(timeZone)
-  const parts = new Intl.DateTimeFormat(locale, {
+  const parts = new Intl.DateTimeFormat(locale ?? currentLocale(), {
     timeZone: zone,
     timeZoneName: 'short',
   }).formatToParts(at)
@@ -638,7 +651,7 @@ export function formatWeekday(weekday: DayOfWeek, locale?: string): string {
   // 2026-08-31 is a Monday, so its index is the offset into a real week.
   const monday = atUtcNoon('2026-08-31')
   monday.setUTCDate(monday.getUTCDate() + WEEKDAYS.indexOf(weekday))
-  return monday.toLocaleDateString(locale, { weekday: 'long', timeZone: 'UTC' })
+  return monday.toLocaleDateString(locale ?? currentLocale(), { weekday: 'long', timeZone: 'UTC' })
 }
 
 /**
