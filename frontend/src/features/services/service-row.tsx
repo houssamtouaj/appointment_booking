@@ -1,12 +1,12 @@
 import { Pencil, RotateCcw, Archive } from 'lucide-react'
 
+import { formatDurationText } from '@/i18n/duration'
 import { Monogram } from '@/components/monogram'
 import { Button } from '@/components/ui/button'
 import { BookableChip } from '@/features/services/bookable-chip'
 import { bookabilityOf, performersOf } from '@/features/services/bookability'
 import type { Lookups } from '@/hooks/use-lookups'
 import { formatMoney } from '@/lib/money'
-import { formatDuration } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { Service } from '@/types'
 
@@ -121,7 +121,7 @@ export function ServiceRow({
  * line, at the cost of the one line where the numbers differ standing out less.
  */
 function describeTiming(service: Service): string {
-  const duration = formatDuration(service.durationMinutes)
+  const duration = formatDurationText(service.durationMinutes)
   const hasBuffers = service.bufferBeforeMinutes > 0 || service.bufferAfterMinutes > 0
   if (!hasBuffers) return duration
 

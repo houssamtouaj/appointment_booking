@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
+import { formatDurationText } from '@/i18n/duration'
 import { formatMoney } from '@/lib/money'
-import { formatDuration } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { PublicService } from '@/types'
 
@@ -60,7 +60,7 @@ export function ServiceCard({ service, currency, to, selected, className }: Serv
 
       <div className="mt-4 flex items-baseline justify-between gap-4 font-mono">
         <span className="text-muted-foreground text-xs">
-          {formatDuration(service.durationMinutes)}
+          {formatDurationText(service.durationMinutes)}
         </span>
         <span className="text-foreground text-base">
           {formatMoney(service.priceCents, currency)}

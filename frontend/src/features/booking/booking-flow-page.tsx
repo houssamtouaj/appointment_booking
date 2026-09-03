@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
+import { formatDurationText } from '@/i18n/duration'
 import { isApiError } from '@/api/error'
 import { describeError, requestIdOf } from '@/api/error-copy'
 import { guestDetailsSchema } from '@/api/schemas/booking'
@@ -25,7 +26,6 @@ import { SlotStep } from '@/features/booking/slot-step'
 import { StaffStep } from '@/features/booking/staff-step'
 import { useBookingFailure } from '@/features/booking/use-booking-failure'
 import { useEffectiveBookingParams } from '@/features/booking/use-effective-params'
-import { formatDuration } from '@/lib/time'
 import { formatMoney } from '@/lib/money'
 import type { GuestDetails, PublicBooking, PublicBusiness, PublicService } from '@/types'
 
@@ -300,7 +300,7 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
         params={effective}
         summary={{
           service: service
-            ? `${service.name} · ${formatDuration(service.durationMinutes)}`
+            ? `${service.name} · ${formatDurationText(service.durationMinutes)}`
             : undefined,
           staff: staffSummary,
         }}
@@ -365,7 +365,7 @@ function Flow({ slug, business }: { slug: string; business: PublicBusiness }) {
               onContinue={(slot) => setParams({ slot: slot.start })}
             />
             <p className="text-muted-foreground mt-8 text-sm">
-              {service.name} · {formatDuration(service.durationMinutes)} ·{' '}
+              {service.name} · {formatDurationText(service.durationMinutes)} ·{' '}
               {formatMoney(service.priceCents, business.currency)}
             </p>
           </>

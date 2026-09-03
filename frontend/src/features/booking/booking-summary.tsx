@@ -1,5 +1,6 @@
+import { formatDurationText } from '@/i18n/duration'
 import { formatMoney } from '@/lib/money'
-import { clockOf, dayKeyOf, formatDayHeading, formatDuration } from '@/lib/time'
+import { clockOf, dayKeyOf, formatDayHeading } from '@/lib/time'
 import { cn } from '@/lib/utils'
 
 type BookingSummaryProps = {
@@ -51,7 +52,7 @@ export function BookingSummary({
     >
       <Row label="Service">
         {serviceName}
-        <span className="text-muted-foreground"> · {formatDuration(durationMinutes)}</span>
+        <span className="text-muted-foreground"> · {formatDurationText(durationMinutes)}</span>
       </Row>
 
       {staffName ? <Row label="With">{staffName}</Row> : null}

@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 
+import { formatDurationText } from '@/i18n/duration'
 import { isApiError } from '@/api/error'
 import {
   MAX_BUFFER_MINUTES,
@@ -33,7 +34,6 @@ import {
 } from '@/features/services/service-form'
 import type { Lookups } from '@/hooks/use-lookups'
 import { currencyDigits } from '@/lib/money'
-import { formatDuration } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { Service, Staff } from '@/types'
 
@@ -337,7 +337,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
           <p role="status" className="text-muted-foreground text-xs">
             {blockMinutes === undefined
               ? 'Enter a duration to see how much of the calendar one appointment takes.'
-              : `One appointment blocks ${formatDuration(blockMinutes)} of the calendar.`}
+              : `One appointment blocks ${formatDurationText(blockMinutes)} of the calendar.`}
           </p>
         </fieldset>
 

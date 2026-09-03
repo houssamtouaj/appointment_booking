@@ -11,13 +11,13 @@ import {
   daysOfWeek,
   dayKeyOf,
   formatDayHeading,
-  formatDuration,
   formatWeekday,
   groupSlotsByDay,
   hourMarks,
   isDayKey,
   minutesIntoDay,
   partOfDay,
+  splitDuration,
   splitByPartOfDay,
   weekInstants,
   weekOf,
@@ -321,12 +321,17 @@ describe('a day key from the URL', () => {
   })
 })
 
-describe('durations', () => {
-  it('reads the demo catalogue back the way a person would say it', () => {
-    expect(formatDuration(20)).toBe('20 min')
-    expect(formatDuration(45)).toBe('45 min')
-    expect(formatDuration(60)).toBe('1 hr')
-    expect(formatDuration(90)).toBe('1 hr 30 min')
+describe('splitDuration', () => {
+  it('splits minutes into hours and the remainder', () => {
+    expect(splitDuration(90)).toEqual({ hours: 1, minutes: 30 })
+    expect(splitDuration(45)).toEqual({ hours: 0, minutes: 45 })
+    expect(splitDuration(120)).toEqual({ hours: 2, minutes: 0 })
+  })
+
+  it('says nothing about words, which is the point', () => {
+    // "1 hr 30 min" and "1 h 30 min" differ, and neither belongs in a file whose
+    // job is calendar arithmetic. The dictionary owns the wording.
+    expect(splitDuration(90)).not.toHaveProperty('label')
   })
 })
 

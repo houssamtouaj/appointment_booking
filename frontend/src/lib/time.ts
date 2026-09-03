@@ -665,11 +665,15 @@ export function formatLocalTime(localTime: string): string {
   return localTime.slice(0, 5)
 }
 
-/** `20` becomes `"20 min"`, `60` becomes `"1 hr"`, `90` becomes `"1 hr 30 min"`. */
-export function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60)
-  const rest = minutes % 60
-  if (hours === 0) return `${rest} min`
-  if (rest === 0) return `${hours} hr`
-  return `${hours} hr ${rest} min`
+/**
+ * Minutes as hours and minutes, and no words.
+ *
+ * This was `formatDuration`, which returned `"1 hr 30 min"` — the only English
+ * baked into this file. The wording is `common.durationHoursMinutes` and its two
+ * siblings in the dictionary, composed by `src/i18n/duration.ts`; the arithmetic
+ * stays here, where the rest of the calendar arithmetic is. Splitting on that
+ * line is what keeps both monopolies true at once.
+ */
+export function splitDuration(minutes: number): { hours: number; minutes: number } {
+  return { hours: Math.floor(minutes / 60), minutes: minutes % 60 }
 }

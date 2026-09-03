@@ -1,7 +1,8 @@
+import { formatDurationText } from '@/i18n/duration'
 import { styleOf } from '@/features/calendar/status-style'
 import { serviceNameIn, staffNameIn, type Lookups } from '@/hooks/use-lookups'
 import { formatMoney } from '@/lib/money'
-import { clockOf, dayKeyOf, formatDayHeading, formatDuration } from '@/lib/time'
+import { clockOf, dayKeyOf, formatDayHeading } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { BookingDetail } from '@/types'
 
@@ -136,10 +137,10 @@ function describeBuffers(booking: BookingDetail): string {
   const after = booking.bufferAfterMinutes
 
   if (before > 0 && after > 0) {
-    return `${formatDuration(before)} before and ${formatDuration(after)} after`
+    return `${formatDurationText(before)} before and ${formatDurationText(after)} after`
   }
-  if (before > 0) return `${formatDuration(before)} before`
-  return `${formatDuration(after)} after`
+  if (before > 0) return `${formatDurationText(before)} before`
+  return `${formatDurationText(after)} after`
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
