@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { BusinessForm } from '@/features/settings/business-form'
 import { PolicyForm } from '@/features/settings/policy-form'
 import { useBusinessSettings, usePolicySettings } from '@/features/settings/settings-queries'
+import { useTranslation } from '@/i18n'
 
 /**
  * Screen 9: everything about the business that is not a person, a service or an
@@ -23,22 +24,23 @@ import { useBusinessSettings, usePolicySettings } from '@/features/settings/sett
  * timezone change also holding the booking rules hostage.
  */
 export function SettingsPage() {
+  const { t } = useTranslation()
   const business = useBusinessSettings()
   const policy = usePolicySettings()
 
   return (
     <Container className="pb-16">
       <PageHeader
-        eyebrow="Admin"
-        title="Settings"
-        description="What the business is called, the clock it runs on, and the rules every customer books against."
+        eyebrow={t('admin.eyebrow')}
+        title={t('settings.title')}
+        description={t('settings.description')}
       />
 
       {business.isPending ? (
-        <SettingsSkeleton label="Loading your business settings" />
+        <SettingsSkeleton label={t('settings.loadingBusiness')} />
       ) : business.error && business.data === undefined ? (
         <ErrorState
-          title="Your business settings could not be loaded"
+          title={t('settings.businessErrorTitle')}
           description={describeError(business.error)}
           requestId={requestIdOf(business.error)}
           onRetry={() => void business.refetch()}
@@ -48,11 +50,11 @@ export function SettingsPage() {
       ) : null}
 
       {policy.isPending ? (
-        <SettingsSkeleton label="Loading your booking rules" className="mt-12" />
+        <SettingsSkeleton label={t('settings.loadingPolicy')} className="mt-12" />
       ) : policy.error && policy.data === undefined ? (
         <ErrorState
           className="mt-12"
-          title="Your booking rules could not be loaded"
+          title={t('settings.policyErrorTitle')}
           description={describeError(policy.error)}
           requestId={requestIdOf(policy.error)}
           onRetry={() => void policy.refetch()}

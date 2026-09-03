@@ -9,6 +9,7 @@ import { AccountMenu } from '@/features/admin/account-menu'
 import { AdminNav } from '@/features/admin/admin-nav'
 import { useAuth } from '@/hooks/use-auth'
 import type { MeResponse } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * The shell every admin screen hangs on: a persistent rail at ≥ 1024px, a drawer
@@ -78,6 +79,7 @@ export function AdminLayout() {
  * — a margin and a width that have to agree is a pair that stops agreeing.
  */
 function Sidebar({ user }: { user: MeResponse | null }) {
+  const { t } = useTranslation()
   return (
     <aside className="border-rule bg-card sticky top-0 hidden h-dvh flex-col border-r lg:flex">
       <div className="border-rule flex h-[var(--header-height)] shrink-0 items-center border-b px-5">
@@ -96,7 +98,7 @@ function Sidebar({ user }: { user: MeResponse | null }) {
       {user ? (
         <div className="border-rule shrink-0 border-t px-5 py-4">
           <p className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
-            Booking page
+            {t('nav.bookingPage')}
           </p>
           <Link
             to={`/b/${user.business.slug}`}
@@ -133,6 +135,7 @@ function Sidebar({ user }: { user: MeResponse | null }) {
  * nothing and a drawer left standing would look broken.
  */
 function MobileNav({ user }: { user: MeResponse }) {
+  const { t } = useTranslation()
   const location = useLocation()
   const [open, setOpen] = useState(false)
   const [entry, setEntry] = useState(location.key)
@@ -145,7 +148,7 @@ function MobileNav({ user }: { user: MeResponse }) {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label="Open menu">
+        <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label={t('nav.openMenu')}>
           <Menu aria-hidden="true" />
         </Button>
       </Dialog.Trigger>
@@ -163,7 +166,7 @@ function MobileNav({ user }: { user: MeResponse }) {
               Slotflow
             </Dialog.Title>
             <Dialog.Close asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Close menu">
+              <Button variant="ghost" size="icon-sm" aria-label={t('nav.closeMenu')}>
                 <X aria-hidden="true" />
               </Button>
             </Dialog.Close>
@@ -175,7 +178,7 @@ function MobileNav({ user }: { user: MeResponse }) {
 
           <div className="border-rule shrink-0 border-t px-5 py-4">
             <p className="text-muted-foreground text-2xs tracking-eyebrow font-mono uppercase">
-              Booking page
+              {t('nav.bookingPage')}
             </p>
             <Link
               to={`/b/${user.business.slug}`}

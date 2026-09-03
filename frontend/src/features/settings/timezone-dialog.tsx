@@ -2,6 +2,7 @@ import { AlertDialog } from 'radix-ui'
 
 import { Button } from '@/components/ui/button'
 import { zoneAbbreviation } from '@/lib/time'
+import { translate, useTranslation } from '@/i18n'
 
 export type TimezoneShift = {
   /** The zone the tenant is on now, as the **server** named it in the refusal. */
@@ -56,6 +57,7 @@ export function TimezoneDialog({
   onConfirm: () => void
   onCancel: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <AlertDialog.Root open onOpenChange={(next) => !next && onCancel()}>
       <AlertDialog.Portal>
@@ -67,18 +69,16 @@ export function TimezoneDialog({
           ].join(' ')}
         >
           <AlertDialog.Title className="text-foreground text-xl font-medium">
-            Move the business to {shift.to}?
+            {t('settings.timezone.title', { to: shift.to })}
           </AlertDialog.Title>
 
           <AlertDialog.Description className="text-muted-foreground mt-2 text-sm">
-            Every future slot moves with it. Working hours are wall-clock times read in the business
-            timezone, so “we open at nine” will mean nine o’clock in {shift.to} instead of nine
-            o’clock in {shift.from}.
+            {t('settings.timezone.body', { to: shift.to, from: shift.from })}
           </AlertDialog.Description>
 
           <dl className="border-rule mt-4 grid grid-cols-2 gap-px border-y py-3 text-sm">
             <div>
-              <dt className="text-muted-foreground text-xs">Now</dt>
+              <dt className="text-muted-foreground text-xs">{t('settings.timezone.now')}</dt>
               <dd className="text-foreground font-mono">
                 {shift.from}
                 <span className="text-muted-foreground ml-2 font-sans text-xs">
@@ -87,7 +87,7 @@ export function TimezoneDialog({
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground text-xs">After saving</dt>
+              <dt className="text-muted-foreground text-xs">{t('settings.timezone.after')}</dt>
               <dd className="text-foreground font-mono">
                 {shift.to}
                 <span className="text-muted-foreground ml-2 font-sans text-xs">
@@ -98,17 +98,18 @@ export function TimezoneDialog({
           </dl>
 
           <p className="text-muted-foreground mt-4 text-sm">
-            {describeBookings(shift.bookings)} Nothing is rescheduled and no appointment is moved —
-            each one keeps its wall-clock time in the new zone.
+            {t('settings.timezone.footnote', { bookings: describeBookings(shift.bookings) })}
           </p>
 
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <AlertDialog.Cancel asChild>
               {/* The safe answer, and the one focus lands on. */}
-              <Button variant="outline">Keep {shift.from}</Button>
+              <Button variant="outline">{t('settings.timezone.keep', { from: shift.from })}</Button>
             </AlertDialog.Cancel>
             <Button variant="danger" disabled={saving} onClick={onConfirm}>
-              {saving ? 'Saving…' : `Move to ${shift.to}`}
+              {saving
+                ? t('settings.timezone.saving')
+                : t('settings.timezone.move', { to: shift.to })}
             </Button>
           </div>
         </AlertDialog.Content>
@@ -117,8 +118,15 @@ export function TimezoneDialog({
   )
 }
 
+/**
+ * The count as a whole sentence, so the verb can agree with it.
+ *
+ * `Intl.PluralRules` rather than two ternaries: this had `count === 1 ? '' : 's'`
+ * *and* `count === 1 ? 'is' : 'are'`, and French agrees both differently and at
+ * a different boundary. Zero keeps its own sentence, which is what a person says.
+ */
 function describeBookings(count: number | undefined): string {
-  if (count === undefined) return 'Appointments already in the calendar are affected.'
-  if (count === 0) return 'There are no future appointments in the calendar right now.'
-  return `${count} future appointment${count === 1 ? '' : 's'} ${count === 1 ? 'is' : 'are'} in the calendar.`
+  if (count === undefined) return translate('settings.timezone.bookingsUnknown')
+  if (count === 0) return translate('settings.timezone.bookingsNone')
+  return translate('settings.timezone.bookingsCount', { count })
 }

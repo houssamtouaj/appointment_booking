@@ -12,6 +12,7 @@ import { FormAlert } from '@/components/form-alert'
 import { describeCutoff, describePolicy, POLICY_HINTS } from '@/features/settings/policy-copy'
 import { useUpdatePolicy } from '@/features/settings/settings-queries'
 import type { Policy } from '@/types'
+import { translate, useTranslation, type TKey } from '@/i18n'
 
 /**
  * The four numbers a customer feels.
@@ -28,28 +29,43 @@ import type { Policy } from '@/types'
  * is invisible until nobody can book.
  */
 
+/**
+ * A validation message, as a dictionary key — see `services/service-form.ts`.
+ * Identity, so a reader following one from schema to screen sees the key at both
+ * ends.
+ */
+function key(k: TKey): string {
+  return k
+}
+
+/** One of those keys, back as prose, at render. */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
+}
+
 const SCHEMA = z.object({
   minLeadTimeHours: z.coerce
     .number<number>()
-    .int('Whole hours only')
-    .min(0, 'Between 0 and 168')
-    .max(168, 'Between 0 and 168'),
+    .int(key('settings.policy.wholeHours'))
+    .min(0, key('settings.policy.hoursRange'))
+    .max(168, key('settings.policy.hoursRange')),
   maxAdvanceDays: z.coerce
     .number<number>()
-    .int('Whole days only')
-    .min(1, 'Between 1 and 365')
-    .max(365, 'Between 1 and 365'),
+    .int(key('settings.policy.wholeDays'))
+    .min(1, key('settings.policy.daysRange'))
+    .max(365, key('settings.policy.daysRange')),
   cancellationCutoffHours: z.coerce
     .number<number>()
-    .int('Whole hours only')
-    .min(0, 'Between 0 and 168')
-    .max(168, 'Between 0 and 168'),
+    .int(key('settings.policy.wholeHours'))
+    .min(0, key('settings.policy.hoursRange'))
+    .max(168, key('settings.policy.hoursRange')),
   slotGranularityMinutes: z.coerce.number<number>().pipe(z.literal(SLOT_GRANULARITIES)),
 })
 
 type PolicyFormValues = z.input<typeof SCHEMA>
 
 export function PolicyForm({ policy }: { policy: Policy }) {
+  const { t } = useTranslation()
   const update = useUpdatePolicy()
 
   const form = useForm<PolicyFormValues, unknown, z.output<typeof SCHEMA>>({
@@ -84,7 +100,7 @@ export function PolicyForm({ policy }: { policy: Policy }) {
     update.mutate(values, {
       onSuccess: (saved) => {
         form.reset(saved)
-        toast.success('Your booking rules are saved.', { description: describePolicy(saved) })
+        toast.success(translate('settings.policy.saved'), { description: describePolicy(saved) })
       },
       onError: (error) => {
         reportFailure(error, {
@@ -102,7 +118,7 @@ export function PolicyForm({ policy }: { policy: Policy }) {
   return (
     <section aria-labelledby="booking-policy" className="mt-12">
       <h2 id="booking-policy" className="font-display text-foreground text-lg">
-        Booking rules
+        {t('settings.policy.heading')}
       </h2>
 
       <form noValidate onSubmit={form.handleSubmit(submit)} className="max-w-copy mt-4 grid gap-5">
@@ -110,9 +126,9 @@ export function PolicyForm({ policy }: { policy: Policy }) {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField
-            label="Minimum notice (hours)"
+            label={t('settings.policy.minLeadTime')}
             hint={POLICY_HINTS.minLeadTimeHours}
-            error={errors.minLeadTimeHours?.message}
+            error={message(errors.minLeadTimeHours?.message)}
           >
             {(control) => (
               <Input
@@ -126,9 +142,9 @@ export function PolicyForm({ policy }: { policy: Policy }) {
           </FormField>
 
           <FormField
-            label="Booking window (days)"
+            label={t('settings.policy.maxAdvance')}
             hint={POLICY_HINTS.maxAdvanceDays}
-            error={errors.maxAdvanceDays?.message}
+            error={message(errors.maxAdvanceDays?.message)}
           >
             {(control) => (
               <Input
@@ -142,9 +158,9 @@ export function PolicyForm({ policy }: { policy: Policy }) {
           </FormField>
 
           <FormField
-            label="Cancellation cutoff (hours)"
+            label={t('settings.policy.cutoff')}
             hint={POLICY_HINTS.cancellationCutoffHours}
-            error={errors.cancellationCutoffHours?.message}
+            error={message(errors.cancellationCutoffHours?.message)}
           >
             {(control) => (
               <Input
@@ -158,9 +174,9 @@ export function PolicyForm({ policy }: { policy: Policy }) {
           </FormField>
 
           <FormField
-            label="Slot step"
+            label={t('settings.policy.slotStep')}
             hint={POLICY_HINTS.slotGranularityMinutes}
-            error={errors.slotGranularityMinutes?.message}
+            error={message(errors.slotGranularityMinutes?.message)}
           >
             {(control) => (
               // A select over the enum. See this file's header: the API accepts
@@ -189,23 +205,18 @@ export function PolicyForm({ policy }: { policy: Policy }) {
               </p>
             </>
           ) : (
-            <p className="text-muted-foreground text-sm">
-              Fill in all four numbers to see what customers will be offered.
-            </p>
+            <p className="text-muted-foreground text-sm">{t('settings.policy.incomplete')}</p>
           )}
         </div>
 
         {/* Correct, and worth saying once: the API allows it and does not move
             anything, so a warning implying otherwise would be inventing a
             consequence. */}
-        <p className="text-muted-foreground text-xs">
-          Changing the slot step does not move appointments that are already booked. Some may sit
-          off the new grid, which is expected.
-        </p>
+        <p className="text-muted-foreground text-xs">{t('settings.policy.stepNote')}</p>
 
         <div className="flex justify-end">
           <Button type="submit" disabled={update.isPending || !form.formState.isDirty}>
-            {update.isPending ? 'Saving…' : 'Save booking rules'}
+            {update.isPending ? t('settings.policy.saving') : t('settings.policy.save')}
           </Button>
         </div>
       </form>

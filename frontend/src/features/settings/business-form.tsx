@@ -15,6 +15,7 @@ import { useUpdateBusiness } from '@/features/settings/settings-queries'
 import { TimezoneDialog, type TimezoneShift } from '@/features/settings/timezone-dialog'
 import { ZoneSuggestions } from '@/features/settings/zone-suggestions'
 import type { Business, BusinessRequest } from '@/types'
+import { translate, useTranslation, type TKey } from '@/i18n'
 
 /**
  * Name, timezone, currency and the deposit rule.
@@ -29,25 +30,46 @@ import type { Business, BusinessRequest } from '@/types'
  * customer does not get to change.
  */
 
+/**
+ * A validation message, as a dictionary key — see `services/service-form.ts`.
+ * Identity, so a reader following one from schema to screen sees the key at both
+ * ends.
+ */
+function key(k: TKey): string {
+  return k
+}
+
+/** One of those keys, back as prose, at render. */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
+}
+
 const SCHEMA = z.object({
-  name: z.string().trim().min(1, 'Enter a name').max(120, 'Keep it under 120 characters'),
-  timezone: z.string().trim().min(1, 'Enter a timezone').max(64),
+  // Keys, not sentences — see `services/service-form.ts`. `message()` below
+  // resolves them at render.
+  name: z
+    .string()
+    .trim()
+    .min(1, key('settings.business.nameRequired'))
+    .max(120, key('settings.business.nameTooLong')),
+  timezone: z.string().trim().min(1, key('settings.business.timezoneRequired')).max(64),
   currency: z
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-Z]{3}$/, 'Three letters, like EUR or GBP'),
+    .regex(/^[A-Z]{3}$/, key('settings.business.currencyShape')),
   depositRequired: z.boolean(),
   depositPercent: z.coerce
     .number<number>()
-    .int('Whole numbers only')
-    .min(0, 'Between 0 and 100')
-    .max(100, 'Between 0 and 100'),
+    .int(key('settings.business.wholeNumbers'))
+    .min(0, key('settings.business.percentRange'))
+    .max(100, key('settings.business.percentRange')),
 })
 
 type BusinessFormValues = z.input<typeof SCHEMA>
 
 export function BusinessForm({ business }: { business: Business }) {
+  const { t } = useTranslation()
   const update = useUpdateBusiness()
   const zoneListId = useId()
   const [shift, setShift] = useState<TimezoneShift | null>(null)
@@ -99,9 +121,11 @@ export function BusinessForm({ business }: { business: Business }) {
         setShift(null)
         form.reset({ ...values, currency: saved.currency, timezone: saved.timezone })
         toast.success(
-          confirmShift ? `The business is now on ${saved.timezone}.` : 'Your settings are saved.',
+          confirmShift
+            ? t('settings.business.movedTo', { zone: saved.timezone })
+            : t('settings.business.saved'),
           {
-            description: confirmShift ? 'Every screen is now drawn in the new zone.' : undefined,
+            description: confirmShift ? t('settings.business.movedNote') : undefined,
           },
         )
       },
@@ -134,7 +158,7 @@ export function BusinessForm({ business }: { business: Business }) {
   return (
     <section aria-labelledby="business-settings">
       <h2 id="business-settings" className="font-display text-foreground text-lg">
-        Business
+        {t('settings.business.heading')}
       </h2>
 
       <form
@@ -144,16 +168,13 @@ export function BusinessForm({ business }: { business: Business }) {
       >
         {alert ? <FormAlert {...alert} /> : null}
 
-        <FormField label="Name" error={errors.name?.message}>
+        <FormField label={t('settings.business.name')} error={message(errors.name?.message)}>
           {(control) => (
             <Input {...control} {...form.register('name')} autoComplete="organization" />
           )}
         </FormField>
 
-        <FormField
-          label="Booking page address"
-          hint="Permanent. Changing it would break every link already sent to a customer, so there is no way to."
-        >
+        <FormField label={t('settings.business.slug')} hint={t('settings.business.slugHint')}>
           {(control) => (
             <Input
               {...control}
@@ -166,8 +187,8 @@ export function BusinessForm({ business }: { business: Business }) {
         </FormField>
 
         <FormField
-          label="Timezone"
-          hint="Working hours are read in this zone. Changing it moves every future slot, and asks first."
+          label={t('settings.business.timezone')}
+          hint={t('settings.business.timezoneHint')}
           error={errors.timezone?.message}
         >
           {(control) => (
@@ -188,8 +209,8 @@ export function BusinessForm({ business }: { business: Business }) {
         </FormField>
 
         <FormField
-          label="Currency"
-          hint="ISO 4217, three letters. It is the unit of every price you have already set — changing it reinterprets them and converts nothing."
+          label={t('settings.business.currency')}
+          hint={t('settings.business.currencyHint')}
           error={errors.currency?.message}
         >
           {(control) => (
@@ -203,16 +224,16 @@ export function BusinessForm({ business }: { business: Business }) {
         </FormField>
 
         <fieldset className="border-rule grid gap-3 border-t pt-5">
-          <legend className="sr-only">Deposits</legend>
+          <legend className="sr-only">{t('settings.business.deposits')}</legend>
 
           <label className="flex items-center gap-2 text-sm">
             <Checkbox {...form.register('depositRequired')} />
-            Ask for a deposit when a customer books
+            {t('settings.business.askDeposit')}
           </label>
 
           <FormField
-            label="Deposit percentage"
-            hint="0 to 100."
+            label={t('settings.business.depositPercent')}
+            hint={t('settings.business.depositPercentHint')}
             error={errors.depositPercent?.message}
           >
             {(control) => (
@@ -231,21 +252,19 @@ export function BusinessForm({ business }: { business: Business }) {
               hypothetical on this deployment. */}
           {depositRequired && depositIsZero ? (
             <p className="border-warning/50 bg-warning-wash text-foreground rounded-sm border px-3 py-2 text-sm">
-              A percentage of zero means <strong className="font-medium">no deposit</strong>,
-              whatever the checkbox says. That is what the booking page reports too.
+              <strong className="font-medium">{t('settings.business.zeroLead')}</strong>{' '}
+              {t('settings.business.zeroBody')}
             </p>
           ) : null}
 
-          <p className="text-muted-foreground text-xs">
-            Deposits are taken only when payments are configured for this deployment. This setting
-            is stored either way, and the booking response is what decides whether a customer is
-            asked for money.
-          </p>
+          <p className="text-muted-foreground text-xs">{t('settings.business.paymentsNote')}</p>
         </fieldset>
 
         <div className="flex justify-end">
           <Button type="submit" disabled={update.isPending || !form.formState.isDirty}>
-            {update.isPending && !shift ? 'Saving…' : 'Save business settings'}
+            {update.isPending && !shift
+              ? t('settings.business.saving')
+              : t('settings.business.save')}
           </Button>
         </div>
       </form>

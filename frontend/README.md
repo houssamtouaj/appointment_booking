@@ -373,11 +373,20 @@ form can say what "wrong" means for a field it owns, and anything unpredicted ke
 server's sentence — a sentence in the wrong language still names the problem, where a
 blank does not.
 
-**The admin surface is Phase 2 and is not done.** Dashboard, calendar, services, team,
-hours and settings still write English. The `TRANSLATED` list in
-`src/i18n/no-hardcoded-strings.test.ts` is the honest record of how far this reaches;
-adding a folder to it is how a Phase 2 task declares itself finished. A French customer is
-the case that matters, and an owner reading their own admin in English is normal.
+**The admin surface is done too.** Dashboard, calendar, services, team, hours and
+settings all read from the dictionary, and `no-hardcoded-strings.test.ts` now walks the
+whole of `src/` with no per-folder allowances — the one file it skips is the dev-only
+session debug panel, which Vite drops from a production build, and it says so in a
+comment.
+
+Finishing the admin screens meant finishing the `Intl` work as well, because that is where
+the counting lives. Every `${n} ${n === 1 ? 'x' : 'xs'}` is now a plural key — French counts
+0 with the singular, so the ternary was wrong in both languages the moment there were two.
+`weekly-grid.tsx` was agreeing a _verb_ that way (`has`/`have`). `timezone-dialog.tsx` was
+agreeing two things at once. `hours-dialogs.tsx` joined a list with `' and '`, which is now
+`Intl.ListFormat`. And `booking-list.tsx` abbreviated a weekday with `.slice(0, 3)`, which
+is an English abbreviation and not a general one — `formatWeekdayShort` asks `Intl` for the
+language's own, and French answers `lun.` with the stop.
 
 ## Not built yet
 

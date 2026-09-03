@@ -155,8 +155,11 @@ order (`QueryClientProvider` → `AuthProvider` → router) is the one order tha
   `lib/time.ts` and `lib/money.ts` default their `locale` to that store rather than to the browser
   (F23), so no call site passes one. Never build a sentence from two keys, and never wrap prose
   around a `<span>` for emphasis — French word order is not English word order, so one key with
-  `{placeholders}` is the only shape that translates. Phase 2 (the admin features) is not done: the
-  `TRANSLATED` list in the scan is what says how far the wave has reached.
+  `{placeholders}` is the only shape that translates. **The scan is total**: it walks all of `src/`
+  with no per-folder allowances, and the one file it skips (`session-debug-panel.tsx`, which Vite
+  drops from a production build) has to earn that in a comment. Anything that counts — a plural, a
+  list's conjunction, an abbreviated weekday — goes through `Intl`, not through a `=== 1` ternary
+  or a `.slice(0, 3)`: those only know what English looks like.
 
 ## Routing and access
 

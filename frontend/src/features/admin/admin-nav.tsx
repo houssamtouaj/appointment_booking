@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { navItemsFor } from '@/features/admin/nav'
 import { cn } from '@/lib/utils'
 import type { MeResponse } from '@/types'
+import { useTranslation } from '@/i18n'
 
 type AdminNavProps = {
   user: MeResponse
@@ -26,8 +27,9 @@ type AdminNavProps = {
  * exactly two things: a selected slot and an active nav row.
  */
 export function AdminNav({ user, onNavigate }: AdminNavProps) {
+  const { t } = useTranslation()
   return (
-    <nav aria-label="Sections" className="px-3 py-4">
+    <nav aria-label={t('nav.sections')} className="px-3 py-4">
       <ul className="space-y-0.5">
         {navItemsFor(user).map(({ to, label, icon: Icon, end }) => (
           <li key={to}>
@@ -54,7 +56,7 @@ export function AdminNav({ user, onNavigate }: AdminNavProps) {
                     )}
                   />
                   <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{label}</span>
+                  <span className="truncate">{t(label)}</span>
                 </>
               )}
             </NavLink>

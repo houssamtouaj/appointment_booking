@@ -4,25 +4,15 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 /**
- * The translated surface, and nothing else.
+ * The whole of `src/`, which is where wave 10 was aiming.
  *
- * Deliberately a list rather than "everything under src/": Phase 2 adds the
- * admin features to it, and until then a scan over the whole tree would be a
- * hundred failures nobody is going to act on this week. Adding a folder here is
- * how Phase 2's tasks declare themselves finished.
+ * Phase 1 shipped this as a per-folder list because the admin features were
+ * still English and a total scan would have been a hundred failures nobody was
+ * going to act on that week. Phase 2 finished them, so the list is gone: there
+ * is no folder left that gets to opt out, and adding one would now be a decision
+ * somebody has to argue for rather than a line nobody notices.
  */
-const TRANSLATED = [
-  'src/components',
-  'src/layouts',
-  'src/pages',
-  'src/features/auth',
-  'src/features/booking',
-  'src/features/dashboard',
-  'src/features/calendar',
-  'src/features/services',
-  'src/features/staff',
-  'src/features/hours',
-]
+const TRANSLATED = ['src']
 
 /**
  * Props whose value is read by a person. `label`, `hint` and `title` are the

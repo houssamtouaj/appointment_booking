@@ -742,6 +742,122 @@ export const en = {
       timesDiffer: 'Start and end must differ',
     },
   },
+  nav: {
+    sections: 'Sections',
+    dashboard: 'Dashboard',
+    calendar: 'Calendar',
+    services: 'Services',
+    team: 'Team',
+    settings: 'Settings',
+    workingHours: 'Working hours',
+    bookingPage: 'Booking page',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    /** `{name}` is the signed-in person's own name. */
+    account: 'Account: {name}',
+    viewBookingPage: 'View booking page',
+    theme: 'Theme',
+    themeSystem: 'Match system',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+  },
+  settings: {
+    title: 'Settings',
+    description:
+      'What the business is called, the clock it runs on, and the rules every customer books against.',
+    loadingBusiness: 'Loading your business settings',
+    loadingPolicy: 'Loading your booking rules',
+    businessErrorTitle: 'Your business settings could not be loaded',
+    policyErrorTitle: 'Your booking rules could not be loaded',
+    business: {
+      heading: 'Business',
+      name: 'Name',
+      slug: 'Booking page address',
+      slugHint:
+        'Permanent. Changing it would break every link already sent to a customer, so there is no way to.',
+      timezone: 'Timezone',
+      timezoneHint:
+        'Working hours are read in this zone. Changing it moves every future slot, and asks first.',
+      currency: 'Currency',
+      currencyHint:
+        'ISO 4217, three letters. It is the unit of every price you have already set — changing it reinterprets them and converts nothing.',
+      deposits: 'Deposits',
+      askDeposit: 'Ask for a deposit when a customer books',
+      depositPercent: 'Deposit percentage',
+      depositPercentHint: '0 to 100.',
+      /** Two sentences so the bolded half survives translation as its own key. */
+      zeroLead: 'A percentage of zero means no deposit,',
+      zeroBody: 'whatever the checkbox says. That is what the booking page reports too.',
+      paymentsNote:
+        'Deposits are taken only when payments are configured for this deployment. This setting is stored either way, and the booking response is what decides whether a customer is asked for money.',
+      save: 'Save business settings',
+      saving: 'Saving…',
+      saved: 'Your settings are saved.',
+      /** `{zone}` is an IANA zone id and is not prose. */
+      movedTo: 'The business is now on {zone}.',
+      movedNote: 'Every screen is now drawn in the new zone.',
+      /** The Zod messages, as keys — see `services/service-form.ts` for why. */
+      nameRequired: 'Enter a name',
+      nameTooLong: 'Keep it under 120 characters',
+      timezoneRequired: 'Enter a timezone',
+      currencyShape: 'Three letters, like EUR or GBP',
+      wholeNumbers: 'Whole numbers only',
+      percentRange: 'Between 0 and 100',
+    },
+    policy: {
+      heading: 'Booking rules',
+      minLeadTime: 'Minimum notice (hours)',
+      minLeadTimeHint:
+        'The soonest someone can book. 2 hours means nothing today after 4pm for a 6pm slot.',
+      maxAdvance: 'Booking window (days)',
+      maxAdvanceHint: 'How far ahead the calendar is open.',
+      cutoff: 'Cancellation cutoff (hours)',
+      cutoffHint: 'After this, a customer can no longer cancel themselves.',
+      slotStep: 'Slot step',
+      slotStepHint: 'The step between offered start times.',
+      incomplete: 'Fill in all four numbers to see what customers will be offered.',
+      stepNote:
+        'Changing the slot step does not move appointments that are already booked. Some may sit off the new grid, which is expected.',
+      save: 'Save booking rules',
+      saving: 'Saving…',
+      saved: 'Your booking rules are saved.',
+      wholeHours: 'Whole hours only',
+      wholeDays: 'Whole days only',
+      hoursRange: 'Between 0 and 168',
+      daysRange: 'Between 1 and 365',
+      /**
+       * The four numbers said back as one sentence, so an owner can recognise it
+       * as wrong. `{lead}`, `{window}` and `{step}` are the three phrases below.
+       */
+      summary: 'Customers can book {lead} up to {window} out, in {step}-minute steps.',
+      leadImmediate: 'right up to the start time',
+      leadAhead: 'from {hours} ahead',
+      hourCount: { one: '{count} hour', other: '{count} hours' },
+      dayCount: { one: '{count} day', other: '{count} days' },
+      cutoffImmediate: 'They can cancel themselves right up to the start time.',
+      cutoffBefore:
+        'They can cancel themselves until {hours} before the appointment; after that, only you can.',
+    },
+    timezone: {
+      /** `{to}` and `{from}` are IANA zone ids and are not prose. */
+      title: 'Move the business to {to}?',
+      body: 'Every future slot moves with it. Working hours are wall-clock times read in the business timezone, so “we open at nine” will mean nine o’clock in {to} instead of nine o’clock in {from}.',
+      now: 'Now',
+      after: 'After saving',
+      /** `{bookings}` is one of the three sentences below. */
+      footnote:
+        '{bookings} Nothing is rescheduled and no appointment is moved — each one keeps its wall-clock time in the new zone.',
+      bookingsUnknown: 'Appointments already in the calendar are affected.',
+      bookingsNone: 'There are no future appointments in the calendar right now.',
+      bookingsCount: {
+        one: '{count} future appointment is in the calendar.',
+        other: '{count} future appointments are in the calendar.',
+      },
+      keep: 'Keep {from}',
+      move: 'Move to {to}',
+      saving: 'Saving…',
+    },
+  },
   components: {
     copyText: {
       copy: 'Copy',

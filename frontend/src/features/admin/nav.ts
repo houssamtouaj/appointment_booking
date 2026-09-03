@@ -1,6 +1,7 @@
 import { CalendarDays, Clock, Gauge, Settings2, Tag, Users, type LucideIcon } from 'lucide-react'
 
 import type { MeResponse } from '@/types'
+import type { TKey } from '@/i18n'
 
 /**
  * The nav matrix (F19), as data rather than as five conditionals in the markup.
@@ -37,7 +38,7 @@ import type { MeResponse } from '@/types'
  */
 export type NavItem = {
   to: string
-  label: string
+  label: TKey
   icon: LucideIcon
   /**
    * Exact-match the path. Only `/dashboard` needs it today; it is on the type so
@@ -49,16 +50,16 @@ export type NavItem = {
 
 export function navItemsFor(user: MeResponse): NavItem[] {
   const shared: NavItem[] = [
-    { to: '/dashboard', label: 'Dashboard', icon: Gauge, end: true },
-    { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+    { to: '/dashboard', label: 'nav.dashboard', icon: Gauge, end: true },
+    { to: '/calendar', label: 'nav.calendar', icon: CalendarDays },
   ]
 
   if (user.role === 'OWNER') {
     return [
       ...shared,
-      { to: '/services', label: 'Services', icon: Tag },
-      { to: '/team', label: 'Team', icon: Users },
-      { to: '/settings', label: 'Settings', icon: Settings2 },
+      { to: '/services', label: 'nav.services', icon: Tag },
+      { to: '/team', label: 'nav.team', icon: Users },
+      { to: '/settings', label: 'nav.settings', icon: Settings2 },
     ]
   }
 
@@ -68,6 +69,6 @@ export function navItemsFor(user: MeResponse): NavItem[] {
     // scopes its figures by `tenant.userId()` and `StaffResponse.id` is the same
     // column — so there is no second identifier to look up and no request to
     // make before the nav can be rendered.
-    { to: `/team/${user.id}/hours`, label: 'Working hours', icon: Clock },
+    { to: `/team/${user.id}/hours`, label: 'nav.workingHours', icon: Clock },
   ]
 }

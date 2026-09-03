@@ -32,7 +32,7 @@ export function AccountMenu({ user }: { user: MeResponse }) {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
         className="text-foreground hover:bg-accent flex items-center gap-2 rounded-sm py-1 pr-1.5 pl-1 text-sm transition-colors"
-        aria-label={`Account: ${user.fullName}`}
+        aria-label={t('nav.account', { name: user.fullName })}
       >
         <Monogram fullName={user.fullName} size="md" />
         <span className="hidden max-w-[12ch] truncate sm:inline">{user.fullName}</span>
@@ -49,7 +49,7 @@ export function AccountMenu({ user }: { user: MeResponse }) {
             <p className="text-foreground truncate text-sm font-medium">{user.fullName}</p>
             <p className="text-muted-foreground truncate text-xs">{user.email}</p>
             <p className="text-muted-foreground text-2xs tracking-eyebrow mt-1.5 font-mono uppercase">
-              {user.role === 'OWNER' ? 'Owner' : 'Staff'} · {user.business.name}
+              {t(user.role === 'OWNER' ? 'team.owner' : 'team.staff')} · {user.business.name}
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export function AccountMenu({ user }: { user: MeResponse }) {
           <Separator />
 
           <p className="text-muted-foreground text-2xs tracking-eyebrow px-2.5 pt-1.5 pb-1 font-mono uppercase">
-            Theme
+            {t('nav.theme')}
           </p>
           <DropdownMenu.RadioGroup
             value={theme}
@@ -96,7 +96,7 @@ export function AccountMenu({ user }: { user: MeResponse }) {
                 className="text-foreground data-[highlighted]:bg-accent flex cursor-default items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-sm outline-none"
               >
                 <Icon className="text-muted-foreground size-4" aria-hidden="true" />
-                {label}
+                {t(label)}
                 <DropdownMenu.ItemIndicator className="ml-auto">
                   <Check className="text-primary size-4" aria-hidden="true" />
                 </DropdownMenu.ItemIndicator>
@@ -112,7 +112,7 @@ export function AccountMenu({ user }: { user: MeResponse }) {
               className="text-foreground data-[highlighted]:bg-accent flex cursor-default items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-sm outline-none"
             >
               <ExternalLink className="text-muted-foreground size-4" aria-hidden="true" />
-              View booking page
+              {t('nav.viewBookingPage')}
             </Link>
           </DropdownMenu.Item>
 
@@ -130,7 +130,7 @@ export function AccountMenu({ user }: { user: MeResponse }) {
             className="text-foreground data-[highlighted]:bg-accent flex cursor-default items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-sm outline-none data-[disabled]:opacity-50"
           >
             <LogOut className="text-muted-foreground size-4" aria-hidden="true" />
-            {leaving ? 'Signing out…' : 'Sign out'}
+            {leaving ? t('common.signingOut') : t('common.signOut')}
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
@@ -153,9 +153,9 @@ const LANGUAGES = [
 ] as const
 
 const THEMES = [
-  { value: 'system', label: 'Match system', icon: Monitor },
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'nav.themeSystem', icon: Monitor },
+  { value: 'light', label: 'nav.themeLight', icon: Sun },
+  { value: 'dark', label: 'nav.themeDark', icon: Moon },
 ] as const
 
 function Separator() {
