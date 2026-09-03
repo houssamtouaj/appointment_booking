@@ -7,6 +7,7 @@ import { isApiError, problemMember } from '@/api/error'
 import { describeError, referenceNote } from '@/api/error-copy'
 import { statusWord } from '@/features/calendar/status-style'
 import type { BookingStatus, StaffTransition } from '@/types'
+import { translate } from '@/i18n'
 
 /**
  * `PATCH /api/bookings/{id}/status`, applied before the server answers (F14).
@@ -106,7 +107,10 @@ function describeRefusal(error: unknown, attempted: StaffTransition): string {
   const to = problemMember(error, 'to')
   const target = typeof to === 'string' ? to : attempted
 
-  return `A ${statusWord(from)} booking cannot be marked ${statusWord(target)}.`
+  return translate('calendar.transition.refused', {
+    from: statusWord(from),
+    to: statusWord(target),
+  })
 }
 
 export type StatusChange = { id: string; status: StaffTransition }
@@ -151,7 +155,7 @@ export function useStatusMutation() {
       // anything else that moved with the status, and the guess covered one
       // field.
       client.setQueryData(bookingKeys.detail(booking.id), booking)
-      toast.success(`Marked ${statusWord(booking.status)}.`)
+      toast.success(translate('calendar.transition.marked', { status: statusWord(booking.status) }))
     },
 
     /**
@@ -199,10 +203,10 @@ export function transitionBlockedReason(
   const at = now.getTime()
 
   if (status === 'COMPLETED' && at < Date.parse(booking.endsAt)) {
-    return 'An appointment can be marked completed once it has finished.'
+    return translate('calendar.transition.tooEarlyCompleted')
   }
   if (status === 'NO_SHOW' && at < Date.parse(booking.startsAt)) {
-    return 'A no-show can only be recorded once the appointment was due to start.'
+    return translate('calendar.transition.tooEarlyNoShow')
   }
   return undefined
 }

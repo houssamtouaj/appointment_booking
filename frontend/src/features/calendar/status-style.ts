@@ -1,6 +1,7 @@
 import { Check, CircleSlash, Hourglass, UserX, type LucideIcon } from 'lucide-react'
 
 import type { BookingStatus } from '@/types'
+import { currentLocale, translate, type TKey } from '@/i18n'
 
 /**
  * What each status looks like, and why none of it is only a colour.
@@ -32,7 +33,7 @@ import type { BookingStatus } from '@/types'
 
 export type StatusStyle = {
   /** Sentence case, for prose and for a booking's accessible name. */
-  label: string
+  label: TKey
   /** The tile's own classes: fill, edge and text treatment. */
   tile: string
   /** The 3px spine down the left of a tile, which is the fastest of the signals. */
@@ -40,54 +41,54 @@ export type StatusStyle = {
   /** Absent for `CONFIRMED` — see the note above. */
   icon?: LucideIcon
   /** One line, for the sheet: what this status means about the appointment. */
-  meaning: string
+  meaning: TKey
 }
 
 export const STATUS_STYLES: Record<BookingStatus, StatusStyle> = {
   CONFIRMED: {
-    label: 'Confirmed',
+    label: 'calendar.status.confirmed',
     tile: 'border-success/45 bg-success-wash text-foreground',
     spine: 'bg-success',
-    meaning: 'Booked and paid for as far as it needs to be. It holds its slot.',
+    meaning: 'calendar.status.confirmedMeaning',
   },
   PENDING: {
-    label: 'Awaiting deposit',
+    label: 'calendar.status.pending',
     // Dashed: the booking is not settled, and the edge says so before the icon
     // is read. It still holds the slot, so the fill is tinted like a confirmed
     // one rather than hollow.
     tile: 'border-dashed border-warning/60 bg-warning-wash text-foreground',
     spine: 'bg-warning',
     icon: Hourglass,
-    meaning: 'A deposit is in flight. It holds its slot until the hold expires.',
+    meaning: 'calendar.status.pendingMeaning',
   },
   COMPLETED: {
-    label: 'Completed',
+    label: 'calendar.status.completed',
     // Flat grey and dimmed: done, still worth seeing, no longer worth reading
     // first. This is the only status whose text is quieted without being struck.
     tile: 'border-border bg-muted text-muted-foreground',
     spine: 'bg-muted-foreground/50',
     icon: Check,
-    meaning: 'The appointment happened. It counts towards revenue earned.',
+    meaning: 'calendar.status.completedMeaning',
   },
   CANCELLED: {
     // Hollow and struck through. The slot is back on the market, and the tile
     // should read as a line drawn through an entry in the book rather than as
     // an appointment.
-    label: 'Cancelled',
+    label: 'calendar.status.cancelled',
     tile: 'border-dashed border-border bg-transparent text-muted-foreground line-through',
     spine: 'bg-border',
     icon: CircleSlash,
-    meaning: 'Cancelled. The slot went back to the calendar immediately.',
+    meaning: 'calendar.status.cancelledMeaning',
   },
   NO_SHOW: {
     // Outlined and hollow, but not struck: the appointment was not cancelled,
     // it was missed, and those are different facts about the customer. A dotted
     // edge separates it from `CANCELLED` in greyscale.
-    label: 'No-show',
+    label: 'calendar.status.noShow',
     tile: 'border-dotted border-danger/70 bg-transparent text-foreground',
     spine: 'bg-danger',
     icon: UserX,
-    meaning: 'The customer did not arrive. It counts towards the no-show rate.',
+    meaning: 'calendar.status.noShowMeaning',
   },
 }
 
@@ -108,5 +109,13 @@ export function styleOf(status: BookingStatus): StatusStyle {
  */
 export function statusWord(status: string): string {
   const known = STATUS_STYLES[status as BookingStatus]
-  return known ? known.label.toLowerCase() : status.toLowerCase().replace(/_/g, ' ')
+  // Lower-cased for English, where a status word mid-sentence is lower case.
+  // French capitalises the same words no more than English does, and `Intl` has
+  // no opinion about it — `toLocaleLowerCase` with the reader's locale is still
+  // the right call, because Turkish dotted I is a real case difference and this
+  // costs nothing.
+  if (known) return translate(known.label).toLocaleLowerCase(currentLocale())
+  // A status this bundle predates. The wire value, made readable, and not
+  // translated because there is nothing to translate it to.
+  return status.toLowerCase().replace(/_/g, ' ')
 }

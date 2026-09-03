@@ -14,6 +14,7 @@ import { serviceNameIn, type Lookups } from '@/hooks/use-lookups'
 import { clockOf, dayKeyOf, formatDayHeading } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { BookingDetail } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * One booking, in full, in a panel beside the calendar.
@@ -46,6 +47,7 @@ export function BookingSheet({
   currency,
   onClose,
 }: BookingSheetProps) {
+  const { t } = useTranslation()
   const detail = useBookingDetail(bookingId)
   const transition = useStatusMutation()
   const booking = detail.data
@@ -90,7 +92,7 @@ export function BookingSheet({
           <header className="border-rule flex items-start justify-between gap-3 border-b px-5 py-4">
             <div className="min-w-0">
               <Dialog.Title className="font-display text-display-sm text-foreground truncate leading-tight">
-                {booking ? booking.guest.name : 'Appointment'}
+                {booking ? booking.guest.name : t('calendar.sheet.fallbackTitle')}
               </Dialog.Title>
               {/* Radix warns without a description, and the honest one is what
                   this booking *is* — service, day and time — rather than a
@@ -100,12 +102,12 @@ export function BookingSheet({
                   ? `${serviceNameIn(lookups, booking.serviceId)} · ${formatDayHeading(
                       dayKeyOf(booking.startsAt, timeZone),
                     )} at ${clockOf(booking.startsAt, timeZone)}`
-                  : 'Loading this appointment’s details.'}
+                  : t('calendar.sheet.loading')}
               </Dialog.Description>
             </div>
 
             <Dialog.Close asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Close">
+              <Button variant="ghost" size="icon-sm" aria-label={t('components.modal.close')}>
                 <X aria-hidden="true" />
               </Button>
             </Dialog.Close>
@@ -114,7 +116,7 @@ export function BookingSheet({
           <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
             {detail.error ? (
               <ErrorState
-                title="This appointment could not be loaded"
+                title={t('calendar.sheet.errorTitle')}
                 description={describeError(detail.error)}
                 requestId={requestIdOf(detail.error)}
                 onRetry={() => void detail.refetch()}
@@ -150,6 +152,7 @@ function SheetActions({
   booking: BookingDetail
   transition: ReturnType<typeof useStatusMutation>
 }) {
+  const { t } = useTranslation()
   const blocked = STAFF_TRANSITIONS.map((target) => ({
     target,
     reason: transitionBlockedReason(target, booking),
@@ -175,7 +178,7 @@ function SheetActions({
             title={reason}
             onClick={() => transition.mutate({ id: booking.id, status: target })}
           >
-            {styleOf(target).label}
+            {t(styleOf(target).label)}
           </Button>
         ))}
       </div>
@@ -189,10 +192,11 @@ function SheetActions({
 }
 
 function SheetSkeleton() {
+  const { t } = useTranslation()
   return (
     <div className="space-y-4">
       <span className="sr-only" role="status">
-        Loading this appointment
+        {t('calendar.loadingAppointment')}
       </span>
       {Array.from({ length: 5 }, (_, index) => (
         <div key={index}>

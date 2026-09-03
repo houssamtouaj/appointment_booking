@@ -27,6 +27,7 @@ import { useLookups } from '@/hooks/use-lookups'
 import { useMediaQuery, WEEK_GRID_MIN_WIDTH } from '@/hooks/use-media-query'
 import { dayKeyOf, daysOfWeek, todayIn, zoneCity } from '@/lib/time'
 import type { MeResponse } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * Screen 6: the week a business actually works.
@@ -61,6 +62,7 @@ export function CalendarPage() {
 const LIST_PAGE_SIZE = 25
 
 function Calendar({ user }: { user: MeResponse }) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const timeZone = user.business.timezone
 
@@ -138,7 +140,7 @@ function Calendar({ user }: { user: MeResponse }) {
     if (lookups.error) {
       return (
         <ErrorState
-          title="The calendar could not resolve its names"
+          title={t('calendar.lookupsErrorTitle')}
           description={describeError(lookups.error)}
           requestId={requestIdOf(lookups.error)}
           onRetry={() => void queryClient.invalidateQueries({ queryKey: referenceKeys.all })}
@@ -156,8 +158,8 @@ function Calendar({ user }: { user: MeResponse }) {
           // retry that would refuse identically.
           title={
             failure instanceof WeekTooLargeError
-              ? 'This week has more appointments than the calendar can show'
-              : 'This week could not be loaded'
+              ? t('calendar.tooManyTitle')
+              : t('calendar.weekErrorTitle')
           }
           description={
             failure instanceof WeekTooLargeError ? failure.message : describeError(failure)
@@ -246,8 +248,8 @@ function Calendar({ user }: { user: MeResponse }) {
   return (
     <Container className="pb-12">
       <PageHeader
-        eyebrow="Admin"
-        title="Calendar"
+        eyebrow={t('admin.eyebrow')}
+        title={t('calendar.title')}
         description={`Every appointment at ${user.business.name}, in ${zoneCity(timeZone)} time.`}
         actions={
           <CalendarToolbar

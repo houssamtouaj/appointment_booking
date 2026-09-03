@@ -3,6 +3,7 @@ import type { CalendarParams } from '@/features/calendar/calendar-params'
 import { STATUS_STYLES } from '@/features/calendar/status-style'
 import type { Lookups } from '@/hooks/use-lookups'
 import type { Staff } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * Colleague and status, both in the URL so a filtered week is a link.
@@ -19,6 +20,7 @@ import type { Staff } from '@/types'
  * to answer the question those filters exist for.
  */
 export function CalendarFilters({ params, lookups }: { params: CalendarParams; lookups: Lookups }) {
+  const { t } = useTranslation()
   const staff = [...lookups.staffById.values()].sort((a: Staff, b: Staff) =>
     a.fullName.localeCompare(b.fullName),
   )
@@ -26,7 +28,7 @@ export function CalendarFilters({ params, lookups }: { params: CalendarParams; l
   return (
     <div className="flex items-center gap-2">
       <label className="sr-only" htmlFor="calendar-staff">
-        Filter by colleague
+        {t('calendar.filters.byColleague')}
       </label>
       <select
         id="calendar-staff"
@@ -36,7 +38,7 @@ export function CalendarFilters({ params, lookups }: { params: CalendarParams; l
         }
         className="border-input bg-card text-foreground h-8 rounded-sm border px-2 text-xs"
       >
-        <option value="">Everyone</option>
+        <option value="">{t('calendar.filters.everyone')}</option>
         {staff.map((person) => (
           <option key={person.id} value={person.id}>
             {person.fullName}
@@ -45,7 +47,7 @@ export function CalendarFilters({ params, lookups }: { params: CalendarParams; l
       </select>
 
       <label className="sr-only" htmlFor="calendar-status">
-        Filter by status
+        {t('calendar.filters.byStatus')}
       </label>
       <select
         id="calendar-status"
@@ -62,10 +64,10 @@ export function CalendarFilters({ params, lookups }: { params: CalendarParams; l
         }
         className="border-input bg-card text-foreground h-8 rounded-sm border px-2 text-xs"
       >
-        <option value="">Any status</option>
+        <option value="">{t('calendar.filters.anyStatus')}</option>
         {bookingStatusSchema.options.map((status) => (
           <option key={status} value={status}>
-            {STATUS_STYLES[status].label}
+            {t(STATUS_STYLES[status].label)}
           </option>
         ))}
       </select>

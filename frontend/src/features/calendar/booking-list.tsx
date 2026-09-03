@@ -2,9 +2,10 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { styleOf } from '@/features/calendar/status-style'
 import { serviceNameIn, staffNameIn, type Lookups } from '@/hooks/use-lookups'
-import { clockOf, dayKeyOf, formatDayShort, formatWeekday, weekdayOf } from '@/lib/time'
+import { clockOf, dayKeyOf, formatDayShort, formatWeekdayShort, weekdayOf } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { BookingPage } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * The week as rows — for **finding** a booking rather than reading a day.
@@ -39,6 +40,8 @@ export function BookingList({
   selectedId,
   onOpen,
 }: BookingListProps) {
+  const { t } = useTranslation()
+
   if (!page) return <ListSkeleton />
 
   return (
@@ -71,7 +74,7 @@ export function BookingList({
 
                 <span className="text-muted-foreground w-16 shrink-0 font-mono text-xs">
                   <span className="block">
-                    {formatWeekday(weekdayOf(day)).slice(0, 3)} {formatDayShort(day)}
+                    {formatWeekdayShort(weekdayOf(day))} {formatDayShort(day)}
                   </span>
                   <span className="text-foreground block text-sm">
                     {clockOf(booking.startsAt, timeZone)}
@@ -98,7 +101,7 @@ export function BookingList({
                     for, and a colour cannot be searched for by eye in greyscale. */}
                 <span className="text-muted-foreground hidden shrink-0 items-center gap-1 text-xs sm:flex">
                   {Icon ? <Icon aria-hidden="true" className="size-3" /> : null}
-                  {style.label}
+                  {t(style.label)}
                 </span>
               </button>
             </li>
@@ -158,10 +161,11 @@ function Pager({
 }
 
 function ListSkeleton() {
+  const { t } = useTranslation()
   return (
     <div className="border-border bg-card overflow-hidden rounded-md border">
       <span className="sr-only" role="status">
-        Loading this week’s appointments
+        {t('calendar.loadingWeek')}
       </span>
       {Array.from({ length: 8 }, (_, index) => (
         <div

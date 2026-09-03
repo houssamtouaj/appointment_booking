@@ -7,6 +7,7 @@ import { VIEWS, type CalendarParams, type CalendarView } from '@/features/calend
 import type { Lookups } from '@/hooks/use-lookups'
 import { addDays, formatDayHeading, formatRange, weekOf } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { useTranslation, type TKey } from '@/i18n'
 
 /**
  * What is on screen, and how to change it — all of it writing to the URL.
@@ -18,10 +19,10 @@ import { cn } from '@/lib/utils'
  * try first and are surprised not to get.
  */
 
-const VIEW_LABEL: Record<CalendarView, string> = {
-  week: 'Week',
-  day: 'Day',
-  list: 'List',
+const VIEW_LABEL: Record<CalendarView, TKey> = {
+  week: 'calendar.view.week',
+  day: 'calendar.view.day',
+  list: 'calendar.view.list',
 }
 
 type ToolbarProps = {
@@ -63,6 +64,7 @@ export function CalendarToolbar({ params, view, lookups, weekUnavailable }: Tool
  * face so the digits do not jump as the week changes underneath them.
  */
 function StepControl({ params, view }: { params: CalendarParams; view: CalendarView }) {
+  const { t } = useTranslation()
   // The *effective* view, not the chosen one. A phone showing the day grid under
   // a URL that still says `view=week` must still step by a day.
   const byDay = view === 'day'
@@ -73,14 +75,14 @@ function StepControl({ params, view }: { params: CalendarParams; view: CalendarV
         : weekOf(addDays(params.week.from, direction * 7)).from,
     )
 
-  const unit = byDay ? 'day' : 'week'
+  const unit = t(byDay ? 'calendar.unitDay' : 'calendar.unitWeek')
 
   return (
     <div className="border-border bg-card flex items-center rounded-sm border">
       <Button
         variant="ghost"
         size="icon-sm"
-        aria-label={`Previous ${unit}`}
+        aria-label={t('calendar.previous', { unit })}
         onClick={() => step(-1)}
       >
         <ChevronLeft aria-hidden="true" />
@@ -96,7 +98,12 @@ function StepControl({ params, view }: { params: CalendarParams; view: CalendarV
         {byDay ? formatDayHeading(params.date) : formatRange(params.week)}
       </p>
 
-      <Button variant="ghost" size="icon-sm" aria-label={`Next ${unit}`} onClick={() => step(1)}>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t('calendar.next', { unit })}
+        onClick={() => step(1)}
+      >
         <ChevronRight aria-hidden="true" />
       </Button>
     </div>
@@ -140,6 +147,7 @@ function ViewSwitch({
   params: CalendarParams
   weekUnavailable: boolean
 }) {
+  const { t } = useTranslation()
   const group = useRef<HTMLDivElement>(null)
   const available = VIEWS.filter((view) => !(view === 'week' && weekUnavailable))
   // The single tab stop, and it is simply the checked option now: every button
@@ -163,7 +171,7 @@ function ViewSwitch({
       <div
         ref={group}
         role="radiogroup"
-        aria-label="Calendar view"
+        aria-label={t('calendar.view.label')}
         className="border-border bg-card flex items-center rounded-sm border p-0.5"
       >
         {VIEWS.map((view) => {
@@ -180,7 +188,7 @@ function ViewSwitch({
               aria-disabled={disabled || undefined}
               aria-describedby={disabled ? REASON_ID : undefined}
               tabIndex={view === stop ? 0 : -1}
-              title={disabled ? WEEK_UNAVAILABLE_REASON : undefined}
+              title={disabled ? t(WEEK_UNAVAILABLE_REASON) : undefined}
               // Ignored rather than prevented by the platform: an `aria-disabled`
               // control is a real button, so the refusal has to be here.
               onClick={() => {
@@ -206,7 +214,7 @@ function ViewSwitch({
                 disabled && 'cursor-not-allowed opacity-40',
               )}
             >
-              {VIEW_LABEL[view]}
+              {t(VIEW_LABEL[view])}
             </button>
           )
         })}
@@ -217,7 +225,7 @@ function ViewSwitch({
           thing that context has no way to show. */}
       {weekUnavailable ? (
         <p id={REASON_ID} className="text-muted-foreground text-2xs">
-          {WEEK_UNAVAILABLE_REASON}
+          {t(WEEK_UNAVAILABLE_REASON)}
         </p>
       ) : null}
     </div>
@@ -225,5 +233,5 @@ function ViewSwitch({
 }
 
 /** One sentence, in the tooltip, in the text, and in `aria-describedby`. */
-const WEEK_UNAVAILABLE_REASON = 'The week grid needs a wider screen'
+const WEEK_UNAVAILABLE_REASON: TKey = 'calendar.view.weekUnavailable'
 const REASON_ID = 'calendar-week-unavailable'

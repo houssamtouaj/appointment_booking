@@ -5,6 +5,7 @@ import { formatMoney } from '@/lib/money'
 import { clockOf, dayKeyOf, formatDayHeading } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { BookingDetail } from '@/types'
+import { translate, useTranslation } from '@/i18n'
 
 /**
  * Everything `GET /api/bookings/{id}` knows, arranged so the two time ranges
@@ -37,6 +38,7 @@ export function SheetBody({
   timeZone: string
   currency: string
 }) {
+  const { t } = useTranslation()
   const status = styleOf(booking.status)
   const StatusIcon = status.icon
 
@@ -54,62 +56,61 @@ export function SheetBody({
         )}
       >
         {StatusIcon ? <StatusIcon aria-hidden="true" className="size-3.5" /> : null}
-        {status.label}
+        {t(status.label)}
       </span>
 
-      <Section title="When">
-        <Row label="Date">{formatDayHeading(day)}</Row>
-        <Row label="Appointment">
+      <Section title={t('calendar.sheet.when')}>
+        <Row label={t('calendar.sheet.date')}>{formatDayHeading(day)}</Row>
+        <Row label={t('calendar.sheet.appointment')}>
           <span className="font-mono">{appointment}</span>
         </Row>
-        <Row label="Blocked out">
+        <Row label={t('calendar.sheet.blocked')}>
           <span className="font-mono">{blocked}</span>
           <span className="text-muted-foreground mt-0.5 block text-xs">
             {buffered
-              ? `The appointment plus ${describeBuffers(booking)} — this is what the calendar lost, and it is why a nearby slot may be unavailable.`
-              : 'This service has no buffers, so the blocked range is the appointment itself.'}
+              ? t('calendar.sheet.blockedBuffered', { buffers: describeBuffers(booking) })
+              : t('calendar.sheet.blockedPlain')}
           </span>
         </Row>
       </Section>
 
-      <Section title="What">
-        <Row label="Service">{serviceNameIn(lookups, booking.serviceId)}</Row>
-        <Row label="With">{staffNameIn(lookups, booking.staffId)}</Row>
+      <Section title={t('calendar.sheet.what')}>
+        <Row label={t('calendar.sheet.service')}>{serviceNameIn(lookups, booking.serviceId)}</Row>
+        <Row label={t('calendar.sheet.with')}>{staffNameIn(lookups, booking.staffId)}</Row>
       </Section>
 
-      <Section title="Guest">
-        <Row label="Name">{booking.guest.name}</Row>
-        <Row label="Email">
+      <Section title={t('calendar.sheet.guest')}>
+        <Row label={t('calendar.sheet.name')}>{booking.guest.name}</Row>
+        <Row label={t('calendar.sheet.email')}>
           <Contact href={`mailto:${booking.guest.email}`} value={booking.guest.email} />
         </Row>
         {booking.guest.phone ? (
-          <Row label="Phone">
+          <Row label={t('calendar.sheet.phone')}>
             <Contact href={`tel:${booking.guest.phone}`} value={booking.guest.phone} />
           </Row>
         ) : null}
         {booking.notes ? (
-          <Row label="Notes">
+          <Row label={t('calendar.sheet.notes')}>
             <span className="whitespace-pre-wrap">{booking.notes}</span>
           </Row>
         ) : null}
       </Section>
 
-      <Section title="Money">
-        <Row label="Price">{formatMoney(booking.priceCents, currency)}</Row>
-        <Row label="Deposit paid">{formatMoney(booking.depositPaidCents, currency)}</Row>
-        <Row label="Outstanding">
+      <Section title={t('calendar.sheet.money')}>
+        <Row label={t('calendar.sheet.price')}>{formatMoney(booking.priceCents, currency)}</Row>
+        <Row label={t('calendar.sheet.depositPaid')}>
+          {formatMoney(booking.depositPaidCents, currency)}
+        </Row>
+        <Row label={t('calendar.sheet.outstanding')}>
           {/* The API derives this rather than the client subtracting, so that
               "price minus deposit" has exactly one definition. */}
           <strong className="font-medium">{formatMoney(booking.outstandingCents, currency)}</strong>
           <span className="text-muted-foreground mt-0.5 block text-xs">
-            Still to collect at the appointment.
+            {t('calendar.sheet.outstandingNote')}
           </span>
         </Row>
-        <Row label="Agreed">
-          <span className="text-muted-foreground text-xs">
-            The price and buffers above are the ones in force when this booking was made, not
-            today’s.
-          </span>
+        <Row label={t('calendar.sheet.agreed')}>
+          <span className="text-muted-foreground text-xs">{t('calendar.sheet.agreedNote')}</span>
         </Row>
       </Section>
     </div>
@@ -132,15 +133,28 @@ function Contact({ href, value }: { href: string; value: string }) {
   )
 }
 
+/**
+ * `"5 min before and 10 min after"`.
+ *
+ * `translate` and not the hook's `t`: this is a plain function, called from the
+ * component below. Three keys rather than one sentence with two optional halves,
+ * because "before" and "after" sit in different places in French and an
+ * `and`-joined pair of fragments cannot express that.
+ */
 function describeBuffers(booking: BookingDetail): string {
   const before = booking.bufferBeforeMinutes
   const after = booking.bufferAfterMinutes
 
   if (before > 0 && after > 0) {
-    return `${formatDurationText(before)} before and ${formatDurationText(after)} after`
+    return translate('calendar.sheet.buffersBoth', {
+      before: formatDurationText(before),
+      after: formatDurationText(after),
+    })
   }
-  if (before > 0) return `${formatDurationText(before)} before`
-  return `${formatDurationText(after)} after`
+  if (before > 0) {
+    return translate('calendar.sheet.buffersBefore', { before: formatDurationText(before) })
+  }
+  return translate('calendar.sheet.buffersAfter', { after: formatDurationText(after) })
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

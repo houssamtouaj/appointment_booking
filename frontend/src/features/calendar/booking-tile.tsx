@@ -1,9 +1,10 @@
 import type { TileGeometry } from '@/features/calendar/grid-scale'
-import { styleOf } from '@/features/calendar/status-style'
+import { styleOf, statusWord } from '@/features/calendar/status-style'
 import { serviceNameIn, staffNameIn, type Lookups } from '@/hooks/use-lookups'
 import { clockOf } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { BookingSummary } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * One appointment on the grid.
@@ -82,6 +83,7 @@ export function BookingTile({
   onFocus,
   ref,
 }: BookingTileProps) {
+  const { t } = useTranslation()
   const style = styleOf(booking.status)
   const Icon = style.icon
 
@@ -107,7 +109,16 @@ export function BookingTile({
       // The tile is a control that opens a panel describing itself, so it is
       // named by what it opens rather than by a separate "View booking" label
       // that would be read forty times identically.
-      aria-label={`${booking.guestName}, ${service} with ${staff}, ${from} to ${to}, ${style.label.toLowerCase()}`}
+      // One key, not a template: French says "avec" where English says "with"
+      // and puts the two times differently, and a joined string cannot say so.
+      aria-label={t('calendar.tileLabel', {
+        guest: booking.guestName,
+        service,
+        staff,
+        from,
+        to,
+        status: statusWord(booking.status),
+      })}
       aria-current={selected ? 'true' : undefined}
       style={geometry}
       className={cn(

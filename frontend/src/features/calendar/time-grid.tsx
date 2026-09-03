@@ -13,6 +13,7 @@ import type { Lookups } from '@/hooks/use-lookups'
 import type { DayKey } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { BookingSummary, OpeningHours } from '@/types'
+import { useTranslation } from '@/i18n'
 
 /**
  * The ruled page: a time gutter, N columns, and every appointment placed on it.
@@ -92,6 +93,7 @@ export function TimeGrid({
   loading = false,
   now = new Date(),
 }: TimeGridProps) {
+  const { t } = useTranslation()
   const focus = useGridFocus(columns)
   const height = remOf(scale.minutes)
   const scroller = useGridScroll(columns, timeZone, openingHours, scale)
@@ -101,7 +103,7 @@ export function TimeGrid({
       {/* Announced without stealing focus. An empty grid and a still-loading one
           look identical, and only one of them means the week is free. */}
       <span role="status" className="sr-only">
-        {loading ? 'Loading this week’s appointments' : ''}
+        {loading ? t('calendar.loadingWeek') : ''}
       </span>
 
       <div ref={scroller} className="max-h-[70vh] overflow-auto" aria-busy={loading || undefined}>

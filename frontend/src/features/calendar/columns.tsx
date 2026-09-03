@@ -12,6 +12,7 @@ import {
 } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { BookingSummary } from '@/types'
+import { translate } from '@/i18n'
 
 /**
  * What a column *is* — the only thing the week view and the day view disagree
@@ -55,9 +56,11 @@ export function weekColumns(
       // the top is a row of numbers competing with the dates, and the column
       // underneath already shows how full it is. A screen reader has no such
       // view, which is exactly why it is said there.
-      label: `${weekday} ${formatDayShort(dayKey)}, ${countPhrase(dayBookings.length)}${
-        isToday ? ', today' : ''
-      }`,
+      label: translate(isToday ? 'calendar.columnLabelToday' : 'calendar.columnLabel', {
+        weekday,
+        date: formatDayShort(dayKey),
+        count: countPhrase(dayBookings.length),
+      }),
       header: (
         <span className="block">
           <span
@@ -116,9 +119,17 @@ function groupByDay(
   return days
 }
 
+/**
+ * `"no appointments"`, `"1 appointment"`, `"4 appointments"`.
+ *
+ * Zero is its own sentence rather than `"0 appointments"` — "no appointments" is
+ * what a person says. One and many go through `Intl.PluralRules`, because French
+ * counts 0 with the singular and the hand-rolled `count === 1` this replaced
+ * could not express that.
+ */
 function countPhrase(count: number): string {
-  if (count === 0) return 'no appointments'
-  return `${count} appointment${count === 1 ? '' : 's'}`
+  if (count === 0) return translate('calendar.noAppointments')
+  return translate('calendar.appointmentCount', { count })
 }
 
 /**
@@ -155,8 +166,10 @@ export function dayColumns(
         key: 'empty',
         dayKey: date,
         isToday: date === today,
-        label: 'No appointments',
-        header: <span className="text-muted-foreground text-sm">No appointments</span>,
+        label: translate('calendar.emptyColumn'),
+        header: (
+          <span className="text-muted-foreground text-sm">{translate('calendar.emptyColumn')}</span>
+        ),
         bookings: [],
       },
     ]

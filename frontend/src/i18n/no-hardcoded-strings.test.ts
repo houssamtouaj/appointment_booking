@@ -18,6 +18,7 @@ const TRANSLATED = [
   'src/features/auth',
   'src/features/booking',
   'src/features/dashboard',
+  'src/features/calendar',
 ]
 
 /**
@@ -41,13 +42,18 @@ const JSX_TEXT = />\s*([A-Za-z][^<>{}]*\s+[^<>{}]*[a-z][^<>{}]*)\s*</g
  * angle brackets all produce them, so the expression above happily spans from
  * the arrow of one callback to the `<` of a tag several statements later. Every
  * such match has something in it that prose in this app does not — an `=`, a
- * `;`, an optional-property `?:`, or a blank line between two statements.
+ * `;`, an optional-property `?:`, a typed callback's `: (`, a `||` or `&&`, or a
+ * blank line between two statements.
  *
  * A discriminator rather than a longer allowlist, deliberately: an allowlist
  * grows one entry per false positive and each entry also blinds the scan to a
  * real string. This rules out a *shape*, and the shape is unambiguous.
+ *
+ * Note what is deliberately *not* here: a bare `(`. Prose has parentheses —
+ * "Phone (optional)" is a real label — and banning them would turn this into an
+ * allowlist by another name.
  */
-const LOOKS_LIKE_CODE = /[=;]|\?:|\n\s*\n/
+const LOOKS_LIKE_CODE = /[=;]|\?:|:\s*\(|\|\||&&|\n\s*\n/
 
 /**
  * Strings that are not copy. Keep this list short and justified — a long

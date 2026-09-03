@@ -646,12 +646,36 @@ export function weekdayOf(dayKey: DayKey): DayOfWeek {
   return WEEKDAYS[(atUtcNoon(dayKey).getUTCDay() + 6) % 7] as DayOfWeek
 }
 
+/**
+ * `"Mon"`, `"lun."`. The abbreviated weekday, from `Intl`.
+ *
+ * Added in wave 10 for the calendar, which was doing `formatWeekday(d).slice(0, 3)`.
+ * A three-character truncation is a *format*, and it only knows what an English
+ * abbreviation looks like: French abbreviates Monday as `lun.` with the stop, and
+ * German as `Mo`. `Intl` already knows every language's answer, so asking it is
+ * both shorter and right.
+ */
+export function formatWeekdayShort(weekday: DayOfWeek, locale?: string): string {
+  return weekdayDate(weekday).toLocaleDateString(locale ?? currentLocale(), {
+    weekday: 'short',
+    timeZone: 'UTC',
+  })
+}
+
 /** `"Monday"`, for a week table that never shows a date. */
 export function formatWeekday(weekday: DayOfWeek, locale?: string): string {
+  return weekdayDate(weekday).toLocaleDateString(locale ?? currentLocale(), {
+    weekday: 'long',
+    timeZone: 'UTC',
+  })
+}
+
+/** A real date that falls on `weekday`, so `Intl` has something to format. */
+function weekdayDate(weekday: DayOfWeek): Date {
   // 2026-08-31 is a Monday, so its index is the offset into a real week.
   const monday = atUtcNoon('2026-08-31')
   monday.setUTCDate(monday.getUTCDate() + WEEKDAYS.indexOf(weekday))
-  return monday.toLocaleDateString(locale ?? currentLocale(), { weekday: 'long', timeZone: 'UTC' })
+  return monday
 }
 
 /**

@@ -313,6 +313,118 @@ export const en = {
       notEnoughData: 'Not enough data',
     },
   },
+  calendar: {
+    title: 'Calendar',
+    /**
+     * A column's spoken name: the weekday, the date, how full it is, and whether
+     * it is today. The count is *only* in the label — seven counts across the top
+     * is a row of numbers competing with the dates, and the column underneath
+     * already shows how full it is. A screen reader has no such view.
+     */
+    columnLabel: '{weekday} {date}, {count}',
+    columnLabelToday: '{weekday} {date}, {count}, today',
+    /** `Intl.PluralRules` picks the form; French counts 0 with the singular. */
+    appointmentCount: { one: '{count} appointment', other: '{count} appointments' },
+    noAppointments: 'no appointments',
+    loadingWeek: 'Loading this week’s appointments',
+    loadingAppointment: 'Loading this appointment',
+    emptyColumn: 'No appointments',
+    view: {
+      label: 'Calendar view',
+      week: 'Week',
+      day: 'Day',
+      list: 'List',
+      weekUnavailable: 'The week grid needs a wider screen',
+    },
+    /** `{unit}` is the day-or-week noun below, so the two agree in gender in French. */
+    previous: 'Previous {unit}',
+    next: 'Next {unit}',
+    unitDay: 'day',
+    unitWeek: 'week',
+    filters: {
+      everyone: 'Everyone',
+      anyStatus: 'Any status',
+      byColleague: 'Filter by colleague',
+      byStatus: 'Filter by status',
+      clear: 'Clear filters',
+    },
+    empty: {
+      filteredTitle: 'Nothing matches these filters this week',
+      filteredBody:
+        'There may be appointments this week for other colleagues, or with a different status.',
+      neverTitle: 'No appointments anywhere yet',
+      neverBody:
+        'Nothing is booked before or after this week either. The booking page is where the first one comes from.',
+      openBookingPage: 'Open the booking page',
+      weekTitle: 'Nothing booked this week',
+      weekBody:
+        'The week is free. Jump to the nearest week that has appointments, or use the arrows to look around.',
+      findNearest: 'Find the nearest week',
+      looking: 'Looking…',
+      dayTitle: 'Nothing booked on this day',
+      dayBodyElsewhere: 'This day is free. There are appointments elsewhere this week.',
+      dayBodyAlone: 'This day is free, and so is the rest of this week.',
+    },
+    sheet: {
+      fallbackTitle: 'Appointment',
+      loading: 'Loading this appointment’s details.',
+      errorTitle: 'This appointment could not be loaded',
+      when: 'When',
+      date: 'Date',
+      appointment: 'Appointment',
+      blocked: 'Blocked out',
+      /** `{buffers}` is the before/after phrase below. */
+      blockedBuffered:
+        'The appointment plus {buffers} — this is what the calendar lost, and it is why a nearby slot may be unavailable.',
+      blockedPlain: 'This service has no buffers, so the blocked range is the appointment itself.',
+      buffersBoth: '{before} before and {after} after',
+      buffersBefore: '{before} before',
+      buffersAfter: '{after} after',
+      what: 'What',
+      service: 'Service',
+      with: 'With',
+      guest: 'Guest',
+      name: 'Name',
+      email: 'Email',
+      phone: 'Phone',
+      notes: 'Notes',
+      money: 'Money',
+      price: 'Price',
+      depositPaid: 'Deposit paid',
+      outstanding: 'Outstanding',
+      outstandingNote: 'Still to collect at the appointment.',
+      agreed: 'Agreed',
+      agreedNote:
+        'The price and buffers above are the ones in force when this booking was made, not today’s.',
+    },
+    /**
+     * A tile's spoken name. One key, because English says "with" where French
+     * says "avec" in a different position, and the times sit in the middle.
+     */
+    tileLabel: '{guest}, {service} with {staff}, {from} to {to}, {status}',
+    status: {
+      confirmed: 'Confirmed',
+      confirmedMeaning: 'Booked and paid for as far as it needs to be. It holds its slot.',
+      pending: 'Awaiting deposit',
+      pendingMeaning: 'A deposit is in flight. It holds its slot until the hold expires.',
+      completed: 'Completed',
+      completedMeaning: 'The appointment happened. It counts towards revenue earned.',
+      cancelled: 'Cancelled',
+      cancelledMeaning: 'Cancelled. The slot went back to the calendar immediately.',
+      noShow: 'No-show',
+      noShowMeaning: 'The customer did not arrive. It counts towards the no-show rate.',
+    },
+    transition: {
+      /** `{status}` is a status word, lower-cased by the caller where the language allows it. */
+      marked: 'Marked {status}.',
+      refused: 'A {from} booking cannot be marked {to}.',
+      tooEarlyCompleted: 'An appointment can be marked completed once it has finished.',
+      tooEarlyNoShow: 'A no-show can only be recorded once the appointment was due to start.',
+    },
+    lookupsErrorTitle: 'The calendar could not resolve its names',
+    tooManyTitle: 'This week has more appointments than the calendar can show',
+    weekErrorTitle: 'This week could not be loaded',
+  },
   components: {
     copyText: {
       copy: 'Copy',

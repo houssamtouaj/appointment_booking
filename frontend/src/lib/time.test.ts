@@ -12,6 +12,7 @@ import {
   dayKeyOf,
   formatDayHeading,
   formatWeekday,
+  formatWeekdayShort,
   groupSlotsByDay,
   hourMarks,
   isDayKey,
@@ -495,5 +496,13 @@ describe('the default locale', () => {
   it('translates a weekday name', () => {
     setLanguage('fr')
     expect(formatWeekday('MONDAY')).toBe('lundi')
+  })
+
+  it('abbreviates a weekday the way the language does, not by truncating', () => {
+    // The bug this replaced: `formatWeekday(d).slice(0, 3)` in the calendar.
+    // Three characters is an English abbreviation; French wants the stop.
+    expect(formatWeekdayShort('MONDAY')).toBe('Mon')
+    setLanguage('fr')
+    expect(formatWeekdayShort('MONDAY')).toBe('lun.')
   })
 })

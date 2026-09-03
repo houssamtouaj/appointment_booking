@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { EmptyState } from '@/components/empty-state'
 import { Button } from '@/components/ui/button'
 import { formatDayHeading, type DayKey } from '@/lib/time'
+import { useTranslation } from '@/i18n'
 
 /**
  * A week with nothing in it, offering the nearest one that has something.
@@ -41,6 +42,7 @@ export function EmptyWeek({
   searchedAndFoundNothing,
   slug,
 }: EmptyWeekProps) {
+  const { t } = useTranslation()
   // A filtered empty week is a different fact from an empty one, and offering
   // "find the nearest week" first would send somebody to another week that is
   // also empty for the same reason. The filter is the thing to undo.
@@ -48,11 +50,11 @@ export function EmptyWeek({
     return (
       <EmptyState
         icon={CalendarSearch}
-        title="Nothing matches these filters this week"
-        description="There may be appointments this week for other colleagues, or with a different status."
+        title={t('calendar.empty.filteredTitle')}
+        description={t('calendar.empty.filteredBody')}
         action={
           <Button variant="outline" size="sm" onClick={onClearFilters}>
-            Clear filters
+            {t('calendar.filters.clear')}
           </Button>
         }
       />
@@ -63,11 +65,11 @@ export function EmptyWeek({
     return (
       <EmptyState
         icon={CalendarSearch}
-        title="No appointments anywhere yet"
-        description="Nothing is booked before or after this week either. The booking page is where the first one comes from."
+        title={t('calendar.empty.neverTitle')}
+        description={t('calendar.empty.neverBody')}
         action={
           <Button asChild variant="outline" size="sm">
-            <Link to={`/b/${slug}`}>Open the booking page</Link>
+            <Link to={`/b/${slug}`}>{t('calendar.empty.openBookingPage')}</Link>
           </Button>
         }
       />
@@ -77,11 +79,11 @@ export function EmptyWeek({
   return (
     <EmptyState
       icon={CalendarSearch}
-      title="Nothing booked this week"
-      description="The week is free. Jump to the nearest week that has appointments, or use the arrows to look around."
+      title={t('calendar.empty.weekTitle')}
+      description={t('calendar.empty.weekBody')}
       action={
         <Button variant="outline" size="sm" disabled={searching} onClick={onFindNearest}>
-          {searching ? 'Looking…' : 'Find the nearest week'}
+          {searching ? t('calendar.empty.looking') : t('calendar.empty.findNearest')}
         </Button>
       }
     />
@@ -109,14 +111,13 @@ export function EmptyDay({
   nearestDay?: DayKey
   onGoToDay: (day: DayKey) => void
 }) {
+  const { t } = useTranslation()
   return (
     <EmptyState
       icon={CalendarSearch}
-      title="Nothing booked on this day"
+      title={t('calendar.empty.dayTitle')}
       description={
-        nearestDay
-          ? 'This day is free. There are appointments elsewhere this week.'
-          : 'This day is free, and so is the rest of this week.'
+        nearestDay ? t('calendar.empty.dayBodyElsewhere') : t('calendar.empty.dayBodyAlone')
       }
       action={
         nearestDay ? (
