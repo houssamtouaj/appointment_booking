@@ -48,7 +48,15 @@ export function useBookingFailure(options: {
     // about rather than only in the banner. What matches nothing comes back and
     // is shown, because React Hook Form accepts `setError` on an unregistered
     // path without complaint and the message would otherwise vanish.
-    const unmatched = applyFieldErrors(caught, form)
+    const unmatched = applyFieldErrors(caught, form, {
+      // The three fields the details step owns. Everything else on a booking
+      // request is chosen from the picker, so a 422 naming it is this client's
+      // bug rather than something a guest can fix by reading a sentence.
+      messageFor: {
+        guestName: 'errors.fieldName',
+        guestEmail: 'errors.fieldEmail',
+      },
+    })
     const described = describeBookingFailure(caught, timeZone)
     setFailure({ failure: described, slot: attempt.slot, serviceId: attempt.serviceId, unmatched })
 

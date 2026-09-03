@@ -77,7 +77,18 @@ export function RegisterPage() {
 
       // Everything else: attach what maps to a field, and surface what does not
       // rather than letting React Hook Form drop it silently.
-      reportFailure(error, { copy: { VALIDATION_FAILED: 'Some of these details need fixing.' } })
+      reportFailure(error, {
+        copy: { VALIDATION_FAILED: 'errors.bookingDetailsInvalid' },
+        // The five fields this form owns. Bean Validation words its `errors[]`
+        // in English; these say the same thing in the reader's language.
+        messageFor: {
+          businessName: 'errors.fieldBusinessName',
+          slug: 'errors.fieldSlug',
+          fullName: 'errors.fieldName',
+          email: 'errors.fieldEmail',
+          password: 'errors.fieldPassword',
+        },
+      })
     },
   })
 

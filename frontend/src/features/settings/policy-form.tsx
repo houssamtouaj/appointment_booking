@@ -89,8 +89,8 @@ export function PolicyForm({ policy }: { policy: Policy }) {
       onError: (error) => {
         reportFailure(error, {
           copy: {
-            VALIDATION_FAILED: 'Check the numbers marked below.',
-            ACCESS_DENIED: 'Only an owner can change the booking rules.',
+            VALIDATION_FAILED: 'errors.checkNumbersBelow',
+            ACCESS_DENIED: 'errors.ownerOnlyPolicy',
           },
         })
       },

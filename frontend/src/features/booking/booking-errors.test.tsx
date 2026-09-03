@@ -6,6 +6,7 @@ import { describeBookingFailure, type BookingRecovery } from '@/features/booking
 import { BookingFailureAlert } from '@/features/booking/booking-failure-alert'
 import { addDays, todayIn } from '@/lib/time'
 import type { ErrorCode } from '@/types'
+import { en } from '@/i18n/en'
 
 /**
  * The wave gate, stated as a test: *every* code in the plan's step-2 table has
@@ -234,6 +235,9 @@ describe('anything not in the table', () => {
     const failure = describeBookingFailure(toApiError(offline), TZ)
 
     expect(failure.recover).toBe('stay')
-    expect(failure.description).toMatch(/Could not reach the server/)
+    // The dictionary's sentence, not `ApiError`'s `NETWORK_DETAIL`: a status-0
+    // detail is a string this app wrote, so it was never the server's prose and
+    // had no business being shown untranslated.
+    expect(failure.description).toBe(en.errors.networkFailure)
   })
 })

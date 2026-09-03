@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 import { demoLogin, login } from '@/api/auth'
 import { describeError, requestIdOf } from '@/api/error-copy'
+import type { TKey } from '@/i18n'
 import { loginRequestSchema } from '@/api/schemas/auth'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
@@ -53,13 +54,13 @@ export function LoginPage() {
       // gets. The absent `@Profile` controller never gets a say, and the 404
       // this screen used to look for never arrives — which left a reviewer who
       // typed no password being told their password was wrong.
-      const unauthenticated =
+      const unauthenticated: TKey =
         variables === 'demo'
-          ? 'The demo account is not available — the API is running without its demo profile.'
+          ? 'errors.demoUnavailable'
           : // Deliberately one message for three causes: the API answers the
             // same 401 for an unknown address, a wrong password and a
             // deactivated account, and saying which would undo that here.
-            'Email or password is incorrect.'
+            'errors.badCredentials'
       setAlert(describeError(error, { UNAUTHENTICATED: unauthenticated }))
       setRequestId(requestIdOf(error))
     },

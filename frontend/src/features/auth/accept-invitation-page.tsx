@@ -63,7 +63,8 @@ export function AcceptInvitationPage() {
     },
     onError: (error) => {
       reportFailure(error, {
-        copy: { INVITATION_CONSUMED: 'This invitation has already been used or has expired.' },
+        messageFor: { fullName: 'errors.fieldName', password: 'errors.fieldPassword' },
+        copy: { INVITATION_CONSUMED: 'errors.invitationSpent' },
       })
     },
   })
@@ -93,8 +94,7 @@ export function AcceptInvitationPage() {
             consumed
               ? 'Invitations work once and expire after seven days. Ask an owner of the business to send a new one.'
               : describeError(invitation.error, {
-                  NOT_FOUND:
-                    'We do not recognise this link. Check that you copied the whole address from the email.',
+                  NOT_FOUND: 'errors.invitationUnrecognised',
                 })
           }
           requestId={requestIdOf(invitation.error)}

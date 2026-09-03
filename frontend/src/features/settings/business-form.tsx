@@ -121,8 +121,8 @@ export function BusinessForm({ business }: { business: Business }) {
         setShift(null)
         reportFailure(error, {
           copy: {
-            VALIDATION_FAILED: 'Check the fields marked below.',
-            ACCESS_DENIED: 'Only an owner can change the business settings.',
+            VALIDATION_FAILED: 'errors.checkFieldsBelow',
+            ACCESS_DENIED: 'errors.ownerOnlyBusiness',
           },
         })
       },

@@ -196,7 +196,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
       return
     }
 
-    reportFailure(error, { copy: { VALIDATION_FAILED: 'Some of these details need fixing.' } })
+    reportFailure(error, { copy: { VALIDATION_FAILED: 'errors.bookingDetailsInvalid' } })
   }
 
   const errors = form.formState.errors

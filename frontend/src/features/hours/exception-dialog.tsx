@@ -131,8 +131,8 @@ export function ExceptionDialog({
         onError: (error) => {
           reportFailure(error, {
             copy: {
-              VALIDATION_FAILED: 'Check the date and times.',
-              ACCESS_DENIED: 'You can only change your own days.',
+              VALIDATION_FAILED: 'errors.checkDateAndTimes',
+              ACCESS_DENIED: 'errors.hoursOnlyYourOwnDays',
             },
           })
         },

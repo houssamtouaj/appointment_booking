@@ -3,6 +3,7 @@ import type { FieldValues, UseFormReturn } from 'react-hook-form'
 
 import { applyFieldErrors } from '@/api/error'
 import { describeError, requestIdOf } from '@/api/error-copy'
+import type { TKey } from '@/i18n'
 import type { ErrorCode } from '@/api/schemas/problem'
 import type { FormAlertProps } from '@/components/form-alert'
 import type { ValidationError } from '@/types'
@@ -13,12 +14,20 @@ export type ReportFailureOptions = {
    * to `describeError`. A sign-in form and a booking screen say different things
    * about the same code.
    */
-  copy?: Partial<Record<ErrorCode, string>>
+  copy?: Partial<Record<ErrorCode, TKey>>
   /**
    * Server field name to form field name, for the handful of places the two
    * legitimately differ — a request that nests what the form flattens.
    */
   rename?: Record<string, string>
+  /**
+   * Form field to a dictionary key, passed straight to `applyFieldErrors`.
+   *
+   * The 422's `errors[]` messages are Bean Validation's, in English. This is how
+   * a form says what "wrong" means for a field it owns, in the reader's
+   * language; anything unlisted keeps the server's sentence.
+   */
+  messageFor?: Record<string, TKey>
 }
 
 export type FormErrorSummary = {
@@ -63,11 +72,10 @@ export function useFormErrorSummary<TFieldValues extends FieldValues>(
 
   const reportFailure = useCallback(
     (error: unknown, options?: ReportFailureOptions) => {
-      const unmatched = applyFieldErrors(
-        error,
-        form,
-        options?.rename ? { rename: options.rename } : undefined,
-      )
+      const unmatched = applyFieldErrors(error, form, {
+        ...(options?.rename ? { rename: options.rename } : {}),
+        ...(options?.messageFor ? { messageFor: options.messageFor } : {}),
+      })
       setAlert({
         message: describeError(error, options?.copy),
         unmatched,

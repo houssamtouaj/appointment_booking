@@ -115,8 +115,8 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
         }
         toast.error(
           describeError(error, {
-            HOURS_OVERLAP: 'Two ranges overlap. Nothing was saved.',
-            ACCESS_DENIED: 'You can only edit your own hours.',
+            HOURS_OVERLAP: 'errors.hoursOverlapUnsaved',
+            ACCESS_DENIED: 'errors.hoursOnlyYourOwn',
           }),
           { description: referenceNote(error) },
         )

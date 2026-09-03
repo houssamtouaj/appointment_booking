@@ -12,6 +12,7 @@ import { createQueryClient } from '@/api/query-client'
 import { endSessionQuietly } from '@/api/session'
 import { AuthProvider } from '@/features/auth/auth-provider'
 import { routes } from '@/routes'
+import { en } from '@/i18n/en'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -309,7 +310,12 @@ describe('resetting a password', () => {
     // A regex, because the banner prints the server's field name beside the
     // sentence — `token — This link was already used` across two elements.
     expect(await screen.findByText(/This link was already used/)).toBeInTheDocument()
-    expect(screen.getByText('Too short')).toBeInTheDocument()
+    // The field's own message is this app's, not the server's: `password` is a
+    // field this form owns, so `messageFor` replaces Bean Validation's English
+    // "Too short" with the dictionary's sentence in the reader's language. The
+    // unmatched `token` entry above still carries the server's prose, because
+    // nothing here can predict what it will say.
+    expect(screen.getByText(en.errors.fieldPassword)).toBeInTheDocument()
   })
 })
 

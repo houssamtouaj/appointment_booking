@@ -47,7 +47,7 @@ export function ForgotPasswordPage() {
     onError: (error) => {
       // Only ever a rate limit or an outage — never "no such account".
       reportFailure(error, {
-        copy: { RATE_LIMITED: 'Too many requests. Wait a minute and try again.' },
+        copy: { RATE_LIMITED: 'errors.tooManyRequests' },
       })
     },
   })

@@ -1,9 +1,11 @@
 import { renderHook } from '@testing-library/react'
 import { useForm } from 'react-hook-form'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { ApiError, applyFieldErrors, isApiError, toApiError } from '@/api/error'
 import { describeError } from '@/api/error-copy'
+import { fr } from '@/i18n/fr'
+import { resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
 
 /**
  * A 422 exactly as the API sends one. Taken from `Problems.of` +
@@ -200,26 +202,47 @@ describe('applyFieldErrors', () => {
   })
 })
 
-describe('describeError', () => {
-  it('prefers the screen’s wording, then the shared table, then the server’s prose', () => {
-    const unauthenticated = new ApiError({
-      code: 'UNAUTHENTICATED',
-      status: 401,
-      detail: 'Bad credentials',
-    })
+/**
+ * `describeError` itself moved to `error-copy.test.ts` when its overrides became
+ * dictionary keys — the coverage gate over every `ErrorCode` belongs beside the
+ * dictionary, not beside `applyFieldErrors`. What stays here is the half that is
+ * this file's: a 422's `errors[]` reaching the form in the reader's language.
+ */
+describe('applyFieldErrors and the reader’s language', () => {
+  function formWith(defaultValues: Record<string, unknown>) {
+    return renderHook(() => useForm({ defaultValues })).result.current
+  }
 
-    expect(
-      describeError(unauthenticated, { UNAUTHENTICATED: 'Email or password is incorrect.' }),
-    ).toBe('Email or password is incorrect.')
-    expect(describeError(unauthenticated)).toBe('Please sign in and try again.')
+  beforeEach(() => {
+    localStorage.clear()
+    resetLanguageStoreForTests()
+  })
 
-    // A code with no entry anywhere falls back to `detail`, which is a good
-    // sentence written by somebody who knew the context.
-    const niche = new ApiError({
-      code: 'TIMEZONE_SHIFT_UNCONFIRMED',
-      status: 409,
-      detail: 'Changing the timezone moves 14 future bookings.',
-    })
-    expect(describeError(niche)).toBe('Changing the timezone moves 14 future bookings.')
+  it('prefers a key over the server message for a field the app owns', () => {
+    setLanguage('fr')
+    const form = formWith({ guestEmail: '' })
+    applyFieldErrors(
+      toApiError(
+        validationProblem([
+          { field: 'guestEmail', message: 'must be a well-formed email address' },
+        ]),
+      ),
+      form,
+      { messageFor: { guestEmail: 'errors.checkAddressAndName' } },
+    )
+    expect(form.getFieldState('guestEmail').error?.message).toBe(fr.errors.checkAddressAndName)
+  })
+
+  it('keeps the server message for a field it does not predict', () => {
+    setLanguage('fr')
+    const form = formWith({ surprise: '' })
+    applyFieldErrors(
+      toApiError(validationProblem([{ field: 'surprise', message: 'must not be blank' }])),
+      form,
+      {},
+    )
+    // English, and deliberately so: a sentence in the wrong language still names
+    // the problem. A blank field error names nothing.
+    expect(form.getFieldState('surprise').error?.message).toBe('must not be blank')
   })
 })

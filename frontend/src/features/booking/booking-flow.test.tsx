@@ -12,6 +12,7 @@ import { endSessionQuietly } from '@/api/session'
 import { AuthProvider } from '@/features/auth/auth-provider'
 import { routes } from '@/routes'
 import { addDays, dayKeyOf, formatDayHeading, todayIn, weekOf } from '@/lib/time'
+import { en } from '@/i18n/en'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -863,7 +864,9 @@ describe('the ways a booking does not work', () => {
     renderAt(detailsPath)
     await attempt(user)
 
-    expect(await screen.findByText('must not be blank')).toBeVisible()
+    // `guestName` is a field this form owns, so the message on it is the
+    // dictionary's rather than Bean Validation's English (`messageFor`).
+    expect(await screen.findByText(en.errors.fieldName)).toBeVisible()
     expect(screen.getByLabelText('Your name')).toHaveAttribute('aria-invalid', 'true')
   })
 

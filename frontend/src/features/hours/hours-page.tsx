@@ -97,8 +97,8 @@ function HoursFor({ user, staffId, own }: { user: MeResponse; staffId: string; o
         <ErrorState
           title="These working hours could not be loaded"
           description={describeError(hours.error, {
-            NOT_FOUND: 'That colleague is not in your business.',
-            ACCESS_DENIED: 'You can only edit your own working hours.',
+            NOT_FOUND: 'errors.hoursColleagueNotYours',
+            ACCESS_DENIED: 'errors.hoursOnlyYourOwn',
           })}
           requestId={requestIdOf(hours.error)}
           onRetry={() => void hours.refetch()}

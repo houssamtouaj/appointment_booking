@@ -71,7 +71,7 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
           return
         }
 
-        reportFailure(error, { copy: { VALIDATION_FAILED: 'Check the address and the name.' } })
+        reportFailure(error, { copy: { VALIDATION_FAILED: 'errors.checkAddressAndName' } })
       },
     })
   }

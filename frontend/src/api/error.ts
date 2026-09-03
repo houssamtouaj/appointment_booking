@@ -9,6 +9,7 @@ import {
   type ProblemDetail,
   type ValidationError,
 } from '@/api/schemas/problem'
+import { translate, type TKey } from '@/i18n'
 
 /**
  * One error type for the whole app (F13).
@@ -251,6 +252,16 @@ export function applyFieldErrors<TFieldValues extends FieldValues>(
      * legitimately differ — a request that nests what the form flattens.
      */
     rename?: Record<string, string>
+    /**
+     * Form field to a dictionary key, for the fields this app can predict.
+     *
+     * The server's `errors[]` messages are Bean Validation's, in English, and a
+     * client cannot translate arbitrary prose — but it *can* say what "this field
+     * is wrong" means for a field it owns, which is every field on every form in
+     * this app. Anything unpredicted keeps the server's sentence: a wrong-language
+     * sentence still names the problem, where a blank does not.
+     */
+    messageFor?: Record<string, TKey>
   },
 ): ValidationError[] {
   if (!isApiError(error) || error.errors.length === 0) return []
@@ -265,9 +276,10 @@ export function applyFieldErrors<TFieldValues extends FieldValues>(
       unmatched.push(item)
       continue
     }
+    const key = options?.messageFor?.[path]
     form.setError(
       path as Path<TFieldValues>,
-      { type: 'server', message: item.message },
+      { type: 'server', message: key ? translate(key) : item.message },
       // Focus the first one only. Focusing each in turn ends on the last field
       // the server happened to mention, which is rarely the one to fix first
       // and scrolls the page away from the others.

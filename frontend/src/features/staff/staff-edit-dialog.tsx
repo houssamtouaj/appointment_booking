@@ -102,7 +102,7 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
             return
           }
 
-          reportFailure(error, { copy: { VALIDATION_FAILED: 'Check the name.' } })
+          reportFailure(error, { copy: { VALIDATION_FAILED: 'errors.checkTheName' } })
         },
       },
     )

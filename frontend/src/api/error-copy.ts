@@ -1,47 +1,50 @@
 import { isApiError } from '@/api/error'
 import type { ErrorCode } from '@/api/schemas/problem'
+import { translate, type TKey } from '@/i18n'
 
 /**
- * `ApiError.code` to a sentence a person can act on.
+ * `ApiError.code` to a sentence a person can act on, in the reader's language.
  *
  * The backend's `detail` is prose and reads well, but it is written from the
- * server's point of view and it is explicitly allowed to change wording at any
- * time — `ErrorCode`'s javadoc says so. Screens therefore switch on `code`, and
- * this table is where the switch lives so that "that slug is taken" is worded
- * once for the whole app.
+ * server's point of view, it is explicitly allowed to change wording at any time
+ * — `ErrorCode`'s javadoc says so — and it is always English. Screens therefore
+ * switch on `code`, and the sentences live in `i18n/en.ts` and `i18n/fr.ts`
+ * under `errors.<CODE>`, one entry per code, guarded by a test that walks
+ * `errorCodeSchema` (F21).
  *
- * Not every code needs an entry. A code with no default here falls back to the
- * server's `detail`, which is a good sentence written by somebody who knew the
- * context — the failure mode this table prevents is a screen that shows a raw
- * enum name, not one that shows the server's prose.
+ * `translate` rather than `useTranslation`: this is a plain function called from
+ * mutation handlers, toasts and error boundaries, and making it a hook would put
+ * a hook in every one of those. It reads the module store, which is exactly why
+ * the store is a module store.
  */
-const DEFAULT_COPY: Partial<Record<ErrorCode, string>> = {
-  UNAUTHENTICATED: 'Please sign in and try again.',
-  ACCESS_DENIED: 'You do not have access to that.',
-  NOT_FOUND: 'That is no longer there.',
-  RATE_LIMITED: 'Too many attempts. Wait a minute and try again.',
-  VALIDATION_FAILED: 'Some of the details need fixing.',
-  INTERNAL_ERROR: 'Something went wrong on our side. Try again in a moment.',
-  PAYMENT_UNAVAILABLE: 'Payments are temporarily unavailable. Try again shortly.',
-}
 
 /**
- * @param overrides the screen's own wording for the codes it actually expects.
- *   A sign-in form says "Email or password is incorrect" for `UNAUTHENTICATED`;
- *   a booking screen says something else entirely for the same code.
+ * @param overrides the screen's own wording for the codes it actually expects,
+ *   as **dictionary keys** rather than sentences. A sign-in form says
+ *   `errors.badCredentials` for `UNAUTHENTICATED`; a booking screen says
+ *   something else entirely for the same code. Keys and not sentences because a
+ *   sentence at a call site is a sentence in one language.
  */
 export function describeError(
   error: unknown,
-  overrides?: Partial<Record<ErrorCode, string>>,
+  overrides?: Partial<Record<ErrorCode, TKey>>,
 ): string {
-  if (!isApiError(error)) {
-    return 'Something went wrong. Try again in a moment.'
-  }
-  // Network failures already carry the only sentence there is to say — the
-  // browser tells JavaScript nothing about why a request never left.
-  if (error.isNetworkFailure) return error.detail
+  if (!isApiError(error)) return translate('errors.unknown')
 
-  return overrides?.[error.code] ?? DEFAULT_COPY[error.code] ?? error.detail
+  // A network failure carries the only sentence there is to say, and now it is
+  // ours: `error.detail` for a status-0 is a string this app wrote, so it was
+  // never the server's prose and had no business being returned untranslated.
+  if (error.isNetworkFailure) return translate('errors.networkFailure')
+
+  const override = overrides?.[error.code]
+  if (override) return translate(override)
+
+  const key = `errors.${error.code}` as TKey
+  const copy = translate(key)
+  // `translate` returns the key when it finds nothing, which is how the server's
+  // detail stays reachable for a code this bundle predates (problem.ts's
+  // `.catch()` degrades an unknown code, it does not reject the body).
+  return copy === key ? (error.detail ?? translate('errors.unknown')) : copy
 }
 
 /** The request id, when there is one, for the alert or toast that shows the message. */

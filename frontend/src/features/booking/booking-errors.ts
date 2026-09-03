@@ -146,7 +146,7 @@ export function describeBookingFailure(error: unknown, timeZone: string): Bookin
         code,
         title: 'This booking could not be completed',
         description: describeError(error, {
-          VALIDATION_FAILED: 'Some of these details need fixing.',
+          VALIDATION_FAILED: 'errors.bookingDetailsInvalid',
         }),
         // Everything unlisted keeps the customer where they are, with what they
         // typed. Sending them back a step for a failure nobody has classified

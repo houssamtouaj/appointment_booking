@@ -60,12 +60,13 @@ export function ResetPasswordPage() {
       // `token`, which it does not — so the token message comes back unmatched
       // and lands in the banner rather than disappearing.
       reportFailure(error, {
+        messageFor: { password: 'errors.fieldPassword' },
         copy: {
           // The single shape this endpoint fails in that is worth its own
           // sentence: the token is spent, expired, or was never ours. The API
           // does not distinguish between them and neither should this.
-          VALIDATION_FAILED: 'That link is no longer valid. Ask for a new one.',
-          NOT_FOUND: 'That link is no longer valid. Ask for a new one.',
+          VALIDATION_FAILED: 'errors.resetLinkExpired',
+          NOT_FOUND: 'errors.resetLinkExpired',
         },
       })
     },
