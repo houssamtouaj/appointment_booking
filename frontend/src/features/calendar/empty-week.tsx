@@ -122,7 +122,7 @@ export function EmptyDay({
       action={
         nearestDay ? (
           <Button variant="outline" size="sm" onClick={() => onGoToDay(nearestDay)}>
-            Go to {formatDayHeading(nearestDay)}
+            {t('calendar.empty.goToDay', { day: formatDayHeading(nearestDay) })}
           </Button>
         ) : undefined
       }

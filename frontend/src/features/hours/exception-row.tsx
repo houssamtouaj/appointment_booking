@@ -55,9 +55,7 @@ export function ExceptionRow({ override, removable, busy, onRemove }: ExceptionR
           {formatDayHeading(override.date)}
           <span className="text-muted-foreground ml-2 font-normal">
             {override.wholeDay
-              ? blocked
-                ? 'closed all day'
-                : 'all day'
+              ? t(blocked ? 'hours.overrides.closedAllDay' : 'hours.overrides.allDay')
               : `${formatLocalTime(override.startTime ?? '')} – ${formatLocalTime(override.endTime ?? '')}`}
           </span>
         </p>

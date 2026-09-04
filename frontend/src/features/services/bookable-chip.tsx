@@ -147,13 +147,19 @@ export function BookableChip({
             // team being empty, never "they are all already on it". The fix is on
             // the other screen, and an empty list with no explanation would read
             // as a broken menu.
-            <p className="text-muted-foreground mt-4 text-xs">
-              Nobody on your team is active, so there is no one to assign.{' '}
-              <Link to="/team" className="text-primary underline underline-offset-4">
-                {t('services.bookability.reactivateColleague')}
-              </Link>{' '}
-              or invite someone new.
-            </p>
+            <div className="mt-4 text-xs">
+              {/* One sentence in one key, with the link under it rather than
+                  inside it. Wrapping prose around a `<Link>` meant three JSX
+                  pieces — "…no one to assign.", the link, "or invite someone
+                  new." — and French does not put those three in that order. */}
+              <p className="text-muted-foreground">{t('services.bookability.nobodyActive')}</p>
+              <Link
+                to="/team"
+                className="text-primary mt-1 inline-block underline underline-offset-4"
+              >
+                {t('services.bookability.goToTeam')}
+              </Link>
+            </div>
           )}
         </Popover.Content>
       </Popover.Portal>

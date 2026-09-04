@@ -88,7 +88,7 @@ export function ResetPasswordPage() {
       description={t('auth.reset.description')}
       footer={
         <>
-          Link expired?{' '}
+          {t('auth.reset.expiredPrompt')}{' '}
           <Link to="/forgot-password" className="text-primary underline underline-offset-4">
             {t('auth.reset.askAgain')}
           </Link>

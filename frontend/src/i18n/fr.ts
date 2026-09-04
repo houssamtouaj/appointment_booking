@@ -181,6 +181,7 @@ export const fr = {
       title: 'Choisir un nouveau mot de passe',
       description:
         "Le définir vous déconnecte partout ailleurs — c'est à cela que sert une réinitialisation.",
+      expiredPrompt: 'Lien expiré ?',
       askAgain: 'En demander un nouveau',
       password: 'Nouveau mot de passe',
       passwordHint: 'Au moins 8 caractères.',
@@ -293,6 +294,7 @@ export const fr = {
       neverBody:
         "Rien n'est réservé avant ni après cette semaine non plus. C'est de la page de réservation que vient le premier.",
       openBookingPage: 'Ouvrir la page de réservation',
+      goToDay: 'Aller au {day}',
       weekTitle: 'Rien de réservé cette semaine',
       weekBody:
         'La semaine est libre. Allez à la semaine la plus proche qui a des rendez-vous, ou utilisez les flèches pour explorer.',
@@ -392,11 +394,13 @@ export const fr = {
       unbookable: 'Non réservable',
       chipHint: '. {reason} Ouvrez pour corriger.',
       assignStaff: 'Assigner du personnel',
-      reactivateColleague: 'Réactiver un collègue',
+      goToTeam: 'Aller à votre équipe',
       noneAssigned:
         "Personne n'est assigné pour la réaliser, elle ne propose donc aucun horaire sur votre page de réservation.",
       assignActive:
         'Elle ne propose aucun horaire sur votre page de réservation. Assignez un collègue encore actif.',
+      nobodyActive:
+        'Personne n’est actif dans votre équipe, il n’y a donc personne à assigner. Réactivez un collègue ou invitez quelqu’un.',
       onlyPersonGone: '{names} est la seule personne assignée, et elle a été désactivée.',
       everyoneGone: 'Toutes les personnes assignées ont été désactivées : {names}.',
     },
@@ -645,6 +649,8 @@ export const fr = {
         '{name} travaille les horaires hebdomadaires ci-dessus, tous les jours de ce mois. Ajoutez une exception pour un congé, un jour de repos ou une ouverture tardive.',
       blocked: 'Bloqué',
       extra: 'Heures supplémentaires',
+      closedAllDay: 'fermé toute la journée',
+      allDay: 'toute la journée',
       wholeBusiness: 'Toute l’entreprise',
       remove: "Supprimer l'exception du {date}",
       setByOwner: 'Défini par un propriétaire',
@@ -802,6 +808,11 @@ export const fr = {
     },
     modal: {
       close: 'Fermer',
+    },
+    themeToggle: {
+      toLight: 'Passer au thème clair',
+      toDark: 'Passer au thème sombre',
+      toSystem: 'Utiliser le thème du système',
     },
     skipLink: 'Aller au contenu',
     footerNote: "Une plateforme de réservation. Horaires affichés dans le fuseau de l'entreprise.",

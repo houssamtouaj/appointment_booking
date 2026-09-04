@@ -58,6 +58,17 @@ const PROSE_TEMPLATES =
  * {formatDayHeading(day)}< ``, and the three places wave 10 left English in
  * front of a `{' '}` spacer. All four read as finished JSX and all four were
  * invisible while the run had to reach a closing tag.
+ *
+ * The **opening** delimiter stays `>` and cannot become `[>}]` the way the
+ * closing one became `[<{]`: a `}` opens the run at the end of the previous
+ * import's brace, so `` }
+import type { `` matches as prose and every file in
+ * the app fails. Ruling that out would take a keyword discriminator — `const`,
+ * `import`, `catch` — and two of the words it would need are `if` and `return`,
+ * which are also English. So a run that *starts* after an expression is the
+ * blind spot this rule keeps, and the one string in it was found by hand and
+ * rewritten so it cannot come back: prose either side of an inline `<Link>` is
+ * banned by `frontend/CLAUDE.md` anyway.
  */
 const JSX_TEXT = />\s*([A-Za-z][^<>{}]*\s+[^<>{}]*[a-z][^<>{}]*?)\s*[<{]/g
 

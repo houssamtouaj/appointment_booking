@@ -266,6 +266,8 @@ export const en = {
     reset: {
       title: 'Choose a new password',
       description: 'Setting it signs you out everywhere else — that is what a reset is for.',
+      /** The line the link below sits in. One key, so French may reorder it. */
+      expiredPrompt: 'Link expired?',
       askAgain: 'Ask for a new one',
       password: 'New password',
       passwordHint: 'At least 8 characters.',
@@ -421,6 +423,8 @@ export const en = {
       neverBody:
         'Nothing is booked before or after this week either. The booking page is where the first one comes from.',
       openBookingPage: 'Open the booking page',
+      /** `{day}` is a formatted day heading, already in the reader's language. */
+      goToDay: 'Go to {day}',
       weekTitle: 'Nothing booked this week',
       weekBody:
         'The week is free. Jump to the nearest week that has appointments, or use the arrows to look around.',
@@ -525,10 +529,18 @@ export const en = {
       /** The chip's spoken name: the state, then why, then what pressing it does. */
       chipHint: '. {reason} Open to fix it.',
       assignStaff: 'Assign staff',
-      reactivateColleague: 'Reactivate a colleague',
+      /** The link under {@link nobodyActive}, which is a destination and not half a sentence. */
+      goToTeam: 'Go to your team',
       noneAssigned: 'Nobody is assigned to perform it, so it offers no times on your booking page.',
       assignActive:
         'It offers no times on your booking page. Assign a colleague who is still active.',
+      /**
+       * Shown when the candidate list is empty, which can only mean the whole
+       * active team is empty — the server has already said no *active* colleague
+       * is assigned, so an empty list is never "they are all already on it".
+       */
+      nobodyActive:
+        'Nobody on your team is active, so there is no one to assign. Reactivate a colleague, or invite somebody new.',
       /** `{names}` is a list of people's own names and is not translated. */
       onlyPersonGone: '{names} is the only person assigned to it, and they have been deactivated.',
       everyoneGone: 'Everyone assigned to it has been deactivated: {names}.',
@@ -827,6 +839,9 @@ export const en = {
         '{name} works the weekly hours above, every day of this month. Add an override for a holiday, a day off or a late opening.',
       blocked: 'Blocked',
       extra: 'Extra hours',
+      /** The two whole-day forms, beside the date rather than instead of it. */
+      closedAllDay: 'closed all day',
+      allDay: 'all day',
       wholeBusiness: 'Whole business',
       /** `{date}` is a formatted day heading. */
       remove: 'Remove the override on {date}',
@@ -998,6 +1013,17 @@ export const en = {
     },
     modal: {
       close: 'Close',
+    },
+    /**
+     * The theme button's accessible name, which says what pressing it will *do*
+     * rather than what the current state is — a button named "Dark" is ambiguous
+     * about whether that is the state or the destination, and a screen-reader
+     * user has no icon to disambiguate it.
+     */
+    themeToggle: {
+      toLight: 'Switch to light theme',
+      toDark: 'Switch to dark theme',
+      toSystem: 'Use system theme',
     },
     skipLink: 'Skip to content',
     footerNote: "A booking platform. Times shown in the business's timezone.",
