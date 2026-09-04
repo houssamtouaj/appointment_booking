@@ -83,7 +83,7 @@ export function DayRow({
         <div className="grid gap-2">
           {day.ranges.map((range, index) => {
             const problem = rangeProblem(range)
-            const shift = `${label}, shift ${index + 1}`
+            const shift = t('hours.day.shift', { day: label, index: index + 1 })
 
             return (
               <div key={range.key} className="flex flex-wrap items-center gap-2">
@@ -128,7 +128,7 @@ export function DayRow({
 
                 {problem ? (
                   <p role="alert" className="text-destructive text-xs">
-                    {problem}
+                    {t(problem)}
                   </p>
                 ) : null}
               </div>

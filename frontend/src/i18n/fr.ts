@@ -593,6 +593,7 @@ export const fr = {
     },
     day: {
       closed: 'Fermé — aucune heure travaillée',
+      shift: '{day}, plage {index}',
       start: 'Début de {shift}',
       end: 'Fin de {shift}',
       remove: 'Supprimer {shift}',
@@ -600,6 +601,8 @@ export const fr = {
       addHint: 'pour une journée coupée ou une pause',
       overlap:
         'Ces horaires en chevauchent d’autres dans la semaine. Deux plages ne peuvent pas revendiquer la même minute.',
+      bothTimes: 'Les deux horaires sont nécessaires',
+      sameTimes: 'Le début et la fin doivent différer',
     },
     removal: {
       oneTitle: '{day} ne sera plus travaillé',

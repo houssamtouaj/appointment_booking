@@ -15,6 +15,7 @@ import {
   toggleDay,
   type HoursDraft,
 } from '@/features/hours/hours-model'
+import { translateIn } from '@/i18n'
 import type { WorkingHoursRange } from '@/types'
 
 /**
@@ -101,6 +102,23 @@ describe('a single range', () => {
   it('refuses equal times and allows a night shift', () => {
     expect(rangeProblem({ start: '09:00', end: '09:00' })).toBeTruthy()
     expect(rangeProblem({ start: '22:00', end: '02:00' })).toBeUndefined()
+  })
+
+  it('names its problem with a key both dictionaries answer', () => {
+    // This module has no `t` and never will — it is pure, and `DayRow` renders
+    // what it returns inside a `role="alert"`. Returning English put English in
+    // that alert on the French hours screen, which is what this pins.
+    for (const range of [
+      { start: '' as const, end: '17:00' as const },
+      { start: '09:00' as const, end: '09:00' as const },
+    ]) {
+      const key = rangeProblem(range)
+      expect(key).toBeDefined()
+      if (!key) continue
+      expect(translateIn('en', key)).not.toBe(key)
+      expect(translateIn('fr', key)).not.toBe(key)
+      expect(translateIn('fr', key)).not.toBe(translateIn('en', key))
+    }
   })
 
   it('measures a midnight crossing forwards, not backwards', () => {

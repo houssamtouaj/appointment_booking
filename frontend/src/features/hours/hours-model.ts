@@ -1,5 +1,6 @@
 import { WEEKDAYS } from '@/lib/time'
 import type { DayOfWeek, WorkingHoursRange, WorkingHoursRequest } from '@/types'
+import type { TKey } from '@/i18n'
 
 /**
  * The weekly grid as the form holds it, and the four questions it has to answer
@@ -155,10 +156,19 @@ export function durationMinutes(range: { start: ClockTime; end: ClockTime }): nu
   return end < start ? MINUTES_PER_DAY - start + end : end - start
 }
 
-/** The one thing wrong with a single range, or `undefined`. */
-export function rangeProblem(range: { start: ClockTime; end: ClockTime }): string | undefined {
-  if (!range.start || !range.end) return 'Both times are needed'
-  if (range.start === range.end) return 'Start and end must differ'
+/**
+ * The one thing wrong with a single range, as a **dictionary key**, or
+ * `undefined`.
+ *
+ * A key and not a sentence for the reason every schema in `api/schemas/` now
+ * gives: this is a plain function in a module, it has no `t`, and returning
+ * English put English in a `role="alert"` on the French hours screen. `DayRow`
+ * translates what it gets back; `weeklyGrid` and `overlappingDays` only ask
+ * whether there *is* a problem, and neither reads the words.
+ */
+export function rangeProblem(range: { start: ClockTime; end: ClockTime }): TKey | undefined {
+  if (!range.start || !range.end) return 'hours.day.bothTimes'
+  if (range.start === range.end) return 'hours.day.sameTimes'
   return undefined
 }
 

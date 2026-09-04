@@ -736,6 +736,15 @@ export const en = {
     },
     day: {
       closed: 'Closed — no hours worked',
+      /**
+       * The shift's own ordinal label, which the three keys below take as
+       * `{shift}`. A key rather than a template in `day-row.tsx`, because the
+       * word "shift" is half of every one of those accessible names and leaving
+       * it in English made French read "Début de lundi, shift 2".
+       *
+       * `{day}` is a weekday from `Intl` and is already in the right language.
+       */
+      shift: '{day}, shift {index}',
       /** `{shift}` is the shift's own ordinal label. */
       start: '{shift} start',
       end: '{shift} end',
@@ -744,6 +753,9 @@ export const en = {
       addHint: 'for a split shift or a break',
       overlap:
         'These hours overlap something else in the week. Two ranges cannot claim the same minute.',
+      /** `rangeProblem`'s two answers, rendered in a `role="alert"` beside the inputs. */
+      bothTimes: 'Both times are needed',
+      sameTimes: 'Start and end must differ',
     },
     removal: {
       /** `{day}` is one weekday name; `{count}` decides the plural. */
