@@ -497,11 +497,11 @@ export const fr = {
     inviteColleague: 'Inviter un collègue',
     loading: 'Chargement de votre équipe',
     standing: {
-      active: 'Actif',
+      active: 'Compte actif',
       activeNote: 'Peut se connecter et prendre des rendez-vous.',
-      deactivated: 'Désactivé',
+      deactivated: 'Compte désactivé',
       deactivatedNote: 'Ne peut pas se connecter. Les rendez-vous déjà pris restent dans l’agenda.',
-      invited: 'Invité — en attente',
+      invited: 'Invitation en attente',
       invitedNote:
         'Cette personne a un lien valable sept jours et choisit son propre mot de passe.',
       lapsed: 'Invitation expirée',
@@ -512,7 +512,7 @@ export const fr = {
     lastOwnerCopy:
       'Une entreprise doit toujours avoir un propriétaire actif, sans quoi personne ne pourrait la gérer. Promouvez d’abord un autre collègue.',
     reactivated: '{name} peut se reconnecter.',
-    deactivated: '{name} est désactivé.',
+    deactivated: 'Le compte de {name} est désactivé.',
     deactivatedNote: 'Cette personne n’a aucun rendez-vous à venir et ne peut pas se connecter.',
     resentTitle: 'Une nouvelle invitation est en route vers {email}.',
     resentNote: 'Il est valable sept jours. Tout lien antérieur ne fonctionne plus.',

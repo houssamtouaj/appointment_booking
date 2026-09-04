@@ -323,7 +323,7 @@ describe('the four states', () => {
     // Archived services are shown and marked: the assignment exists, and hiding
     // it would make this row disagree with the catalogue's own tick boxes.
     expect(
-      within(rowFor('Amélie Rousseau')).getByText(/Coupe classique, Permanente \(archived\)/),
+      within(rowFor('Amélie Rousseau')).getByText(/Coupe classique and Permanente \(archived\)/),
     ).toBeInTheDocument()
     expect(
       within(rowFor('Camille Bérard')).getByText('Performs no services yet'),

@@ -3,7 +3,8 @@ import { AlertDialog } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 import { formatWeekday } from '@/lib/time'
 import type { DayOfWeek } from '@/types'
-import { currentLocale, useTranslation } from '@/i18n'
+import { useTranslation } from '@/i18n'
+import { formatList } from '@/i18n/list'
 
 /**
  * The two questions the working-hours grid has to ask before it does something
@@ -116,25 +117,4 @@ export function UnsavedChangesConfirm({
       </AlertDialog.Portal>
     </AlertDialog.Root>
   )
-}
-
-/** `Monday`, `Monday and Tuesday`, `Monday, Tuesday and Saturday`. */
-/**
- * `"Tuesday, Thursday and Friday"`, `"mardi, jeudi et vendredi"`.
- *
- * `Intl.ListFormat` rather than joining with `', '` and `' and '`, for the same
- * reason `Intl.PluralRules` replaced the `=== 1` ternaries: the conjunction is
- * the language's, not this file's, and French does not put a comma before it
- * either. One formatter per locale, cached like every other in this codebase.
- */
-const listFormatters = new Map<string, Intl.ListFormat>()
-
-function formatList(names: readonly string[]): string {
-  const locale = currentLocale()
-  let formatter = listFormatters.get(locale)
-  if (!formatter) {
-    formatter = new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' })
-    listFormatters.set(locale, formatter)
-  }
-  return formatter.format(names)
 }

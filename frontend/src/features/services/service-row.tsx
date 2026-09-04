@@ -10,6 +10,7 @@ import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import type { Service } from '@/types'
 import { translate, useTranslation } from '@/i18n'
+import { formatList } from '@/i18n/list'
 
 /**
  * One service, as a row.
@@ -173,7 +174,7 @@ function Performers({
     <div className="flex shrink-0 items-center sm:w-28">
       <span className="sr-only">
         {t('services.row.performedBy', {
-          names: performers.map((person) => person.fullName).join(', '),
+          names: formatList(performers.map((person) => person.fullName)),
         })}
       </span>
       <div className="flex items-center -space-x-1.5">

@@ -15,6 +15,7 @@ import type { Lookups } from '@/hooks/use-lookups'
 import { cn } from '@/lib/utils'
 import type { Staff } from '@/types'
 import { translate, useTranslation } from '@/i18n'
+import { formatList } from '@/i18n/list'
 
 /**
  * One colleague, as a row: who they are, what they can do, what state their
@@ -122,7 +123,7 @@ export function StaffRow({
               <span className="italic">{t('team.performsNothing')}</span>
             ) : (
               <>
-                <span className="text-foreground">{t('team.performs')}</span> {services.join(', ')}
+                <span className="text-foreground">{t('team.performs')}</span> {formatList(services)}
               </>
             )}
           </p>

@@ -1,6 +1,7 @@
 import type { Lookups } from '@/hooks/use-lookups'
 import type { Service, Staff } from '@/types'
 import { translate, type TKey } from '@/i18n'
+import { formatList } from '@/i18n/list'
 
 /**
  * The three states a catalogue row can be in, and the reason for the awkward one.
@@ -94,7 +95,7 @@ function unbookableReason(service: Service, lookups: Lookups): string {
     return translate('services.bookability.assignActive')
   }
 
-  const names = departed.map((person) => person.fullName).join(', ')
+  const names = formatList(departed.map((person) => person.fullName))
   return departed.length === 1
     ? translate('services.bookability.onlyPersonGone', { names })
     : translate('services.bookability.everyoneGone', { names })

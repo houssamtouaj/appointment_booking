@@ -97,8 +97,10 @@ describe('naming the cause', () => {
       lookups([DEPARTED, ALSO_DEPARTED]),
     ).reason
 
+    // `Intl.ListFormat`, not a `.join(', ')`: the conjunction belongs to the
+    // language, and French writes "et" with no comma before it.
     expect(reason).toBe(
-      'Everyone assigned to it has been deactivated: Amélie Rousseau, Marc Duval.',
+      'Everyone assigned to it has been deactivated: Amélie Rousseau and Marc Duval.',
     )
   })
 
