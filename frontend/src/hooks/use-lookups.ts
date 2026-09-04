@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 
 import { fetchServices, fetchTeam, referenceKeys } from '@/api/reference'
 import type { Service, Staff } from '@/types'
+import { translate } from '@/i18n'
 
 /**
  * The single reference-data cache (F7): two queries, two maps, one hook.
@@ -97,9 +98,9 @@ function byId<T extends { id: string }>(rows: readonly T[] | undefined): Readonl
  * UUID at a person or leave a gap they read as a rendering bug.
  */
 export function serviceNameIn(lookups: Lookups, serviceId: string): string {
-  return lookups.serviceById.get(serviceId)?.name ?? 'Unknown service'
+  return lookups.serviceById.get(serviceId)?.name ?? translate('common.unknownService')
 }
 
 export function staffNameIn(lookups: Lookups, staffId: string): string {
-  return lookups.staffById.get(staffId)?.fullName ?? 'Unknown colleague'
+  return lookups.staffById.get(staffId)?.fullName ?? translate('common.unknownColleague')
 }

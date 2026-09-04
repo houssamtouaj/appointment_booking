@@ -30,6 +30,8 @@ export const fr = {
     durationHoursMinutes: '{hours} h {minutes} min',
     durationHours: '{hours} h',
     durationMinutes: '{minutes} min',
+    unknownService: 'Prestation inconnue',
+    unknownColleague: 'Collègue inconnu',
   },
   errors: {
     // --- Forme de la requête. Générique à dessein : voir en.ts.
@@ -210,6 +212,8 @@ export const fr = {
     },
     session: {
       logIn: 'Connexion',
+      reused: 'Vous avez été déconnecté car votre session a été utilisée ailleurs.',
+      expired: 'Votre session a expiré. Veuillez vous reconnecter.',
       signedOut: 'Déconnecté',
     },
   },

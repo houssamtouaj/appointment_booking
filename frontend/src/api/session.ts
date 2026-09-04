@@ -14,6 +14,8 @@
  * signing in must not contain the token.
  */
 
+import { translate } from '@/i18n'
+
 /** Why a session ended without the user asking. */
 export type SessionEndReason =
   /** The refresh cookie was missing, expired or rejected. Ordinary. */
@@ -145,9 +147,13 @@ export function forgetAccessToken(): void {
   notifyTokenChanged()
 }
 
-/** The one sentence each ending gets. `reused` is its own, deliberately (wave gate). */
+/**
+ * The one sentence each ending gets. `reused` is its own, deliberately (wave gate).
+ *
+ * `translate` and not a hook: this is a plain function, called from
+ * `AuthProvider`'s `onSessionEnded` subscription rather than from a render. A
+ * French admin whose refresh token was replayed was reading the English.
+ */
 export function signOutMessage(reason: SessionEndReason): string {
-  return reason === 'reused'
-    ? 'You were signed out because your session was used from somewhere else.'
-    : 'Your session expired. Please sign in again.'
+  return translate(reason === 'reused' ? 'auth.session.reused' : 'auth.session.expired')
 }

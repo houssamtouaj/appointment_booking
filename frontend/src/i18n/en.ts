@@ -32,6 +32,14 @@ export const en = {
     durationHoursMinutes: '{hours} hr {minutes} min',
     durationHours: '{hours} hr',
     durationMinutes: '{minutes} min',
+    /**
+     * What the reference lookups say when they miss. Five features read them —
+     * the booking list, the tile, the sheet, the calendar columns and the
+     * dashboard's upcoming list — so they are `common` rather than any one
+     * screen's.
+     */
+    unknownService: 'Unknown service',
+    unknownColleague: 'Unknown colleague',
   },
   /**
    * Every `ErrorCode` the backend declares, plus the three sentences this module
@@ -298,6 +306,14 @@ export const en = {
     },
     session: {
       logIn: 'Log in',
+      /**
+       * The two endings, and `reused` is its own sentence deliberately: being
+       * signed out because somebody replayed a refresh token is a different
+       * event from a session quietly running out, and the wave gate asked for
+       * the difference to be sayable.
+       */
+      reused: 'You were signed out because your session was used from somewhere else.',
+      expired: 'Your session expired. Please sign in again.',
       /** `useSignOut`'s toast. A plain hook, so it reads the module store. */
       signedOut: 'Signed out',
     },

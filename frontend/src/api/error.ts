@@ -143,9 +143,6 @@ export function problemCount(error: unknown, name: string): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
-/** The detail shown when the request never reached the API and there is no body to quote. */
-const NETWORK_DETAIL = 'Could not reach the server. Check your connection and try again.'
-
 /**
  * The single conversion point. Anything already an `ApiError` passes through, so
  * this is safe to call twice on the same rejection.
@@ -169,10 +166,16 @@ export function toApiError(error: unknown): ApiError {
     // No response object at all: offline, aborted, DNS, or a CORS preflight the
     // API declined. The browser deliberately tells JavaScript nothing more than
     // "it failed", so there is no more specific message to be had here.
+    // This `detail` is the `Error.message` and nothing else. Every screen that
+    // shows a status-0 goes through `describeError`, which answers
+    // `errors.networkFailure` before it ever looks at `detail` — so translating
+    // this would be two dictionary entries for a string only a stack trace
+    // reads, which is the same category as the `console.error` in
+    // `api/reference.ts`.
     return new ApiError({
       code: 'INTERNAL_ERROR',
       status: 0,
-      detail: NETWORK_DETAIL,
+      detail: 'Could not reach the server. Check your connection and try again.',
       cause: error,
     })
   }

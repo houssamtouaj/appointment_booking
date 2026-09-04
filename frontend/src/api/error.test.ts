@@ -4,8 +4,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { ApiError, applyFieldErrors, isApiError, toApiError } from '@/api/error'
 import { describeError } from '@/api/error-copy'
+import { translateIn } from '@/i18n'
 import { fr } from '@/i18n/fr'
-import { resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
+import { LANGUAGE_STORAGE_KEY, resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
 
 /**
  * A 422 exactly as the API sends one. Taken from `Problems.of` +
@@ -80,6 +81,30 @@ describe('toApiError', () => {
     // Not retried-forever and not silently swallowed: the query client keys its
     // retry rule off exactly this.
     expect(describeError(error)).toMatch(/could not reach the server/i)
+  })
+
+  it('never shows its own status-0 detail to a reader, in either language', () => {
+    // `toApiError` writes an English `detail` for a request that got no answer,
+    // and it stays English on purpose: it is the `Error.message`, which only a
+    // stack trace reads. `describeError` intercepts `isNetworkFailure` before it
+    // ever consults `detail`, which is what makes that safe — and is the reason
+    // the string was left untranslated rather than given two dictionary entries.
+    const raw = new Error('Network Error') as Error & {
+      isAxiosError: boolean
+      toJSON: () => object
+    }
+    raw.isAxiosError = true
+    raw.toJSON = () => ({})
+    const error = toApiError(raw)
+
+    setLanguage('fr')
+    try {
+      expect(describeError(error)).toBe(translateIn('fr', 'errors.networkFailure'))
+      expect(describeError(error)).not.toBe(error.detail)
+    } finally {
+      localStorage.removeItem(LANGUAGE_STORAGE_KEY)
+      resetLanguageStoreForTests()
+    }
   })
 
   it('is idempotent, so a second call cannot double-wrap', () => {

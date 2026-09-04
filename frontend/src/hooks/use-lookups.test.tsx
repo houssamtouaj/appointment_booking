@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { client } from '@/api/client'
 import { createQueryClient } from '@/api/query-client'
-import { serviceNameIn, staffNameIn, useLookups } from '@/hooks/use-lookups'
+import { serviceNameIn, staffNameIn, useLookups, type Lookups } from '@/hooks/use-lookups'
+import { LANGUAGE_STORAGE_KEY, resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
 
 /**
  * The reference-data layer (F7).
@@ -220,5 +221,26 @@ describe('useLookups', () => {
 
     expect(await screen.findByText(/Unknown service/)).toBeInTheDocument()
     expect(screen.queryByText(new RegExp(ARCHIVED_SERVICE.id))).not.toBeInTheDocument()
+  })
+
+  it('names it in the reader’s language', () => {
+    // Five screens read these two — the booking list, the tile, the sheet, the
+    // calendar columns and the dashboard's upcoming list — and all five got the
+    // English until this wave, because a plain function has no `t`.
+    const empty: Lookups = {
+      serviceById: new Map(),
+      staffById: new Map(),
+      isLoading: false,
+      error: undefined,
+    }
+
+    setLanguage('fr')
+    expect(serviceNameIn(empty, 'nope')).toBe('Prestation inconnue')
+    expect(staffNameIn(empty, 'nope')).toBe('Collègue inconnu')
+
+    localStorage.removeItem(LANGUAGE_STORAGE_KEY)
+    resetLanguageStoreForTests()
+    expect(serviceNameIn(empty, 'nope')).toBe('Unknown service')
+    expect(staffNameIn(empty, 'nope')).toBe('Unknown colleague')
   })
 })
