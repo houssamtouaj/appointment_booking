@@ -294,7 +294,7 @@ top right. Four decisions, F21 to F24.
 
 **A hand-written typed dictionary, not `react-i18next`, `react-intl` or Lingui** (F21).
 `src/i18n/en.ts` is the source of truth; `fr.ts` carries `satisfies Same<typeof en>`, and
-that one line is the whole argument. This app needs ~750 strings, two languages, no lazy
+that one line is the whole argument. This app needs ~790 strings, two languages, no lazy
 namespace loading and no translation-management integration — which is most of what a
 library is for. What it does need is the thing the libraries are weakest at: **a missing
 French string must not compile.** i18next needs a declaration-merging block for key
@@ -370,19 +370,67 @@ server's sentence — a sentence in the wrong language still names the problem, 
 blank does not.
 
 **The admin surface is done too.** Dashboard, calendar, services, team, hours and
-settings all read from the dictionary, and `no-hardcoded-strings.test.ts` now walks the
-whole of `src/` with no per-folder allowances — the one file it skips is the dev-only
-session debug panel, which Vite drops from a production build, and it says so in a
-comment.
+settings all read from the dictionary, and `no-hardcoded-strings.test.ts` walks every `.ts`
+and `.tsx` under `src/` — no per-folder and no per-extension allowances. The three files it
+skips are the dev-only session debug panel, which Vite drops from a production build, and
+`en.ts`/`fr.ts`, which are the answer; each says so in a comment.
+
+**The scan reads `.ts`, and that is where the strings that matter most were.** Its first
+version matched `/\.tsx$/`, so more than eighty source files were never opened — which is
+exactly where a module-scope `const`, a Zod message and a toast body live, and a sentence
+built at module scope is the one kind that cannot work: the module is evaluated once, so it
+freezes the language the tab was loaded in and survives a switch. Every request schema in
+`api/schemas/` was doing that, so a French customer submitting a blank name on step 4 of
+`/b/<slug>` read "Please tell us your name" under "Votre nom". The messages are keys now, in
+the shape `staff-edit-dialog.tsx` and `services/service-form.ts` already used —
+`'booking.details.nameRequired' satisfies TKey` in the schema, resolved at the field — and
+`schemas/form-messages.test.ts` drives failing values through every resolver schema to prove
+each message is a key both dictionaries answer. `business.ts` and `policy.ts` lost their
+messages instead of gaining keys: neither request schema is anybody's resolver, so those
+sentences could never reach a field.
+
+The scan's second rule reads every string and template literal and calls it prose when two
+or more words carry a function word or a capitalised opener between them — a discriminator
+in the shape of `LOOKS_LIKE_CODE` rather than an allowlist, matched per token so
+`justify-between` does not flag every flex row. Diagnostics are excluded by shape, not by
+filename: the argument list of a `console.*`, a `new *Error` or an `Error` subclass's
+`super`. That is also why `toApiError`'s status-0 `detail` stays English — `describeError`
+answers `errors.networkFailure` before it ever consults `detail`, so that string is the
+`Error.message` a stack trace reads and nothing else.
 
 Finishing the admin screens meant finishing the `Intl` work as well, because that is where
 the counting lives. Every `${n} ${n === 1 ? 'x' : 'xs'}` is now a plural key — French counts
 0 with the singular, so the ternary was wrong in both languages the moment there were two.
 `weekly-grid.tsx` was agreeing a _verb_ that way (`has`/`have`). `timezone-dialog.tsx` was
-agreeing two things at once. `hours-dialogs.tsx` joined a list with `' and '`, which is now
-`Intl.ListFormat`. And `booking-list.tsx` abbreviated a weekday with `.slice(0, 3)`, which
-is an English abbreviation and not a general one — `formatWeekdayShort` asks `Intl` for the
-language's own, and French answers `lun.` with the stop.
+agreeing two things at once. `columns.tsx`'s day view was still doing it in a spoken column
+label sixty lines below `weekColumns` doing it correctly. Lists go through
+`i18n/list.ts` — one cached `Intl.ListFormat` per locale, beside `duration.ts` because it is
+the same kind of thing — and the four places that were joining with `', '` or `' and '` all
+use it. And `booking-list.tsx` abbreviated a weekday with `.slice(0, 3)`, which is an
+English abbreviation and not a general one — `formatWeekdayShort` asks `Intl` for the
+language's own, and French answers `lun.` with the stop; `columns.tsx` was still slicing
+until the review found it.
+
+**No sentence is assembled from two keys, and this took four rewrites to be true.** The
+calendar arrows filled "Previous {unit}" from "day"/"week", which French shipped as
+"{unit} précédent(e)" — wrong for both _jour_ and _semaine_, with the "(e)" read aloud by
+the screen reader the label exists for. `hours.description` dropped "you are"/"they are"
+into the middle of a clause. `settings.business.zero*` and `hours.weekly.replaces*` were
+each one sentence split in two so a `<strong>` could wrap the first half, and a sentence
+split for emphasis cannot be reordered — which is the one thing its translation must do; the
+emphasis is on the whole line now. `services.bookability.chipHint` began ". " and was glued
+behind a chip's visible label, fixing the order of state, reason and instruction. And the
+unbookable chip wrapped a sentence around a `<Link>` in three pieces, which is now one key
+with the link under it.
+
+`fr.ts` uses one apostrophe. It shipped both the straight and the curly one — adjacent keys
+in `dashboard.figures` disagreed — which is two glyphs in neighbouring sentences on screen
+and invisible to `tsc` and to the placeholder check. `i18n.test.ts` fails on a straight
+apostrophe in either dictionary now. French also stopped guessing a gender it never learns:
+"Actif", "Invité" and "{name} est désactivé" became "Compte actif", "Invitation en attente"
+and "Le compte de {name} est désactivé", so the adjective agrees with a noun the app owns.
+And `services.row.nobodyAssigned` said "Personne assignée", which without the _ne_ means the
+opposite — the same file gets it right forty lines away.
 
 ## Not built yet
 
