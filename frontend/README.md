@@ -357,11 +357,7 @@ stranded in a language they cannot read is exactly who needs to find it; in the 
 the two options are named in their own language — "English" and "Français", never
 translated.
 
-`<html lang>` is stamped before first paint by a script in `index.html`, beside the theme
-one. There is no flash of the wrong language — there is no text until React mounts — but a
-screen reader picks its voice from that attribute at parse time and does not re-read it.
-The `slotflow-lang` string is duplicated there because the script runs before any module
-is evaluated, and a test fails if the two copies drift.
+`<html lang>` is stamped before first paint by a script in `index.html`, beside the theme one. There is no flash of the wrong language — there is no text until React mounts — but a screen reader picks its voice from that attribute at parse time and does not re-read it, and the browser picks hyphenation and spell-check from it the same way. The `slotflow-lang` string is duplicated there because the script runs before any module is evaluated, and so is the **derivation**: the script walks `navigator.languages` exactly as `detect()` does, and stamps the attribute on every path including the English one, so the static `lang="en"` is a placeholder rather than an answer that happens to agree. `language.ts` stamps its derived value at module init as well, not only from `setLanguage` — which early-returns when nothing changed, and is how a browser listing `['nl-BE', 'fr-BE']` rendered the whole app in French under `lang="en"`. `language.test.ts` executes the script out of `index.html` against stubbed globals and fails if its answer and `detect()`'s ever differ; the assertion it replaced only checked that the file contained the substring `navigator.language`, which `navigator.languages` satisfies too.
 
 **Not translated, deliberately.** Tenant data — business name, service names and
 descriptions, staff names, guest notes — is one business's own copy, in one language, in

@@ -72,23 +72,42 @@
       reader chooses its voice from <html lang>, and the browser chooses
       hyphenation and spell-checking from it.
 
-      The static lang="en" on <html> is the honest default for a document with a
-      stored preference of nothing and an English browser; this corrects it for
-      the other two cases. src/i18n/language.ts keeps it true after a switch.
+      The static lang="en" on <html> is a placeholder, not the answer: this
+      script stamps the attribute on every path, including the English one, so
+      that the derived value is never left to a default that happens to agree.
+      src/i18n/language.ts keeps it true after a switch, and stamps it again at
+      module init in case anything ever loads this document without the script.
+
+      It must derive the language exactly as detect() does in
+      src/i18n/language.ts — the same walk over navigator.languages, the same
+      match on any fr-* tag. The two cannot import each other (this runs before
+      any module is evaluated), so src/i18n/language.test.ts runs this very
+      script against stubbed globals and fails if the answers diverge.
     -->
     <script>
       ;(function () {
+        var chosen = null
         try {
           var stored = localStorage.getItem('slotflow-lang')
-          if (stored === 'en' || stored === 'fr') {
-            document.documentElement.lang = stored
-            return
-          }
+          if (stored === 'en' || stored === 'fr') chosen = stored
         } catch (_) {
           /* Private mode, or storage disabled. Fall through to the browser. */
         }
-        var preferred = (navigator.language || 'en').toLowerCase()
-        if (preferred.indexOf('fr') === 0) document.documentElement.lang = 'fr'
+        if (chosen === null) {
+          // navigator.languages and not navigator.language, matching detect():
+          // a French speaker on an English-first OS often lists fr second, and
+          // reading only the first tag renders the whole app in French under
+          // <html lang="en"> — the one thing this script exists to get right.
+          var preferences = navigator.languages || [navigator.language || 'en']
+          for (var i = 0; i < preferences.length; i++) {
+            var base = String(preferences[i]).toLowerCase().split('-')[0]
+            if (base === 'en' || base === 'fr') {
+              chosen = base
+              break
+            }
+          }
+        }
+        document.documentElement.lang = chosen || 'en'
       })()
     </script>
   </head>

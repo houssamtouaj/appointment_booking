@@ -59,13 +59,29 @@ let current: Language = readStored()
 const listeners = new Set<() => void>()
 
 /**
+ * Stamped once at module init, and not only from `setLanguage`.
+ *
+ * The failure this closes: `setLanguage` early-returns when the value has not
+ * changed, so a browser listing `['nl-BE', 'fr-BE']` with nothing stored used to
+ * render the whole app in French while `<html lang>` kept whatever the document
+ * arrived with. index.html's script derives the same value and would normally
+ * have stamped it already — this is what makes the two impossible to leave
+ * disagreeing, rather than a duplicate of it.
+ */
+apply(current)
+
+/**
  * Stamped on `<html>` as well as held here, because the document language is not
  * decoration: a screen reader picks its voice from it, and the browser picks
  * hyphenation and spell-check from it. index.html's script sets it before first
  * paint; this keeps it true after a switch.
+ *
+ * Guarded, because this module is imported by `lib/time.ts` and `lib/money.ts`
+ * and is the bottom of the app — it must not be the reason a non-DOM
+ * environment throws on import.
  */
 function apply(language: Language) {
-  document.documentElement.lang = language
+  if (typeof document !== 'undefined') document.documentElement.lang = language
 }
 
 export function currentLanguage(): Language {
