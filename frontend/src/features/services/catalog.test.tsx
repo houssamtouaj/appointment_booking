@@ -309,6 +309,20 @@ describe('the three row states', () => {
     ).toBeInTheDocument()
   })
 
+  it('spells the chip’s whole accessible name once, not a state plus a fragment', async () => {
+    // `chipHint` used to start ". " and be appended to whatever the trigger
+    // already said, which fixed the order of state, reason and instruction in
+    // English. It is one sentence with a `{state}` hole now, and the visible
+    // label is `aria-hidden` so the name is not said twice.
+    await renderCatalog('/services?active=all')
+    await waitFor(() => expect(rowFor('Couleur')).toBeInTheDocument())
+
+    const chip = within(rowFor('Couleur')).getByRole('button', { name: /not bookable/i })
+    expect(chip).toHaveAccessibleName(
+      'Not bookable. Nobody is assigned to perform it, so it offers no times on your booking page. Open to fix it.',
+    )
+  })
+
   it('names the reason, and names it differently for the two causes', async () => {
     await renderCatalog('/services?active=all')
     await waitFor(() => expect(rowFor('Couleur')).toBeInTheDocument())

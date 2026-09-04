@@ -16,6 +16,7 @@ import { dashboardKeys } from '@/api/dashboard'
 import { AuthProvider } from '@/features/auth/auth-provider'
 import { WEEK_GRID_MIN_WIDTH } from '@/hooks/use-media-query'
 import { routes } from '@/routes'
+import { LANGUAGE_STORAGE_KEY, resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -343,10 +344,39 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  // `setLanguage` persists, so clearing the key is what actually resets it.
+  localStorage.removeItem(LANGUAGE_STORAGE_KEY)
+  resetLanguageStoreForTests()
   vi.useRealTimers()
 })
 
 // ---------------------------------------------------------------------------
+
+describe('the step arrows', () => {
+  /**
+   * The failure this pins: `calendar.previous` was "{unit} précédent(e)" filled
+   * from "Jour" / "Semaine". *Jour* is masculine and *semaine* is feminine, so
+   * one template could only ever be right for one of them — and the "(e)" is
+   * read aloud by the screen reader the label exists for.
+   */
+  it('agrees with the noun’s gender in French, in both views', async () => {
+    setLanguage('fr')
+    await renderCalendar(`/calendar?date=${MONDAY}&view=week`)
+
+    expect(screen.getByRole('button', { name: 'Semaine précédente' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Semaine suivante' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /\(e\)/ })).not.toBeInTheDocument()
+  })
+
+  it('names the day arrows for the masculine noun', async () => {
+    setViewport(false)
+    setLanguage('fr')
+    await renderCalendar(`/calendar?date=${MONDAY}&view=day`)
+
+    expect(screen.getByRole('button', { name: 'Jour précédent' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Jour suivant' })).toBeInTheDocument()
+  })
+})
 
 describe('the week', () => {
   it('asks for the business week as instants, with an exclusive end', async () => {

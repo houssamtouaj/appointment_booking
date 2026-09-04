@@ -404,10 +404,19 @@ export const en = {
       weekUnavailable: 'The week grid needs a wider screen',
     },
     /** `{unit}` is the day-or-week noun below, so the two agree in gender in French. */
-    previous: 'Previous {unit}',
-    next: 'Next {unit}',
-    unitDay: 'day',
-    unitWeek: 'week',
+    /**
+     * Four flat keys, not two templates over a `{unit}` noun.
+     *
+     * "Previous {unit}" filled from "day"/"week" is English grammar assumed to
+     * be universal: French agrees the adjective with the noun's gender, so one
+     * template can only be right for one of the two — the wave shipped
+     * "{unit} précédent(e)", which is wrong twice and reads the "(e)" aloud.
+     * `dashboard.previousWeek` next door was already this shape.
+     */
+    previousDay: 'Previous day',
+    nextDay: 'Next day',
+    previousWeek: 'Previous week',
+    nextWeek: 'Next week',
     filters: {
       everyone: 'Everyone',
       anyStatus: 'Any status',
@@ -526,8 +535,13 @@ export const en = {
       archived: 'Archived',
       bookable: 'Bookable',
       unbookable: 'Not bookable',
-      /** The chip's spoken name: the state, then why, then what pressing it does. */
-      chipHint: '. {reason} Open to fix it.',
+      /**
+       * The chip's whole spoken name: the state, then why, then what pressing it
+       * does. `{state}` is the visible label — a complete sentence rather than a
+       * fragment starting ". " that the component glued behind whatever was
+       * already there, which fixed the order of three clauses in English.
+       */
+      chipHint: '{state}. {reason} Open to fix it.',
       assignStaff: 'Assign staff',
       /** The link under {@link nobodyActive}, which is a destination and not half a sentence. */
       goToTeam: 'Go to your team',
@@ -749,11 +763,16 @@ export const en = {
     ownTitle: 'Your working hours',
     /** `{name}` is a colleague's own name. */
     otherTitle: '{name}’s working hours',
-    /** `{who}` is `descriptionYou`/`descriptionThey`; `{city}` is an IANA city name. */
-    description:
-      'When {who} available to be booked, in {city} time. These are wall-clock hours: nine o’clock stays nine o’clock when the clocks change.',
-    descriptionYou: 'you are',
-    descriptionThey: 'they are',
+    /**
+     * Two whole sentences, not one with a subject-and-verb fragment dropped into
+     * the middle of it. "When {who} available" filled from "you are"/"they are"
+     * is a clause split at a point only English can be split at. `{city}` is an
+     * IANA city name and is not prose.
+     */
+    descriptionOwn:
+      'When you are available to be booked, in {city} time. These are wall-clock hours: nine o’clock stays nine o’clock when the clocks change.',
+    descriptionOther:
+      'When they are available to be booked, in {city} time. These are wall-clock hours: nine o’clock stays nine o’clock when the clocks change.',
     thisColleague: 'This colleague',
     selfOnly: 'You can only edit your own working hours.',
     loading: 'Loading the weekly hours',
@@ -762,10 +781,14 @@ export const en = {
       heading: 'Weekly hours',
       copyWeekdays: 'Copy Monday to weekdays',
       copyAll: 'Copy Monday to all days',
-      /** Two sentences, so the bolded first half survives translation as its own key. */
-      replacesLead: 'Saving replaces the whole week.',
-      replacesBody:
-        'Every day is sent together, so a day switched off here loses its hours — this form does not edit one day at a time.',
+      /**
+       * One key. It was two so that a `<strong>` could wrap the first half, and
+       * a sentence split for emphasis is a sentence that cannot be reordered —
+       * which is the one thing a translation of it has to do. The emphasis is
+       * kept by styling the whole line instead.
+       */
+      replaces:
+        'Saving replaces the whole week. Every day is sent together, so a day switched off here loses its hours — this form does not edit one day at a time.',
       fixMarked: 'Fix the marked rows before saving.',
       unsaved: 'Unsaved changes. Saving sends all seven days.',
       inSync: 'Everything here matches what is saved.',
@@ -922,9 +945,8 @@ export const en = {
       askDeposit: 'Ask for a deposit when a customer books',
       depositPercent: 'Deposit percentage',
       depositPercentHint: '0 to 100.',
-      /** Two sentences so the bolded half survives translation as its own key. */
-      zeroLead: 'A percentage of zero means no deposit,',
-      zeroBody: 'whatever the checkbox says. That is what the booking page reports too.',
+      /** One key, for the reason `hours.weekly.replaces` gives: the emphasis is on the line, not on half a sentence. */
+      zero: 'A percentage of zero means no deposit, whatever the checkbox says. That is what the booking page reports too.',
       paymentsNote:
         'Deposits are taken only when payments are configured for this deployment. This setting is stored either way, and the booking response is what decides whether a customer is asked for money.',
       save: 'Save business settings',

@@ -76,16 +76,15 @@ function StepControl({ params, view }: { params: CalendarParams; view: CalendarV
         : weekOf(addDays(params.week.from, direction * 7)).from,
     )
 
-  const unit = t(byDay ? 'calendar.unitDay' : 'calendar.unitWeek')
+  // Four flat keys rather than one template over a `{unit}` noun: French agrees
+  // the adjective with the noun, so "{unit} précédent(e)" was wrong for both
+  // "jour" and "semaine" and read the "(e)" aloud.
+  const previous = byDay ? 'calendar.previousDay' : 'calendar.previousWeek'
+  const next = byDay ? 'calendar.nextDay' : 'calendar.nextWeek'
 
   return (
     <div className="border-border bg-card flex items-center rounded-sm border">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t('calendar.previous', { unit })}
-        onClick={() => step(-1)}
-      >
+      <Button variant="ghost" size="icon-sm" aria-label={t(previous)} onClick={() => step(-1)}>
         <ChevronLeft aria-hidden="true" />
       </Button>
 
@@ -99,12 +98,7 @@ function StepControl({ params, view }: { params: CalendarParams; view: CalendarV
         {byDay ? formatDayHeading(params.date) : formatRange(params.week)}
       </p>
 
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t('calendar.next', { unit })}
-        onClick={() => step(1)}
-      >
+      <Button variant="ghost" size="icon-sm" aria-label={t(next)} onClick={() => step(1)}>
         <ChevronRight aria-hidden="true" />
       </Button>
     </div>

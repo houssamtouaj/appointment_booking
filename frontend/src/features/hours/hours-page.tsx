@@ -86,8 +86,7 @@ function HoursFor({ user, staffId, own }: { user: MeResponse; staffId: string; o
       <PageHeader
         eyebrow={t('hours.eyebrow')}
         title={own ? t('hours.ownTitle') : t('hours.otherTitle', { name: staffName })}
-        description={t('hours.description', {
-          who: t(own ? 'hours.descriptionYou' : 'hours.descriptionThey'),
+        description={t(own ? 'hours.descriptionOwn' : 'hours.descriptionOther', {
           city: zoneCity(user.business.timezone),
         })}
       />

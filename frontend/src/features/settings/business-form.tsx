@@ -251,9 +251,8 @@ export function BusinessForm({ business }: { business: Business }) {
           {/* Two honest notes the screen owes the reader, and neither is
               hypothetical on this deployment. */}
           {depositRequired && depositIsZero ? (
-            <p className="border-warning/50 bg-warning-wash text-foreground rounded-sm border px-3 py-2 text-sm">
-              <strong className="font-medium">{t('settings.business.zeroLead')}</strong>{' '}
-              {t('settings.business.zeroBody')}
+            <p className="border-warning/50 bg-warning-wash text-foreground rounded-sm border px-3 py-2 text-sm font-medium">
+              {t('settings.business.zero')}
             </p>
           ) : null}
 

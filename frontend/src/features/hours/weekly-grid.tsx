@@ -163,9 +163,8 @@ export function WeeklyGrid({ staffId, staffName, saved }: WeeklyGridProps) {
       </div>
 
       {/* The rule, stated where somebody is about to break it. */}
-      <p className="border-info/40 bg-info-wash text-foreground mt-3 rounded-sm border px-3 py-2 text-sm">
-        <strong className="font-medium">{t('hours.weekly.replacesLead')}</strong>{' '}
-        {t('hours.weekly.replacesBody')}
+      <p className="border-info/40 bg-info-wash text-foreground mt-3 rounded-sm border px-3 py-2 text-sm font-medium">
+        {t('hours.weekly.replaces')}
       </p>
 
       <ul className="border-rule mt-2 border-t">

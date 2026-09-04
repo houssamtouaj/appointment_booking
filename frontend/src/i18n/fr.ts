@@ -275,10 +275,10 @@ export const fr = {
       list: 'Liste',
       weekUnavailable: 'La grille hebdomadaire demande un écran plus large',
     },
-    previous: '{unit} précédent(e)',
-    next: '{unit} suivant(e)',
-    unitDay: 'Jour',
-    unitWeek: 'Semaine',
+    previousDay: 'Jour précédent',
+    nextDay: 'Jour suivant',
+    previousWeek: 'Semaine précédente',
+    nextWeek: 'Semaine suivante',
     filters: {
       everyone: 'Tout le monde',
       anyStatus: "N'importe quel statut",
@@ -392,7 +392,7 @@ export const fr = {
       archived: 'Archivée',
       bookable: 'Réservable',
       unbookable: 'Non réservable',
-      chipHint: '. {reason} Ouvrez pour corriger.',
+      chipHint: '{state}. {reason} Ouvrez pour corriger.',
       assignStaff: 'Assigner du personnel',
       goToTeam: 'Aller à votre équipe',
       noneAssigned:
@@ -576,10 +576,10 @@ export const fr = {
     eyebrow: 'Disponibilité',
     ownTitle: 'Vos horaires de travail',
     otherTitle: 'Horaires de travail de {name}',
-    description:
-      'Quand {who} disponible pour des rendez-vous, à l’heure de {city}. Ce sont des heures à la pendule : neuf heures reste neuf heures quand on change d’heure.',
-    descriptionYou: 'vous êtes',
-    descriptionThey: 'cette personne est',
+    descriptionOwn:
+      'Quand vous êtes disponible pour des rendez-vous, à l’heure de {city}. Ce sont des heures à la pendule : neuf heures reste neuf heures quand on change d’heure.',
+    descriptionOther:
+      'Quand cette personne est disponible pour des rendez-vous, à l’heure de {city}. Ce sont des heures à la pendule : neuf heures reste neuf heures quand on change d’heure.',
     thisColleague: 'Ce collègue',
     selfOnly: 'Vous ne pouvez modifier que vos propres horaires.',
     loading: 'Chargement des horaires hebdomadaires',
@@ -588,9 +588,8 @@ export const fr = {
       heading: 'Horaires hebdomadaires',
       copyWeekdays: 'Copier lundi sur les jours de semaine',
       copyAll: 'Copier lundi sur tous les jours',
-      replacesLead: "L'enregistrement remplace toute la semaine.",
-      replacesBody:
-        'Tous les jours sont envoyés ensemble : un jour désactivé ici perd ses horaires — ce formulaire ne modifie pas un jour à la fois.',
+      replaces:
+        'L’enregistrement remplace toute la semaine. Tous les jours sont envoyés ensemble : un jour désactivé ici perd ses horaires — ce formulaire ne modifie pas un jour à la fois.',
       fixMarked: "Corrigez les lignes signalées avant d'enregistrer.",
       unsaved: "Modifications non enregistrées. L'enregistrement envoie les sept jours.",
       inSync: 'Tout ici correspond à ce qui est enregistré.',
@@ -728,8 +727,7 @@ export const fr = {
       askDeposit: 'Demander un acompte lors de la réservation',
       depositPercent: "Pourcentage de l'acompte",
       depositPercentHint: '0 à 100.',
-      zeroLead: 'Un pourcentage de zéro signifie aucun acompte,',
-      zeroBody: 'quoi que dise la case cochée. C’est aussi ce qu’indique la page de réservation.',
+      zero: 'Un pourcentage de zéro signifie aucun acompte, quoi que dise la case cochée. C’est aussi ce qu’indique la page de réservation.',
       paymentsNote:
         "Les acomptes ne sont prélevés que si les paiements sont configurés pour ce déploiement. Ce réglage est enregistré dans tous les cas, et c'est la réponse de réservation qui décide si un client doit payer.",
       save: 'Enregistrer les réglages',

@@ -92,12 +92,17 @@ export function BookableChip({
         )}
       >
         <Icon className="size-3.5" aria-hidden="true" />
-        {t(bookability.label)}
-        {/* The reason, in the accessible name. A person using a screen reader
-            hears "Not bookable. Nobody is assigned…" on arrival rather than
-            having to open a panel to find out there was one. */}
+        {/* The visible label is hidden from the accessible name, because the
+            sr-only sentence below now carries the state itself. `chipHint` used
+            to start ". " and be glued behind whatever was already there, which
+            fixed the order of three clauses in English — and French does not
+            put a state, a reason and an instruction in that order. */}
+        <span aria-hidden="true">{t(bookability.label)}</span>
         <span className="sr-only">
-          {t('services.bookability.chipHint', { reason: bookability.reason ?? '' })}
+          {t('services.bookability.chipHint', {
+            state: t(bookability.label),
+            reason: bookability.reason ?? '',
+          })}
         </span>
       </Popover.Trigger>
 
