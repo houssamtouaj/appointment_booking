@@ -14,6 +14,7 @@ import {
 import { describeError, referenceNote } from '@/api/error-copy'
 import { publicKeys } from '@/api/public'
 import type { Override, OverrideRequest, WorkingHoursRequest } from '@/types'
+import { translate } from '@/i18n'
 
 /**
  * The availability screen's reads and writes.
@@ -150,7 +151,7 @@ export function useDeleteOverride() {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: availabilityKeys.overridesAll })
       invalidatePublicOffers(client)
-      toast.success('That override is gone. Availability is back to the weekly hours.')
+      toast.success(translate('hours.overrides.removed'))
     },
     onError: (error) => {
       toast.error(describeError(error), {

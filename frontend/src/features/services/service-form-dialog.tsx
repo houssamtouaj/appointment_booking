@@ -153,8 +153,8 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
         onSuccess: (created) => {
           toast.success(
             created.bookable
-              ? `${created.name} is on your booking page.`
-              : `${created.name} is saved. It is not bookable yet — nobody is assigned to it.`,
+              ? t('services.toast.created', { name: created.name })
+              : t('services.toast.createdUnbookable', { name: created.name }),
           )
           onClose()
         },
@@ -176,7 +176,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
       { id: service.id, request: patch },
       {
         onSuccess: (saved) => {
-          toast.success(`${saved.name} is updated.`)
+          toast.success(t('services.toast.updated', { name: saved.name }))
           onClose()
         },
         onError: handleFailure,

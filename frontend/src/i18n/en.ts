@@ -238,6 +238,8 @@ export const en = {
       passwordHint: 'At least 8 characters.',
       submit: 'Create business',
       submitting: 'Creating…',
+      /** `{name}` is the business the owner just named. Tenant data, untranslated. */
+      ready: '{name} is ready',
     },
     forgot: {
       title: 'Reset your password',
@@ -296,6 +298,8 @@ export const en = {
     },
     session: {
       logIn: 'Log in',
+      /** `useSignOut`'s toast. A plain hook, so it reads the module store. */
+      signedOut: 'Signed out',
     },
   },
   /**
@@ -510,6 +514,23 @@ export const en = {
     row: {
       nobodyAssigned: 'Nobody assigned',
     },
+    /**
+     * What a mutation says when it lands. `{name}` is a service's own name and
+     * is tenant data, so it stays in whatever language the catalogue is written
+     * in — which is why every one of these is a sentence with a hole in it and
+     * not two strings joined.
+     */
+    toast: {
+      /** Says where it went: the row has just left the tab it was on. */
+      archived: '{name} is archived. It is under Archived and off your booking page.',
+      reactivated: '{name} is back in the catalogue.',
+      bookableNow: '{name} is bookable now.',
+      assignedStillUnbookable:
+        'Assigned. {name} is still not bookable — everyone on it is deactivated.',
+      created: '{name} is on your booking page.',
+      createdUnbookable: '{name} is saved. It is not bookable yet — nobody is assigned to it.',
+      updated: '{name} is updated.',
+    },
     form: {
       editTitle: 'Edit service',
       newTitle: 'New service',
@@ -605,7 +626,11 @@ export const en = {
     reactivated: '{name} can sign in again.',
     deactivated: '{name} is deactivated.',
     deactivatedNote: 'They have no appointments ahead of them and cannot sign in.',
+    /** `{email}` is the colleague's own address. */
+    resentTitle: 'A fresh invitation is on its way to {email}.',
     resentNote: 'It is valid for seven days. Any earlier link no longer works.',
+    /** `{name}` is a person's own name. */
+    updated: '{name} is updated.',
     warning: {
       /** `{count}` decides the plural; `{when}` is a day and clock on the salon's clock. */
       headline: '{name} has {appointments}, the next on {when}.',
@@ -758,6 +783,7 @@ export const en = {
       /** `{date}` is a formatted day heading. */
       remove: 'Remove the override on {date}',
       setByOwner: 'Set by an owner',
+      removed: 'That override is gone. Availability is back to the weekly hours.',
     },
     dialog: {
       title: 'Add an override',

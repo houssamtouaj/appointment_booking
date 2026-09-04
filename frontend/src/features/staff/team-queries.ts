@@ -79,7 +79,7 @@ export function useResendInvitation() {
     mutationFn: (person: Staff) => resendInvitation(person.id),
     onSuccess: (person) => {
       invalidateTeam(client)
-      toast.success(`A fresh invitation is on its way to ${person.email}.`, {
+      toast.success(translate('team.resentTitle', { email: person.email }), {
         description: translate('team.resentNote'),
       })
     },

@@ -57,7 +57,7 @@ export function RegisterPage() {
     mutationFn: registerBusiness,
     onSuccess: (auth) => {
       adoptSession(auth)
-      toast.success(`${auth.user.business.name} is ready`)
+      toast.success(t('auth.register.ready', { name: auth.user.business.name }))
     },
     onError: (error) => {
       // The two 409s the endpoint documents. Both are field problems rather than

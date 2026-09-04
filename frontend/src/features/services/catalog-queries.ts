@@ -13,6 +13,7 @@ import { describeError, referenceNote } from '@/api/error-copy'
 import { referenceKeys } from '@/api/reference'
 import { tabQuery, type ServiceTab } from '@/features/services/service-params'
 import type { Service, ServiceRequest, ServiceUpdateRequest } from '@/types'
+import { translate } from '@/i18n'
 
 /**
  * Every read and write the catalogue screen makes.
@@ -145,15 +146,15 @@ function describeServiceAction(action: ServiceAction, service: Service): string 
     case 'deactivate':
       // Says where it went. The row has just left the tab it was on, and an
       // owner who did not expect that needs to know it is not gone.
-      return `${service.name} is archived. It is under Archived and off your booking page.`
+      return translate('services.toast.archived', { name: service.name })
     case 'reactivate':
-      return `${service.name} is back in the catalogue.`
+      return translate('services.toast.reactivated', { name: service.name })
     case 'assign':
       // `bookable` is the server's answer, not a guess: assigning somebody who
       // has themselves been deactivated changes nothing about bookability, and
       // claiming otherwise would be the exact mystery this screen removes.
       return service.bookable
-        ? `${service.name} is bookable now.`
-        : `Assigned. ${service.name} is still not bookable — everyone on it is deactivated.`
+        ? translate('services.toast.bookableNow', { name: service.name })
+        : translate('services.toast.assignedStillUnbookable', { name: service.name })
   }
 }

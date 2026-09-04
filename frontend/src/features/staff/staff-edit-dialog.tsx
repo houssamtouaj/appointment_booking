@@ -88,7 +88,7 @@ export function StaffEditDialog({ person, team, onClose }: StaffEditDialogProps)
       { id: person.id, request: patch },
       {
         onSuccess: (result) => {
-          toast.success(`${result.staff.fullName} is updated.`, {
+          toast.success(t('team.updated', { name: result.staff.fullName }), {
             // A role change is not instant, and pretending otherwise produces a
             // support question. The target's current access token carries the old
             // role until it is refreshed, which the backend documents rather than

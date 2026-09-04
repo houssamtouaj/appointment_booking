@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { useAuth } from '@/hooks/use-auth'
+import { translate } from '@/i18n'
 
 export type SignOutControl = {
   /** Revoke, confirm, and land on the login screen. Never rejects. */
@@ -42,7 +43,7 @@ export function useSignOut(): SignOutControl {
     setLeaving(true)
     try {
       await signOut()
-      toast.success('Signed out')
+      toast.success(translate('auth.session.signedOut'))
       navigate('/login', { replace: true })
     } finally {
       setLeaving(false)

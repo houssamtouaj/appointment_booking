@@ -159,6 +159,7 @@ export const fr = {
       passwordHint: 'Au moins 8 caractères.',
       submit: "Créer l'entreprise",
       submitting: 'Création…',
+      ready: '{name} est prête',
     },
     forgot: {
       title: 'Réinitialiser votre mot de passe',
@@ -209,6 +210,7 @@ export const fr = {
     },
     session: {
       logIn: 'Connexion',
+      signedOut: 'Déconnecté',
     },
   },
   admin: {
@@ -396,6 +398,18 @@ export const fr = {
     row: {
       nobodyAssigned: 'Personne assignée',
     },
+    toast: {
+      archived:
+        '{name} est archivée. Elle est dans Archivées et retirée de votre page de réservation.',
+      reactivated: '{name} est de retour dans le catalogue.',
+      bookableNow: '{name} est désormais réservable.',
+      assignedStillUnbookable:
+        'Collègue assigné. {name} n’est toujours pas réservable — toutes les personnes qui la réalisent sont désactivées.',
+      created: '{name} est sur votre page de réservation.',
+      createdUnbookable:
+        '{name} est enregistrée. Elle n’est pas encore réservable — personne ne lui est assigné.',
+      updated: '{name} est mise à jour.',
+    },
     form: {
       editTitle: 'Modifier la prestation',
       newTitle: 'Nouvelle prestation',
@@ -488,7 +502,9 @@ export const fr = {
     reactivated: '{name} peut se reconnecter.',
     deactivated: '{name} est désactivé.',
     deactivatedNote: "Cette personne n'a aucun rendez-vous à venir et ne peut pas se connecter.",
+    resentTitle: 'Une nouvelle invitation est en route vers {email}.',
     resentNote: 'Il est valable sept jours. Tout lien antérieur ne fonctionne plus.',
+    updated: '{name} est mis à jour.',
     warning: {
       headline: '{name} a {appointments}, le prochain le {when}.',
       appointmentCount: {
@@ -621,6 +637,8 @@ export const fr = {
       wholeBusiness: 'Toute l’entreprise',
       remove: "Supprimer l'exception du {date}",
       setByOwner: 'Défini par un propriétaire',
+      removed:
+        'Cette exception est supprimée. La disponibilité revient aux horaires hebdomadaires.',
     },
     dialog: {
       title: 'Ajouter une exception',
