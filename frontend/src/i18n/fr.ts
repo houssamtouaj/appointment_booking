@@ -257,6 +257,7 @@ export const fr = {
     description: "Tous les rendez-vous de {business}, à l'heure de {city}.",
     columnLabel: '{weekday} {date}, {count}',
     columnLabelToday: "{weekday} {date}, {count}, aujourd'hui",
+    staffColumnLabel: '{name}, {count}',
     appointmentCount: { one: '{count} rendez-vous', other: '{count} rendez-vous' },
     noAppointments: 'aucun rendez-vous',
     loadingWeek: 'Chargement des rendez-vous de la semaine',

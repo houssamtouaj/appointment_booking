@@ -6,6 +6,7 @@ import {
   daysOfWeek,
   formatDayShort,
   formatWeekday,
+  formatWeekdayShort,
   weekdayOf,
   type DayKey,
   type DayRange,
@@ -45,7 +46,7 @@ export function weekColumns(
 
   return daysOfWeek(week).map((dayKey) => {
     const dayBookings = byDay.get(dayKey) ?? []
-    const weekday = formatWeekday(weekdayOf(dayKey))
+    const weekday = weekdayOf(dayKey)
     const isToday = dayKey === today
 
     return {
@@ -57,7 +58,7 @@ export function weekColumns(
       // underneath already shows how full it is. A screen reader has no such
       // view, which is exactly why it is said there.
       label: translate(isToday ? 'calendar.columnLabelToday' : 'calendar.columnLabel', {
-        weekday,
+        weekday: formatWeekday(weekday),
         date: formatDayShort(dayKey),
         count: countPhrase(dayBookings.length),
       }),
@@ -69,7 +70,7 @@ export function weekColumns(
               isToday ? 'text-primary' : 'text-muted-foreground',
             )}
           >
-            {weekday.slice(0, 3)}
+            {formatWeekdayShort(weekday)}
           </span>
           <span
             className={cn(
@@ -186,7 +187,10 @@ export function dayColumns(
         key: staffId,
         dayKey: date,
         isToday: date === today,
-        label: `${name}, ${staffBookings.length} appointment${staffBookings.length === 1 ? '' : 's'}`,
+        label: translate('calendar.staffColumnLabel', {
+          name,
+          count: countPhrase(staffBookings.length),
+        }),
         header: (
           <span className="text-foreground block truncate text-sm font-medium" title={name}>
             {name}

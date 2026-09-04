@@ -366,6 +366,12 @@ export const en = {
      */
     columnLabel: '{weekday} {date}, {count}',
     columnLabelToday: '{weekday} {date}, {count}, today',
+    /**
+     * The day view's column, which is a colleague rather than a date. `{name}`
+     * is a person's own name and `{count}` is already a phrase from
+     * `countPhrase`, so this is the same shape as `columnLabel` next door.
+     */
+    staffColumnLabel: '{name}, {count}',
     /** `Intl.PluralRules` picks the form; French counts 0 with the singular. */
     appointmentCount: { one: '{count} appointment', other: '{count} appointments' },
     noAppointments: 'no appointments',

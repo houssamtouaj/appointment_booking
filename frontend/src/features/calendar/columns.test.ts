@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { dayColumns, nearestBusyDay, weekColumns } from '@/features/calendar/columns'
+import { LANGUAGE_STORAGE_KEY, resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
 import type { Lookups } from '@/hooks/use-lookups'
 import type { BookingSummary } from '@/types'
 
@@ -176,6 +177,31 @@ describe('the day’s staff columns', () => {
     expect(columns.flatMap((column) => column.bookings).map((b) => b.id)).toEqual(['today'])
   })
 
+  it('counts through Intl in the spoken label, and French counts 0 as one', () => {
+    // The branch this pins used to be
+    // `${n} appointment${n === 1 ? '' : 's'}` — an English ternary, sixty lines
+    // below `weekColumns` doing the same job correctly through `countPhrase`.
+    const one = dayColumns('2026-09-01', '2026-09-01', [booking({ id: 'a' })], PARIS, lookups)
+    expect(one[0]?.label).toContain('1 appointment')
+    expect(one[0]?.label).not.toContain('1 appointments')
+
+    const two = dayColumns(
+      '2026-09-01',
+      '2026-09-01',
+      [
+        booking({ id: 'a' }),
+        booking({ id: 'b', startsAt: '2026-09-01T10:00:00Z', endsAt: '2026-09-01T11:00:00Z' }),
+      ],
+      PARIS,
+      lookups,
+    )
+    expect(two[0]?.label).toContain('2 appointments')
+
+    setLanguage('fr')
+    const french = dayColumns('2026-09-01', '2026-09-01', [booking({ id: 'a' })], PARIS, lookups)
+    expect(french[0]?.label).toContain('1 rendez-vous')
+  })
+
   it('still draws a column on a day nobody is working', () => {
     // Without one the grid has no columns at all and collapses to a bare gutter.
     const columns = dayColumns('2026-09-02', '2026-09-01', [], PARIS, lookups)
@@ -183,6 +209,12 @@ describe('the day’s staff columns', () => {
     expect(columns).toHaveLength(1)
     expect(columns[0]?.bookings).toEqual([])
   })
+})
+
+afterEach(() => {
+  // `setLanguage` persists, so clearing the key is what actually resets it.
+  localStorage.removeItem(LANGUAGE_STORAGE_KEY)
+  resetLanguageStoreForTests()
 })
 
 describe('the nearest day with something on it', () => {
