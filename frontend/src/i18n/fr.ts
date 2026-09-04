@@ -397,6 +397,9 @@ export const fr = {
     },
     row: {
       nobodyAssigned: 'Personne assignée',
+      buffers: '+{before} avant / +{after} après',
+      blocks: 'bloque {minutes} min',
+      performedBy: 'Réalisée par {names}',
     },
     toast: {
       archived:
@@ -413,7 +416,7 @@ export const fr = {
     form: {
       editTitle: 'Modifier la prestation',
       newTitle: 'Nouvelle prestation',
-      editDescription: 'Changer un prix ou une durée ne touche jamais une réservation existante.',
+      editDescription: 'Ce qu’est {name}, sa durée et qui la réalise.',
       newDescription: 'Ce que vous vendez, sa durée et qui la réalise.',
       save: 'Enregistrer',
       create: 'Créer la prestation',

@@ -513,6 +513,19 @@ export const en = {
     },
     row: {
       nobodyAssigned: 'Nobody assigned',
+      /**
+       * The timing line's other two segments. The duration beside them has been
+       * worded by `i18n/duration.ts` since this wave began, so leaving these two
+       * as templates made half a line switch language and half of it not.
+       *
+       * `{minutes}` stays minutes rather than going through `formatDurationText`
+       * — the row is dense and "blocks 75 min" is shorter than "blocks 1 hr
+       * 15 min" — and "min" is the abbreviation in both languages.
+       */
+      buffers: '+{before} before / +{after} after',
+      blocks: 'blocks {minutes} min',
+      /** `{names}` is a list of people's own names and is not translated. */
+      performedBy: 'Performed by {names}',
     },
     /**
      * What a mutation says when it lands. `{name}` is a service's own name and
@@ -534,7 +547,8 @@ export const en = {
     form: {
       editTitle: 'Edit service',
       newTitle: 'New service',
-      editDescription: 'Changing a price or a duration never touches an existing booking.',
+      /** `{name}` is the service's own name — tenant data, so it is a hole and not a join. */
+      editDescription: 'What {name} is, how long it takes and who performs it.',
       newDescription: 'What you sell, how long it takes and who performs it.',
       save: 'Save changes',
       create: 'Create service',

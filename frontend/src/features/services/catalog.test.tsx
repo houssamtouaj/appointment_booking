@@ -13,6 +13,7 @@ import { createQueryClient } from '@/api/query-client'
 import { endSessionQuietly } from '@/api/session'
 import { AuthProvider } from '@/features/auth/auth-provider'
 import { routes } from '@/routes'
+import { LANGUAGE_STORAGE_KEY, resetLanguageStoreForTests, setLanguage } from '@/i18n/language'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -273,6 +274,10 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  // `setLanguage` persists, so clearing the key is what actually resets it —
+  // `resetLanguageStoreForTests` re-reads storage and would find 'fr' again.
+  localStorage.removeItem(LANGUAGE_STORAGE_KEY)
+  resetLanguageStoreForTests()
   vi.useRealTimers()
   vi.clearAllMocks()
   endSessionQuietly()
@@ -328,6 +333,29 @@ describe('the three row states', () => {
     ).toBeInTheDocument()
     // Couleur has no buffers, so "blocks 90 min" would restate the duration.
     expect(within(rowFor('Couleur')).getByText('1 hr 30 min')).toBeInTheDocument()
+  })
+
+  it('switches the whole timing line, not the duration half of it', async () => {
+    // The failure this pins: `formatDurationText` was translated in this wave and
+    // the two segments beside it were not, so a French owner read
+    // "1 h · +5 before / +10 after · blocks 75 min" — one line, two languages.
+    setLanguage('fr')
+    await renderCatalog('/services?active=all')
+    await waitFor(() => expect(rowFor('Coupe classique')).toBeInTheDocument())
+
+    expect(
+      within(rowFor('Coupe classique')).getByText('1 h · +5 avant / +10 après · bloque 75 min'),
+    ).toBeInTheDocument()
+  })
+
+  it('names the performers in the reader’s language', async () => {
+    setLanguage('fr')
+    await renderCatalog('/services?active=all')
+    await waitFor(() => expect(rowFor('Coupe classique')).toBeInTheDocument())
+
+    // The sr-only sentence, which is the only place these names are read as a
+    // sentence rather than as three unlabelled circles.
+    expect(within(rowFor('Coupe classique')).getByText(/^Réalisée par /)).toBeInTheDocument()
   })
 
   it('prices from the business currency, never a hard-coded symbol', async () => {

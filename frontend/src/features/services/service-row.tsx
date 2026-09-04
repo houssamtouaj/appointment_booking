@@ -9,7 +9,7 @@ import type { Lookups } from '@/hooks/use-lookups'
 import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import type { Service } from '@/types'
-import { useTranslation } from '@/i18n'
+import { translate, useTranslation } from '@/i18n'
 
 /**
  * One service, as a row.
@@ -129,11 +129,14 @@ function describeTiming(service: Service): string {
 
   return [
     duration,
-    `+${service.bufferBeforeMinutes} before / +${service.bufferAfterMinutes} after`,
+    translate('services.row.buffers', {
+      before: service.bufferBeforeMinutes,
+      after: service.bufferAfterMinutes,
+    }),
     // Read off the response rather than added up here, so the number on screen
     // is the one the availability engine and the database's exclusion constraint
     // use (backend D4).
-    `blocks ${service.totalBlockMinutes} min`,
+    translate('services.row.blocks', { minutes: service.totalBlockMinutes }),
   ].join(' · ')
 }
 
@@ -169,7 +172,9 @@ function Performers({
   return (
     <div className="flex shrink-0 items-center sm:w-28">
       <span className="sr-only">
-        Performed by {performers.map((person) => person.fullName).join(', ')}
+        {t('services.row.performedBy', {
+          names: performers.map((person) => person.fullName).join(', '),
+        })}
       </span>
       <div className="flex items-center -space-x-1.5">
         {shown.map((person) => (

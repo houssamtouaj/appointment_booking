@@ -213,7 +213,7 @@ export function ServiceFormDialog({ service, lookups, currency, onClose }: Servi
       title={t(editing ? 'services.form.editTitle' : 'services.form.newTitle')}
       description={
         editing
-          ? `What ${service.name} is, how long it takes and who performs it.`
+          ? t('services.form.editDescription', { name: service.name })
           : t('services.form.newDescription')
       }
       footer={
