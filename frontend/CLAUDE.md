@@ -147,17 +147,21 @@ order (`QueryClientProvider` → `AuthProvider` → router) is the one order tha
 - **Language.** Every string the app writes itself lives in `src/i18n/en.ts`, and `fr.ts` is
   constrained to its shape by `Same<typeof en>` — a missing French key is a `tsc` failure, not an
   English sentence in a French page (F21). `no-hardcoded-strings.test.ts` scans the translated
-  surface for literal JSX prose and literal `aria-label`/`placeholder`/`hint`/`title`/`eyebrow`
-  props; `i18n.test.ts` asserts both languages use the same `{placeholders}`, which `tsc` cannot
+  surface for literal JSX prose, literal `aria-label`/`placeholder`/`hint`/`title`/`eyebrow`
+  props, and prose in any string or template literal;
+  `i18n.test.ts` asserts both languages use the same `{placeholders}`, which `tsc` cannot
   see; `error-copy.test.ts` walks `errorCodeSchema` and fails on a code with no copy. The chosen
   language is a module store shaped exactly like `use-theme.ts`, including the `slotflow-lang` key
   duplicated in `index.html`'s pre-paint script and the drift test that keeps the two equal.
   `lib/time.ts` and `lib/money.ts` default their `locale` to that store rather than to the browser
   (F23), so no call site passes one. Never build a sentence from two keys, and never wrap prose
   around a `<span>` for emphasis — French word order is not English word order, so one key with
-  `{placeholders}` is the only shape that translates. **The scan is total**: it walks all of `src/`
-  with no per-folder allowances, and the one file it skips (`session-debug-panel.tsx`, which Vite
-  drops from a production build) has to earn that in a comment. Anything that counts — a plural, a
+  `{placeholders}` is the only shape that translates. **The scan is total**: every `.ts` and `.tsx`
+  under `src/`, with no per-folder and no per-extension allowances — a Zod message, a module-scope
+  `const` and a toast body are all in `.ts` files and are the strings that most need catching,
+  because a sentence built at module scope freezes the language the tab was loaded in. The three
+  files it skips (`session-debug-panel.tsx`, which Vite drops from a production build, and
+  `en.ts`/`fr.ts`, which are the answer) each earn that in a comment. Anything that counts — a plural, a
   list's conjunction, an abbreviated weekday — goes through `Intl`, not through a `=== 1` ternary
   or a `.slice(0, 3)`: those only know what English looks like.
 
