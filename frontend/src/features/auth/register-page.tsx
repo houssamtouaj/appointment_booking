@@ -15,7 +15,7 @@ import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
 import { useAuth } from '@/hooks/use-auth'
 import type { RegisterRequest } from '@/types'
-import { useTranslation } from '@/i18n'
+import { translate, useTranslation, type TKey } from '@/i18n'
 
 /**
  * `/register` (F17). Self-registration ships so that a reviewer can have their
@@ -26,6 +26,11 @@ import { useTranslation } from '@/i18n'
  * One request creates the business, its default booking policy and its owner,
  * and signs them in — so this screen has no "now log in" step.
  */
+/** A resolver message, which is a key, back as prose — see `login-page.tsx`. */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
+}
+
 export function RegisterPage() {
   const { t } = useTranslation()
   const { status, adoptSession } = useAuth()
@@ -121,7 +126,10 @@ export function RegisterPage() {
         className="grid gap-4"
         onSubmit={form.handleSubmit((values) => create.mutate(values))}
       >
-        <FormField label={t('auth.register.businessName')} error={errors.businessName?.message}>
+        <FormField
+          label={t('auth.register.businessName')}
+          error={message(errors.businessName?.message)}
+        >
           {(control) => (
             <Input
               {...control}
@@ -151,7 +159,7 @@ export function RegisterPage() {
         <FormField
           label={t('auth.register.slug')}
           hint={t('auth.register.slugHint')}
-          error={errors.slug?.message}
+          error={message(errors.slug?.message)}
         >
           {(control) => (
             <div className="flex items-center gap-2">
@@ -170,7 +178,7 @@ export function RegisterPage() {
           <FormField
             label={t('auth.register.timezone')}
             hint={t('auth.register.timezoneHint')}
-            error={errors.timezone?.message}
+            error={message(errors.timezone?.message)}
           >
             {(control) => <Input {...control} {...form.register('timezone')} autoComplete="off" />}
           </FormField>
@@ -178,7 +186,7 @@ export function RegisterPage() {
           <FormField
             label={t('auth.register.currency')}
             hint={t('auth.register.currencyHint')}
-            error={errors.currency?.message}
+            error={message(errors.currency?.message)}
           >
             {(control) => (
               <Input
@@ -192,11 +200,11 @@ export function RegisterPage() {
           </FormField>
         </div>
 
-        <FormField label={t('auth.register.fullName')} error={errors.fullName?.message}>
+        <FormField label={t('auth.register.fullName')} error={message(errors.fullName?.message)}>
           {(control) => <Input {...control} {...form.register('fullName')} autoComplete="name" />}
         </FormField>
 
-        <FormField label={t('auth.register.email')} error={errors.email?.message}>
+        <FormField label={t('auth.register.email')} error={message(errors.email?.message)}>
           {(control) => (
             <Input {...control} {...form.register('email')} type="email" autoComplete="username" />
           )}
@@ -205,7 +213,7 @@ export function RegisterPage() {
         <FormField
           label={t('auth.register.password')}
           hint={t('auth.register.passwordHint')}
-          error={errors.password?.message}
+          error={message(errors.password?.message)}
         >
           {(control) => (
             <Input

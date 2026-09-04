@@ -17,7 +17,7 @@ import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
 import type { AcceptInvitationRequest } from '@/types'
-import { useTranslation } from '@/i18n'
+import { translate, useTranslation, type TKey } from '@/i18n'
 
 /**
  * `/accept-invitation/:token` — another route the backend names (F12).
@@ -33,6 +33,11 @@ import { useTranslation } from '@/i18n'
  * rather than as a crash: an invitation used yesterday is the most likely way
  * anyone arrives here twice.
  */
+/** A resolver message, which is a key, back as prose — see `login-page.tsx`. */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
+}
+
 export function AcceptInvitationPage() {
   const { t } = useTranslation()
   const { token = '' } = useParams()
@@ -130,7 +135,7 @@ export function AcceptInvitationPage() {
       >
         <FormField
           label={t('auth.invitation.fullName')}
-          error={form.formState.errors.fullName?.message}
+          error={message(form.formState.errors.fullName?.message)}
         >
           {(control) => <Input {...control} {...form.register('fullName')} autoComplete="name" />}
         </FormField>
@@ -138,7 +143,7 @@ export function AcceptInvitationPage() {
         <FormField
           label={t('auth.invitation.password')}
           hint={t('auth.invitation.passwordHint')}
-          error={form.formState.errors.password?.message}
+          error={message(form.formState.errors.password?.message)}
         >
           {(control) => (
             <Input

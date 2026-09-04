@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { BookingSummary } from '@/features/booking/booking-summary'
 import type { GuestDetails, PublicBusiness, PublicService } from '@/types'
-import { useTranslation } from '@/i18n'
+import { translate, useTranslation, type TKey } from '@/i18n'
 
 type DetailsStepProps = {
   /**
@@ -38,6 +38,11 @@ type DetailsStepProps = {
  * the mistake it catches is made three screens earlier: a customer who tapped
  * the wrong chip in a grid of ninety-eight has no other opportunity to find out.
  */
+/** A resolver message, which is a key, back as prose — see `login-page.tsx`. */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
+}
+
 export function DetailsStep({
   form,
   business,
@@ -72,14 +77,14 @@ export function DetailsStep({
       </Link>
 
       <form noValidate className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
-        <FormField label={t('booking.details.name')} error={errors.guestName?.message}>
+        <FormField label={t('booking.details.name')} error={message(errors.guestName?.message)}>
           {(control) => <Input {...control} {...form.register('guestName')} autoComplete="name" />}
         </FormField>
 
         <FormField
           label={t('booking.details.email')}
           hint={t('booking.details.emailHint')}
-          error={errors.guestEmail?.message}
+          error={message(errors.guestEmail?.message)}
         >
           {(control) => (
             <Input
@@ -95,7 +100,7 @@ export function DetailsStep({
           )}
         </FormField>
 
-        <FormField label={t('booking.details.phone')} error={errors.guestPhone?.message}>
+        <FormField label={t('booking.details.phone')} error={message(errors.guestPhone?.message)}>
           {(control) => (
             <Input {...control} {...form.register('guestPhone')} type="tel" autoComplete="tel" />
           )}
@@ -103,7 +108,7 @@ export function DetailsStep({
 
         <FormField
           label={t('booking.details.notes')}
-          error={errors.notes?.message}
+          error={message(errors.notes?.message)}
           hint={t('booking.details.notesHint')}
         >
           {(control) => <Textarea {...control} {...form.register('notes')} rows={3} />}

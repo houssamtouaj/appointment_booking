@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { currencyCode, isoInstant, uuid } from '@/api/schemas/common'
+import type { TKey } from '@/i18n'
 
 /**
  * The three endpoints that turn a slot into a booking and let its customer come
@@ -137,13 +138,23 @@ export type PublicBooking = z.infer<typeof publicBookingSchema>
  * `staffIds` — the same rule the availability request follows, and for the same
  * reason: that array is the union of who *could* take the slot, and sending one
  * back removes the server's ability to balance the work.
+ *
+ * The messages are **dictionary keys, not sentences**. This module is evaluated
+ * once, so a sentence would be captured in whatever language the tab was loaded
+ * in and would survive a language switch — and this is the form where that costs
+ * most, because a customer on `/b/<slug>` is the reader least likely to be
+ * reading English. `DetailsStep` resolves them at the field.
  */
 export const bookingRequestSchema = z.object({
   serviceId: uuid,
   staffId: uuid.optional(),
   startsAt: isoInstant,
 
-  guestName: z.string().trim().min(1, 'Please tell us your name').max(120, 'That is too long'),
+  guestName: z
+    .string()
+    .trim()
+    .min(1, 'booking.details.nameRequired' satisfies TKey)
+    .max(120, 'booking.details.tooLong' satisfies TKey),
 
   /**
    * `z.email()`, matching the backend's `@Email`.
@@ -155,12 +166,20 @@ export const bookingRequestSchema = z.object({
   guestEmail: z
     .string()
     .trim()
-    .min(1, 'We need an address to send your confirmation to')
-    .max(320, 'That is too long')
-    .pipe(z.email('That does not look like an email address')),
+    .min(1, 'booking.details.emailRequired' satisfies TKey)
+    .max(320, 'booking.details.tooLong' satisfies TKey)
+    .pipe(z.email('booking.details.emailShape' satisfies TKey)),
 
-  guestPhone: z.string().trim().max(32, 'That is too long').optional(),
-  notes: z.string().trim().max(2000, 'Please keep this under 2000 characters').optional(),
+  guestPhone: z
+    .string()
+    .trim()
+    .max(32, 'booking.details.tooLong' satisfies TKey)
+    .optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(2000, 'booking.details.notesTooLong' satisfies TKey)
+    .optional(),
 })
 
 export type BookingRequest = z.infer<typeof bookingRequestSchema>

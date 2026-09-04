@@ -169,6 +169,21 @@ export const en = {
   auth: {
     /** The eyebrow above all five. One key, because it genuinely is one word. */
     eyebrow: 'Account',
+    /**
+     * `passwordSchema`'s two messages, shared by register, reset and accept —
+     * one schema, so one pair of keys rather than one pair per screen.
+     *
+     * The numbers are written into the copy rather than interpolated from
+     * `PASSWORD_MIN_LENGTH`/`PASSWORD_MAX_BYTES`, matching `passwordHint` three
+     * keys below, which has always done the same. Threading variables through
+     * would mean every one of the three screens that resolves this message
+     * knowing which variables it wants.
+     */
+    password: {
+      tooShort: 'Must be at least 8 characters',
+      /** Bytes, not characters: BCrypt reads 72 of them and the backend refuses more. */
+      tooLong: 'Must be at most 72 bytes — some characters count as two or three',
+    },
     login: {
       title: 'Log in',
       description: 'Manage your calendar, services and team.',
@@ -181,6 +196,13 @@ export const en = {
       or: 'or',
       email: 'Email',
       password: 'Password',
+      /**
+       * `loginRequestSchema`'s two messages. Deliberately "enter one" and never
+       * "that is not a valid password" — a sign-in form that describes the
+       * password rules is a quiet account-enumeration oracle.
+       */
+      emailRequired: 'Enter your email address',
+      passwordRequired: 'Enter your password',
       submit: 'Log in',
       submitting: 'Signing in…',
       forgot: 'Forgot your password?',
@@ -198,10 +220,17 @@ export const en = {
       slugHint:
         'Letters, digits and hyphens. This is permanent — it is the URL customers bookmark.',
       slugTaken: 'That address is taken. Try another.',
+      /**
+       * The one message on this form with no `errors.field*` twin: the 422 path
+       * only ever reports the *shape* of a slug, and an empty one never leaves
+       * the browser.
+       */
+      slugRequired: 'Enter a URL slug',
       timezone: 'Timezone',
       timezoneHint: 'Every time in the product is shown in it.',
       currency: 'Currency',
       currencyHint: 'Three letters, ISO 4217.',
+      currencyShape: 'Use a three-letter ISO 4217 code, like EUR',
       fullName: 'Your name',
       email: 'Email',
       emailTaken: 'An account already exists for this address.',
@@ -597,6 +626,9 @@ export const en = {
       sending: 'Sending…',
       fullName: 'Full name',
       email: 'Email address',
+      /** `inviteStaffRequestSchema`'s two messages, resolved by `InviteDialog`. */
+      nameRequired: 'Enter their name',
+      emailShape: 'Enter a valid email address',
       emailHint: 'Where the invitation goes. It becomes how they sign in.',
       role: 'Role',
       roleHint:
@@ -1009,6 +1041,21 @@ export const en = {
       phone: 'Phone (optional)',
       notes: 'Anything we should know? (optional)',
       notesHint: 'Allergies, a preference, where to park.',
+      /**
+       * `bookingRequestSchema`'s messages. This is the highest-traffic form in
+       * the product and the one where the reader is least likely to be an
+       * English speaker: a customer reaching step 4 of `/b/<slug>` in French
+       * used to read "Please tell us your name" under "Votre nom".
+       *
+       * `tooLong` is one key for three fields — name, email and phone all cap at
+       * a different number and say the same thing, and the number is not in the
+       * sentence.
+       */
+      nameRequired: 'Please tell us your name',
+      emailRequired: 'We need an address to send your confirmation to',
+      emailShape: 'That does not look like an email address',
+      tooLong: 'That is too long',
+      notesTooLong: 'Please keep this under 2000 characters',
       submit: 'Confirm booking',
       submitting: 'Booking…',
       /**

@@ -13,7 +13,7 @@ import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
 import type { ForgotPasswordRequest } from '@/types'
-import { useTranslation } from '@/i18n'
+import { translate, useTranslation, type TKey } from '@/i18n'
 
 /**
  * `/forgot-password`. The screen whose whole job is to say the same thing
@@ -29,6 +29,11 @@ import { useTranslation } from '@/i18n'
  * the request, because "that is not an email address" is a fact about the text
  * in the box and reveals nothing about who has an account.
  */
+/** A resolver message, which is a key, back as prose — see `login-page.tsx`. */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
+}
+
 export function ForgotPasswordPage() {
   const { t } = useTranslation()
   const [sent, setSent] = useState(false)
@@ -85,7 +90,10 @@ export function ForgotPasswordPage() {
             className="grid gap-4"
             onSubmit={form.handleSubmit((values) => request.mutate(values))}
           >
-            <FormField label={t('auth.forgot.email')} error={form.formState.errors.email?.message}>
+            <FormField
+              label={t('auth.forgot.email')}
+              error={message(form.formState.errors.email?.message)}
+            >
               {(control) => (
                 <Input
                   {...control}

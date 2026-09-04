@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { roleSchema } from '@/api/schemas/auth'
 import { isoInstant, uuid } from '@/api/schemas/common'
+import type { TKey } from '@/i18n'
 
 /**
  * `StaffResponse` — a colleague as the admin screens see them, email address
@@ -49,8 +50,13 @@ export const inviteStaffRequestSchema = z.object({
    * That is a sentence the screen has to write itself, because "conflict" tells
    * an owner nothing about what to do next.
    */
-  email: z.email('Enter a valid email address').max(320),
-  fullName: z.string().min(1, 'Enter their name').max(120),
+  // Keys, not sentences — this module is evaluated once, so a sentence would
+  // freeze the language the tab was loaded in. `InviteDialog` resolves them.
+  email: z.email('team.invite.emailShape' satisfies TKey).max(320),
+  fullName: z
+    .string()
+    .min(1, 'team.invite.nameRequired' satisfies TKey)
+    .max(120),
   /** `OWNER` or `STAFF`. There is no third role and no per-permission model. */
   role: roleSchema,
 })
@@ -75,7 +81,11 @@ export type InviteStaffRequest = z.infer<typeof inviteStaffRequestSchema>
  * backend's third line of defence rather than a state this screen renders.
  */
 export const updateStaffRequestSchema = z.object({
-  fullName: z.string().min(1, 'Enter their name').max(120).optional(),
+  fullName: z
+    .string()
+    .min(1, 'team.edit.nameRequired' satisfies TKey)
+    .max(120)
+    .optional(),
   role: roleSchema.optional(),
   /**
    * `false` deactivates: the person's refresh tokens are revoked, they lose the

@@ -79,17 +79,16 @@ export type SlotGranularity = (typeof SLOT_GRANULARITIES)[number]
  * ever disagree the server is right and this is the affordance — the rule the
  * whole app follows (overview rule 1).
  */
+/* No messages here, for the reason `schemas/business.ts` records: `PolicyForm`
+ * has its own resolver and its own keys, so a sentence on this schema could
+ * never reach a field. */
 export const policyRequestSchema = z.object({
   /** `@Min(0) @Max(168)`. Zero is legal and means "up to the last minute". */
-  minLeadTimeHours: z.number().int().min(0, 'Between 0 and 168').max(168, 'Between 0 and 168'),
+  minLeadTimeHours: z.number().int().min(0).max(168),
   /** `@Min(1) @Max(365)`. A calendar open for no days at all is not offered. */
-  maxAdvanceDays: z.number().int().min(1, 'Between 1 and 365').max(365, 'Between 1 and 365'),
+  maxAdvanceDays: z.number().int().min(1).max(365),
   /** `@Min(0) @Max(168)`. Staff ignore it; only a customer's own cancel obeys it. */
-  cancellationCutoffHours: z
-    .number()
-    .int()
-    .min(0, 'Between 0 and 168')
-    .max(168, 'Between 0 and 168'),
+  cancellationCutoffHours: z.number().int().min(0).max(168),
   slotGranularityMinutes: z.literal(SLOT_GRANULARITIES),
 })
 

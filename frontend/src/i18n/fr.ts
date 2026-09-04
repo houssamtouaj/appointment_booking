@@ -113,6 +113,10 @@ export const fr = {
   },
   auth: {
     eyebrow: 'Compte',
+    password: {
+      tooShort: 'Doit comporter au moins 8 caractères',
+      tooLong: 'Doit faire au plus 72 octets — certains caractères en comptent deux ou trois',
+    },
     login: {
       title: 'Connexion',
       description: 'Gérez votre agenda, vos prestations et votre équipe.',
@@ -124,6 +128,8 @@ export const fr = {
       or: 'ou',
       email: 'Adresse e-mail',
       password: 'Mot de passe',
+      emailRequired: 'Saisissez votre adresse e-mail',
+      passwordRequired: 'Saisissez votre mot de passe',
       submit: 'Se connecter',
       submitting: 'Connexion…',
       forgot: 'Mot de passe oublié ?',
@@ -140,10 +146,12 @@ export const fr = {
       slugHint:
         "Lettres, chiffres et tirets. C'est définitif — c'est l'URL que vos clients mettront en favori.",
       slugTaken: 'Cette adresse est prise. Essayez-en une autre.',
+      slugRequired: 'Saisissez une adresse de page',
       timezone: 'Fuseau horaire',
       timezoneHint: 'Toutes les heures du produit y sont affichées.',
       currency: 'Devise',
       currencyHint: 'Trois lettres, ISO 4217.',
+      currencyShape: 'Utilisez un code ISO 4217 à trois lettres, par exemple EUR',
       fullName: 'Votre nom',
       email: 'Adresse e-mail',
       emailTaken: 'Un compte existe déjà pour cette adresse.',
@@ -500,6 +508,8 @@ export const fr = {
       sending: 'Envoi…',
       fullName: 'Nom complet',
       email: 'Adresse e-mail',
+      nameRequired: 'Saisissez son nom',
+      emailShape: 'Saisissez une adresse e-mail valide',
       emailHint: "Où part l'invitation. Elle devient son identifiant de connexion.",
       role: 'Rôle',
       roleHint:
@@ -861,6 +871,11 @@ export const fr = {
       phone: 'Téléphone (facultatif)',
       notes: 'Quelque chose à nous signaler ? (facultatif)',
       notesHint: 'Allergies, une préférence, où se garer.',
+      nameRequired: 'Indiquez-nous votre nom',
+      emailRequired: 'Il nous faut une adresse pour vous envoyer votre confirmation',
+      emailShape: 'Cela ne ressemble pas à une adresse e-mail',
+      tooLong: 'C’est trop long',
+      notesTooLong: 'Merci de ne pas dépasser 2000 caractères',
       submit: 'Confirmer la réservation',
       submitting: 'Réservation…',
       depositMaybe:

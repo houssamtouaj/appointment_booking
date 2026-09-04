@@ -17,11 +17,25 @@ import { FormAlert } from '@/components/form-alert'
 import { safeNextPath } from '@/features/auth/next-path'
 import { useAuth } from '@/hooks/use-auth'
 import type { AuthResponse, LoginRequest } from '@/types'
-import { useTranslation } from '@/i18n'
+import { translate, useTranslation } from '@/i18n'
 
 /**
  * `/login`. Two ways in, and the second one is the one the brief names.
  */
+/**
+ * A `formState.errors.<field>.message` from this form's resolver, back as prose.
+ *
+ * The schema in `api/schemas/` holds dictionary keys — see
+ * `features/services/service-form.ts` for why a sentence at module scope is the
+ * wrong thing — and this is where they become words. A message that
+ * `applyFieldErrors` wrote from a 422 is already a sentence and passes through
+ * untouched: `translate` returns what it was given when the string is not a key
+ * it knows, which is the same graceful degradation `messageFor` documents.
+ */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
+}
+
 export function LoginPage() {
   const { t } = useTranslation()
   const { status, adoptSession } = useAuth()
@@ -117,13 +131,19 @@ export function LoginPage() {
         className="grid gap-4"
         onSubmit={form.handleSubmit((values) => signIn.mutate(values))}
       >
-        <FormField label={t('auth.login.email')} error={form.formState.errors.email?.message}>
+        <FormField
+          label={t('auth.login.email')}
+          error={message(form.formState.errors.email?.message)}
+        >
           {(control) => (
             <Input {...control} {...form.register('email')} type="email" autoComplete="username" />
           )}
         </FormField>
 
-        <FormField label={t('auth.login.password')} error={form.formState.errors.password?.message}>
+        <FormField
+          label={t('auth.login.password')}
+          error={message(form.formState.errors.password?.message)}
+        >
           {(control) => (
             <Input
               {...control}

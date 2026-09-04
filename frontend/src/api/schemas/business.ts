@@ -55,8 +55,15 @@ export type Business = z.infer<typeof businessSchema>
  * The flag is ignored on every other kind of update, so a save that does not
  * move the zone never sees any of this.
  */
+/*
+ * No messages on this schema, deliberately. It shapes the *request*, and the
+ * form that builds one carries its own resolver with its own key-based messages
+ * (`features/settings/business-form.tsx`). A sentence here could never reach a
+ * field and would only be an English string waiting for somebody to wire it to
+ * one; Zod's own text is the right level for a contract violation.
+ */
 export const businessRequestSchema = z.object({
-  name: z.string().min(1, 'Enter a name').max(120, 'Keep it under 120 characters'),
+  name: z.string().min(1).max(120),
   /**
    * An IANA region id. Deliberately not checked against a list here: the
    * browser's tz database and the server's can differ by a release, and the
@@ -64,7 +71,7 @@ export const businessRequestSchema = z.object({
    * regex can decide. The form offers the browser's zones as suggestions and
    * accepts anything, which is the same trade `zoneId` makes on the way in.
    */
-  timezone: z.string().min(1, 'Enter a timezone').max(64),
+  timezone: z.string().min(1).max(64),
   /**
    * ISO 4217, three letters, upper-cased before it is sent. It is the unit of
    * every `priceCents` in the tenant and **changing it converts nothing** — the
@@ -77,7 +84,7 @@ export const businessRequestSchema = z.object({
    * 0–100. **Zero means no deposit whatever the checkbox says**, which is what
    * `Business.requiresDeposit()` computes and what the public page reports.
    */
-  depositPercent: z.number().int().min(0, 'Between 0 and 100').max(100, 'Between 0 and 100'),
+  depositPercent: z.number().int().min(0).max(100),
   confirmShift: z.boolean().optional(),
 })
 

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { currencyCode, uuid, zoneId } from '@/api/schemas/common'
+import type { TKey } from '@/i18n'
 
 /**
  * `/api/auth/*`, and the two shapes every later wave inherits: `BusinessSummary`
@@ -78,6 +79,13 @@ export type AuthResponse = z.infer<typeof authResponseSchema>
  * characters of Cyrillic is a 422 from a form that believed it was fine.
  * Checking it here puts the message under the field instead of after a round
  * trip.
+ *
+ * The messages are **dictionary keys, not sentences**, and so is every message
+ * below. This module is evaluated once, so a sentence here would be captured in
+ * whatever language the tab was loaded in and would survive a language switch
+ * unchanged — the trap `features/services/service-form.ts` describes at length.
+ * The key travels through react-hook-form's `message`, which is typed `string`,
+ * and the screen turns it back into prose with `t(... as TKey)` at the field.
  */
 const PASSWORD_MIN_LENGTH = 8
 const PASSWORD_MAX_BYTES = 72
@@ -86,10 +94,10 @@ const utf8 = new TextEncoder()
 
 export const passwordSchema = z
   .string()
-  .min(PASSWORD_MIN_LENGTH, `Must be at least ${PASSWORD_MIN_LENGTH} characters`)
+  .min(PASSWORD_MIN_LENGTH, 'auth.password.tooShort' satisfies TKey)
   .refine(
     (value) => utf8.encode(value).length <= PASSWORD_MAX_BYTES,
-    `Must be at most ${PASSWORD_MAX_BYTES} bytes — some characters count as two or three`,
+    'auth.password.tooLong' satisfies TKey,
   )
 
 /**
@@ -99,26 +107,38 @@ export const passwordSchema = z
  * oracle, just a quiet one.
  */
 export const loginRequestSchema = z.object({
-  email: z.string().min(1, 'Enter your email address').max(320),
-  password: z.string().min(1, 'Enter your password').max(200),
+  email: z
+    .string()
+    .min(1, 'auth.login.emailRequired' satisfies TKey)
+    .max(320),
+  password: z
+    .string()
+    .min(1, 'auth.login.passwordRequired' satisfies TKey)
+    .max(200),
 })
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>
 
 /** `RegisterRequest` — one call creates the business, its policy and its owner. */
 export const registerRequestSchema = z.object({
-  businessName: z.string().min(1, 'Enter a business name').max(120),
+  businessName: z
+    .string()
+    .min(1, 'errors.fieldBusinessName' satisfies TKey)
+    .max(120),
   slug: z
     .string()
-    .min(1, 'Enter a URL slug')
+    .min(1, 'auth.register.slugRequired' satisfies TKey)
     // Case-insensitive, matching the backend: `Business` lower-cases before it
     // checks its own regex, so "Dana-Clinic" is a usable answer rather than an
     // error a person has to decode.
-    .regex(/^[A-Za-z0-9-]{3,40}$/, 'Use 3–40 letters, digits or hyphens'),
+    .regex(/^[A-Za-z0-9-]{3,40}$/, 'errors.fieldSlug' satisfies TKey),
   timezone: zoneId.max(64),
-  currency: z.string().regex(/^[A-Za-z]{3}$/, 'Use a three-letter ISO 4217 code, like EUR'),
-  fullName: z.string().min(1, 'Enter your name').max(120),
-  email: z.email('Enter a valid email address').max(320),
+  currency: z.string().regex(/^[A-Za-z]{3}$/, 'auth.register.currencyShape' satisfies TKey),
+  fullName: z
+    .string()
+    .min(1, 'errors.fieldName' satisfies TKey)
+    .max(120),
+  email: z.email('errors.fieldEmail' satisfies TKey).max(320),
   password: passwordSchema,
 })
 
@@ -126,7 +146,7 @@ export type RegisterRequest = z.infer<typeof registerRequestSchema>
 
 /** `ForgotPasswordRequest`. Answered 202 whether or not the address exists (D6). */
 export const forgotPasswordRequestSchema = z.object({
-  email: z.email('Enter a valid email address').max(320),
+  email: z.email('errors.fieldEmail' satisfies TKey).max(320),
 })
 
 export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>

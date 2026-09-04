@@ -13,7 +13,7 @@ import { useFormErrorSummary } from '@/hooks/use-form-error-summary'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { FormAlert } from '@/components/form-alert'
 import { z } from 'zod'
-import { useTranslation, type TKey } from '@/i18n'
+import { translate, useTranslation, type TKey } from '@/i18n'
 
 /**
  * `/reset-password/:token` — a route named by the backend (F12). `FrontendLinks`
@@ -40,6 +40,11 @@ const formSchema = z
   })
 
 type FormValues = z.infer<typeof formSchema>
+
+/** A resolver message, which is a key, back as prose — see `login-page.tsx`. */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
+}
 
 export function ResetPasswordPage() {
   const { t } = useTranslation()
@@ -100,7 +105,7 @@ export function ResetPasswordPage() {
         <FormField
           label={t('auth.reset.password')}
           hint={t('auth.reset.passwordHint')}
-          error={form.formState.errors.password?.message}
+          error={message(form.formState.errors.password?.message)}
         >
           {(control) => (
             <Input
@@ -117,11 +122,7 @@ export function ResetPasswordPage() {
           // The message on this field is a dictionary key the schema wrote, not
           // prose. react-hook-form types `message` as `string` and the value is
           // ours, so the cast says what the type cannot.
-          error={
-            form.formState.errors.confirm?.message
-              ? t(form.formState.errors.confirm.message as TKey)
-              : undefined
-          }
+          error={message(form.formState.errors.confirm?.message)}
         >
           {(control) => (
             <Input

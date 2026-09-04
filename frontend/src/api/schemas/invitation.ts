@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { passwordSchema } from '@/api/schemas/auth'
+import type { TKey } from '@/i18n'
 
 /**
  * `/api/public/invitations/{token}` — the only resource in this wave that is
@@ -22,7 +23,11 @@ export type InvitationPreview = z.infer<typeof invitationPreviewSchema>
 
 /** `AcceptInvitationRequest`. Same password rule as everywhere else. */
 export const acceptInvitationRequestSchema = z.object({
-  fullName: z.string().min(1, 'Enter your name').max(120),
+  // A key, not a sentence — see `schemas/auth.ts`. `AcceptInvitationPage` resolves it.
+  fullName: z
+    .string()
+    .min(1, 'errors.fieldName' satisfies TKey)
+    .max(120),
   password: passwordSchema,
 })
 

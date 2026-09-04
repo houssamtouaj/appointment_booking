@@ -14,7 +14,7 @@ import { FormAlert } from '@/components/form-alert'
 import { useInviteStaff } from '@/features/staff/team-queries'
 import { IS_DEV } from '@/lib/env'
 import type { InviteStaffRequest, Staff } from '@/types'
-import { useTranslation, type TKey } from '@/i18n'
+import { translate, useTranslation, type TKey } from '@/i18n'
 
 /**
  * "Invite a colleague" — and then, in words, what that actually did.
@@ -34,6 +34,11 @@ import { useTranslation, type TKey } from '@/i18n'
 
 type InviteDialogProps = {
   onClose: () => void
+}
+
+/** A resolver message, which is a key, back as prose — see `login-page.tsx`. */
+function message(raw: string | undefined): string | undefined {
+  return raw ? translate(raw as TKey) : undefined
 }
 
 export function InviteDialog({ onClose }: InviteDialogProps) {
@@ -149,7 +154,7 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
       {alert ? <FormAlert {...alert} /> : null}
 
       <form id="invite-form" noValidate onSubmit={form.handleSubmit(submit)} className="grid gap-5">
-        <FormField label={t('team.invite.fullName')} error={errors.fullName?.message}>
+        <FormField label={t('team.invite.fullName')} error={message(errors.fullName?.message)}>
           {(control) => (
             <Input
               {...control}
@@ -163,7 +168,7 @@ export function InviteDialog({ onClose }: InviteDialogProps) {
         <FormField
           label={t('team.invite.email')}
           hint={t('team.invite.emailHint')}
-          error={errors.email?.message}
+          error={message(errors.email?.message)}
         >
           {(control) => (
             <Input {...control} {...form.register('email')} type="email" autoComplete="email" />
