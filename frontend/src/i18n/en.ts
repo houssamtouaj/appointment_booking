@@ -1048,7 +1048,7 @@ export const en = {
       toSystem: 'Use system theme',
     },
     skipLink: 'Skip to content',
-    footerNote: "A booking platform. Times shown in the business's timezone.",
+    footerNote: 'A booking platform. Times shown in the business’s timezone.',
   },
   notFound: {
     eyebrow: 'Error 404',
@@ -1088,7 +1088,7 @@ export const en = {
         'Thanks. We are waiting for your bank to confirm the payment — this page updates itself.',
     },
     openingHours: {
-      caption: "Opening hours, shown in the business's local time",
+      caption: 'Opening hours, shown in the business’s local time',
       today: 'Today',
       closed: 'Closed',
       /** The flag on a shift that runs past midnight. */

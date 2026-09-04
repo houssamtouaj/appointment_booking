@@ -75,6 +75,30 @@ describe('the dictionaries agree', () => {
     }
   })
 
+  /**
+   * One apostrophe, not two.
+   *
+   * `fr.ts` shipped both — `dashboard.figures.today` had the curly one and
+   * `todayDefinition` two lines below had the straight one — which is visible in
+   * the product as two different glyphs in adjacent sentences, and invisible to
+   * `tsc` and to the placeholder check. French needs an apostrophe in roughly a
+   * fifth of its strings, so "whichever the keyboard produced" is not a policy.
+   *
+   * The curly one wins because it was already the majority and because it is
+   * what typography wants; the straight one is a programmer's quote. English is
+   * held to the same rule for the same reason — "nine o’clock" and "this week’s"
+   * are the same decision.
+   */
+  it.each([
+    ['en', enLeaves],
+    ['fr', frLeaves],
+  ])('use one kind of apostrophe in %s', (_language, leaves) => {
+    const straight = Object.entries(leaves)
+      .filter(([, value]) => value.includes("'"))
+      .map(([key]) => key)
+    expect(straight).toEqual([])
+  })
+
   it('carry no empty string in either language', () => {
     for (const [key, value] of Object.entries(enLeaves)) {
       expect(value.trim(), `en.${key}`).not.toBe('')
