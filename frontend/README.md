@@ -432,6 +432,26 @@ and "Le compte de {name} est désactivé", so the adjective agrees with a noun t
 And `services.row.nobodyAssigned` said "Personne assignée", which without the _ne_ means the
 opposite — the same file gets it right forty lines away.
 
+## Deploying to Vercel
+
+**`vercel.json` rewrites every path to `/index.html`, and without it this SPA is broken on
+arrival.** Vercel's Vite preset serves the build output as static files and does not add a
+client-side-routing fallback of its own, so the CDN answers a hard load of `/dashboard` — or
+a refresh, or any pasted link — with a filesystem 404 before React exists to route it. The
+rewrite is applied only after a real file misses, which is why a catch-all does not shadow
+the hashed assets in `/assets/`.
+
+The three paths that make this urgent rather than untidy are `/booking/:cancellationToken`,
+`/reset-password/:token` and `/accept-invitation/:token` (F12): the backend names them and
+builds them into mail that has already been sent, so a 404 there is a customer who cannot
+cancel and an invitation that cannot be accepted, with no second link coming.
+
+The file lives beside `package.json` rather than at the repository root because Vercel reads
+its configuration from the project's Root Directory, which for this monorepo is `frontend/`.
+`render.yaml` sits at the root for the opposite reason — Render only looks for a blueprint
+there. `src/routes.test.ts` walks one concrete URL per `path:` in `routes.tsx` and fails if
+any of them stops resolving to the shell.
+
 ## Not built yet
 
 `/dashboard` and the other admin routes are still wave-1 placeholders — the business

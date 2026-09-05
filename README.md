@@ -261,6 +261,12 @@ Three steps it cannot do for you:
    `Access-Control-Allow-Credentials`, with which a wildcard origin is illegal, and the
    application refuses one at startup rather than failing every preflight afterwards.
 
+The SPA is a Vercel project with its Root Directory set to `frontend/`, which is where its
+`vercel.json` lives. That file exists for one reason: Vercel's Vite preset has no client-side
+routing fallback, so without a catch-all rewrite to `/index.html` every deep link — including
+the three the backend already built into sent mail — is a CDN 404. `frontend/README.md` has
+the detail.
+
 **Backups** are whatever the free tier offers, plus the fact that the demo can be rebuilt from the
 seeder on any empty database. That is the honest answer for a demo, and it is why the seeder is
 idempotent rather than a one-shot migration.
