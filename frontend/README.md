@@ -454,7 +454,10 @@ any of them stops resolving to the shell.
 
 ## Not built yet
 
-`/dashboard` and the other admin routes are still wave-1 placeholders — the business
-cannot see these bookings yet, and there is no `POST /api/bookings` for it to create one
-either way. The screen list is tracked in the local project brief (see `docs/`, not
-committed).
+**The business cannot create a booking on a customer's behalf**, because there is no admin
+`POST /api/bookings` to call — the only creation path is the public one under
+`/b/:slug/book`. A phone booking has to be entered through the customer flow.
+
+The rest of this section is superseded: `/dashboard`, `/calendar`, `/services`, `/team`,
+`/settings` and the working-hours editor are built screens against live endpoints, not
+wave-1 placeholders.

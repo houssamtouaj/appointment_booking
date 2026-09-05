@@ -896,11 +896,16 @@ a time, and which test lost its fixture would otherwise depend on the time of da
 
 ## Not built yet
 
-Payments and the dashboard. A booking can be made, cancelled and moved through its lifecycle, but
-nothing takes money: `app.payments.enabled` is off, so a deposit-requiring business still creates a
-`CONFIRMED` booking rather than a `PENDING` one with a `checkoutUrl`, and the `PENDING` path is
-exercised only by the sweeper's own tests until plan 11 gives it a real producer. Email has no
-transport yet: `NotificationService` is an interface with a logging implementation, so the
-invitation and reset links are read from the api log until plan 12, and `BookingEvent` reaches a
-listener that does nothing but log. There are no statistics. Build order is tracked in
-the local project brief (see `docs/`, not committed yet).
+**A business cannot create a booking on a customer's behalf.** There is no admin
+`POST /api/bookings`; the only creation path is the public
+`POST /api/public/businesses/{slug}/bookings`, so a phone booking has to be entered through the
+public flow. That is the one substantive gap left in the API.
+
+Everything this section used to list is built. Payments are real — `StripeCheckoutSessions`
+opens the session, `StripeWebhookController` and `StripeWebhookService` confirm the booking
+against a `stripe_event` primary key that makes a replay a duplicate-key error, and
+`DepositService` snapshots what was owed. Mail has a transport: `MailNotificationService`
+sends through the configured relay, `IcsCalendar` attaches the invitation, and
+`BookingReminderJob` runs the reminder. `DashboardController` serves the figures. What remains
+off in a fresh environment is `app.payments.enabled`, which is configuration rather than
+absence — the deposit path is exercised end to end whenever it is on.

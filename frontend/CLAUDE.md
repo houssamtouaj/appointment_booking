@@ -165,6 +165,14 @@ order (`QueryClientProvider` → `AuthProvider` → router) is the one order tha
   list's conjunction, an abbreviated weekday — goes through `Intl`, not through a `=== 1` ternary
   or a `.slice(0, 3)`: those only know what English looks like.
 
+- **Deep links.** `vercel.json` rewrites every path to `/index.html`, and `src/routes.test.ts`
+  walks one concrete URL per `path:` in `routes.tsx` — plus the three token routes the backend
+  built into sent mail — and fails if any stops resolving to the shell. Vercel's Vite preset adds
+  no client-side-routing fallback of its own, so without that file a hard load or a refresh of
+  any path but `/` is a CDN 404 before React exists to route it. The file sits beside
+  `package.json` because Vercel reads its configuration from the project's Root Directory, which
+  for this monorepo is `frontend/`. The test pins the config, not Vercel's behaviour.
+
 ## Routing and access
 
 The whole table is in `src/routes.tsx` with the reasoning inline. Public booking lives under

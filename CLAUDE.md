@@ -8,9 +8,9 @@ nothing but the HTTP contract: `backend/` (Spring Boot 3 / Java 21 → Render) a
 
 The long-form reasoning behind almost every decision below lives in `README.md`,
 `backend/README.md` and `frontend/README.md`. Those three files are the design record — read the
-relevant section before changing behaviour they describe, and update them when you do. Their
-"Not built yet" sections are stale: payments, notifications, the dashboard and every admin screen
-are built.
+relevant section before changing behaviour they describe, and update them when you do. Payments,
+notifications, the dashboard and every admin screen are built; the "Not built yet" sections now
+name the one real gap, which is that a business cannot create a booking on a customer's behalf.
 
 ## Commands
 
