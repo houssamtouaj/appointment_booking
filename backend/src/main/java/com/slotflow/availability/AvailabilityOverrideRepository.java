@@ -11,33 +11,21 @@ import org.springframework.data.jpa.repository.Query;
 /**
  * Holidays, one-off blocks and extra hours.
  *
- * <p>Two reads per availability query, not one: the staff-level overrides and the business-wide
- * closures (D5) are different rows with different scoping, and the engine applies the business-wide
- * ones first.
+ * <p>One read per availability query, not two: the staff-level overrides and the business-wide
+ * closures (D5) are different rows with different scoping, but they are rows in the same table, so
+ * {@link #findForEngine} fetches both and the engine applies the business-wide ones first.
  */
 public interface AvailabilityOverrideRepository extends JpaRepository<AvailabilityOverride, UUID> {
-
-    /**
-     * Staff-level overrides for the whole range, in one query.
-     *
-     * <p>Guarded the same way {@code BookingRepository.findActiveForStaffBetween} is: an empty
-     * staff set renders {@code in ()}, a query that can only return nothing, and a business whose
-     * staff are all deactivated would send one per availability request.
-     */
-    default List<AvailabilityOverride> findForStaffBetween(
-            Collection<UUID> staffIds, LocalDate from, LocalDate to) {
-        return staffIds.isEmpty()
-                ? List.of()
-                : findByStaffIdInAndDateBetween(staffIds, from, to);
-    }
-
-    List<AvailabilityOverride> findByStaffIdInAndDateBetween(
-            Collection<UUID> staffIds, LocalDate from, LocalDate to);
 
     /**
      * The business-wide closures (D5): {@code staff_id IS NULL}, so they cannot be expressed as a
      * derived query without inventing an {@code IsNull} suffix that reads like a typo. V1 has a
      * partial index for exactly this predicate.
+     *
+     * <p>Schema verification only, and no production caller by design: {@link #findForEngine} covers
+     * the engine and {@link #findByBusinessIdAndDateBetween} the admin calendar. It stays because
+     * {@code SchemaMappingIT} is what exercises that partial index, which is otherwise only ever
+     * tested implicitly, through {@code findForEngine}'s {@code OR}.
      */
     @Query("""
             select o from AvailabilityOverride o
@@ -52,7 +40,7 @@ public interface AvailabilityOverrideRepository extends JpaRepository<Availabili
      * <b>The engine's one override read</b> (plan 09): the business-wide closures and the candidate
      * staff members' own rows, together, for the whole range.
      *
-     * <p>One query and not the two above, which is the difference between the engine's data load
+     * <p>One query and not one per scope, which is the difference between the engine's data load
      * being three statements and being four — the number the plan fixes and the endpoint's query
      * counter asserts. It costs nothing to merge them: {@code business_id} is on every row whichever
      * level it belongs to, so the predicate is one {@code OR} rather than a second round trip, and

@@ -221,9 +221,10 @@ class BookingTransitionTest {
             Booking pending = bookingIn(BookingStatus.PENDING);
             pending.attachCheckoutSession("cs_test_first", CHECKOUT_URL);
 
-            // Overwriting it would leave the first session's webhook with nothing to resolve
-            // through findByStripeSessionId, so a genuine payment event would be dropped in
-            // silence. "One booking per Checkout session" is what makes replay harmless.
+            // Overwriting it would make the first session's event disagree with the id this row
+            // holds, which is the check the webhook makes before confirming, so a genuine payment
+            // would be dropped in silence. "One booking per Checkout session" is what makes
+            // replay harmless.
             assertThatThrownBy(() -> pending.attachCheckoutSession("cs_test_second", CHECKOUT_URL))
                     .isInstanceOf(IllegalStateException.class);
             assertThat(pending.getStripeSessionId()).isEqualTo("cs_test_first");

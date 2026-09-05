@@ -75,9 +75,6 @@ public interface BookingRepository
 
     Optional<Booking> findByIdAndBusinessId(UUID id, UUID businessId);
 
-    /** Webhook idempotency (plan 11): one booking per Checkout session, so replay is harmless. */
-    Optional<Booking> findByStripeSessionId(String stripeSessionId);
-
     /**
      * What a staff member still has on their calendar, used by plan 06 to warn an owner before
      * deactivating them.

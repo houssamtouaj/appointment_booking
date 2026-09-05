@@ -302,10 +302,11 @@ public class Booking extends AbstractMutableEntity implements TenantOwned {
      * One booking per Checkout session, which is what makes webhook replay harmless (plan 11).
      *
      * <p>Guarded like every other mutator here, because that sentence is a claim plan 11 relies on
-     * rather than a description. Overwriting the id would leave the first session's webhook with
-     * nothing to resolve through {@code findByStripeSessionId}, so a genuine payment event would be
-     * dropped in silence — and only a booking still holding its slot for a deposit has any business
-     * being sent to Checkout at all.
+     * rather than a description. The webhook resolves its booking from the session metadata and then
+     * checks that this row holds the id the event names; overwriting it would make the first
+     * session's event disagree with the booking it belongs to, so a genuine payment would be dropped
+     * in silence — and only a booking still holding its slot for a deposit has any business being
+     * sent to Checkout at all.
      */
     public void attachCheckoutSession(String stripeSessionId, String stripeCheckoutUrl) {
         if (this.stripeSessionId != null) {
