@@ -1,0 +1,27 @@
+# =====================================================================================
+# Build context for frontend/Dockerfile. This file must sit in the context root, which is
+# `frontend/` and not the repository root -- a .dockerignore one level up is not read, and
+# the only symptom is a slow build.
+#
+# All four of the directories below exist in a working tree that has been developed in,
+# and node_modules alone is hundreds of megabytes. None of them belong in the context: the
+# image installs its own dependencies from the lockfile and builds its own dist/.
+# =====================================================================================
+
+# Reinstalled inside the image by `npm ci`. Copying the host's would also mean copying
+# whatever platform-specific binaries it holds, which are not the image's platform.
+node_modules
+
+# The image produces this itself. A stale host build in the context is a build that
+# succeeds while shipping something nobody compiled.
+dist
+
+# Playwright's output. Neither is an input to anything.
+test-results
+playwright-report
+
+# Never in an image. .env.local in particular is the file that would put a real
+# VITE_API_BASE_URL into the bundle behind the ARG's back -- see A17 and the grep in
+# plan 02 task 3 that checks for exactly that.
+.env
+.env.local

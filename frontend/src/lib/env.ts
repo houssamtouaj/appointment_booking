@@ -19,9 +19,23 @@ export const DEMO_SLUG = import.meta.env.VITE_DEMO_SLUG || DEFAULT_DEMO_SLUG
 
 /**
  * Origin of the API, no trailing slash. Baked at build time (F18), which is what
- * makes deployment a three-step handshake rather than a single deploy.
+ * makes a cross-origin deployment a three-step handshake rather than a single deploy.
+ *
+ * `??` and not `||`, which is the whole point: an empty string is a *deliberate*
+ * value here, meaning "same origin — send relative `/api/...` requests". Under `||`
+ * it is merely falsy and falls through to the localhost default, so a build that
+ * set the variable to `""` would ship a bundle asking every visitor's own machine
+ * for `http://localhost:8081`. Nothing catches that: the build is green, the
+ * bundle is valid, and it fails in the browser. The self-hosted deployment
+ * (`slotflow-infrastructure`) relies on the empty value, because there nginx
+ * serves this build and proxies `/api` from the same origin, so there is no
+ * origin to bake.
+ *
+ * Unset still means localhost:8081, so `npm run dev` without a `.env.local` is
+ * unchanged. Only an explicitly empty value behaves differently, and `proxy` mode
+ * below has always produced exactly the same empty `API_ORIGIN`.
  */
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8081'
 
 export type ApiMode = 'direct' | 'proxy' | 'crosssite'
 
