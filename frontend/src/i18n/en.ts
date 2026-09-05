@@ -16,7 +16,6 @@
 export const en = {
   common: {
     cancel: 'Cancel',
-    back: 'Back',
     /** Pagination and one-word actions, shared once they were needed twice. */
     previous: 'Previous',
     next: 'Next',
@@ -25,7 +24,6 @@ export const en = {
     edit: 'Edit',
     deactivate: 'Deactivate',
     reactivate: 'Reactivate',
-    signIn: 'Log in',
     signOut: 'Sign out',
     signingOut: 'Signing out…',
     /** `{hours}` and `{minutes}` come from `splitDuration` — see Task 5. */
@@ -741,9 +739,6 @@ export const en = {
       sentDescription: '{name} has been added to your team as {role}.',
       roleWordOwner: 'an owner',
       roleWordStaff: 'a staff member',
-      sentValidity: 'The link is valid for seven days.',
-      sentUntil:
-        'Until then their row shows Invited, and you can send a fresh link from it at any time.',
     },
     edit: {
       title: 'Edit colleague',
@@ -847,7 +842,6 @@ export const en = {
       discard: 'Discard changes',
     },
     overrides: {
-      heading: 'Overrides',
       eyebrow: 'One-off changes',
       subheading: 'Holidays, days off and extra hours, on top of the weekly template.',
       add: 'Add an override',

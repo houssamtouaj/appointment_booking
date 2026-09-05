@@ -16,7 +16,6 @@ import type { Same } from '@/i18n/index'
 export const fr = {
   common: {
     cancel: 'Annuler',
-    back: 'Retour',
     previous: 'Précédent',
     next: 'Suivant',
     today: 'Aujourd’hui',
@@ -24,7 +23,6 @@ export const fr = {
     edit: 'Modifier',
     deactivate: 'Désactiver',
     reactivate: 'Réactiver',
-    signIn: 'Connexion',
     signOut: 'Déconnexion',
     signingOut: 'Déconnexion…',
     durationHoursMinutes: '{hours} h {minutes} min',
@@ -556,9 +554,6 @@ export const fr = {
       sentDescription: '{name} a été ajouté à votre équipe en tant que {role}.',
       roleWordOwner: 'propriétaire',
       roleWordStaff: 'membre d’équipe',
-      sentValidity: 'Le lien est valable sept jours.',
-      sentUntil:
-        'En attendant, sa ligne affiche « Invité », et vous pouvez lui envoyer un nouveau lien à tout moment.',
     },
     edit: {
       title: 'Modifier le collègue',
@@ -633,7 +628,6 @@ export const fr = {
       discard: 'Abandonner les modifications',
     },
     overrides: {
-      heading: 'Exceptions',
       eyebrow: 'Changements ponctuels',
       subheading:
         'Congés, jours de repos et heures supplémentaires, en plus du modèle hebdomadaire.',

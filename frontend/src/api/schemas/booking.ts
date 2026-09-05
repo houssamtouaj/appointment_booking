@@ -36,11 +36,6 @@ export const bookingStatusSchema = z.enum([
 
 export type BookingStatus = z.infer<typeof bookingStatusSchema>
 
-/** `PENDING` and `CONFIRMED` — the two that still hold the slot (`BookingStatus.isActive`). */
-export function isActiveStatus(status: BookingStatus): boolean {
-  return status === 'PENDING' || status === 'CONFIRMED'
-}
-
 /**
  * `GuestContactResponse` — present only where the cancellation token was
  * presented.

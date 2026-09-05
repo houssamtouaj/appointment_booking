@@ -141,6 +141,5 @@ export const slotSchema = z.object({
 
 export type Slot = z.infer<typeof slotSchema>
 
-export const publicServiceListSchema = z.array(publicServiceSchema)
 export const publicStaffListSchema = z.array(publicStaffSchema)
 export const slotListSchema = z.array(slotSchema)
