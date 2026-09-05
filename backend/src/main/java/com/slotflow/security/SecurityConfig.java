@@ -91,6 +91,13 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/actuator/health",
             "/actuator/health/**",
+            // One endpoint named at a time, for the reason the class note gives -- this is not
+            // /actuator/**. The scrape carries no credential because it is not reachable without
+            // one: the management surface binds its own port (MANAGEMENT_SERVER_PORT), and in
+            // production only the monitoring host can open it. Where a platform folds the
+            // management port back onto the API port, the endpoint is dropped from
+            // management.endpoints.web.exposure.include instead, so there is nothing to read.
+            "/actuator/prometheus",
     };
 
     /**

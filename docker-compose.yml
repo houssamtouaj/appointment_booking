@@ -87,11 +87,22 @@ services:
       # The three schedules, forwarded so that setting one in .env actually reaches the container.
       # A single "-" disables a job; the defaults here match application.yml, so an unset variable
       # changes nothing. Without these lines .env.example documents knobs that silently do nothing.
+      # Forwarded for the same reason the schedules below are: the port appears in the mapping,
+      # and without this line setting it in .env moves the published port while the process
+      # carries on listening on 9090. MANAGEMENT_SERVER_ADDRESS is deliberately not forwarded —
+      # the process binds inside the container's namespace, where every interface is already the
+      # right answer, and setting it is what breaks a folded-port deployment.
+      MANAGEMENT_SERVER_PORT: ${MANAGEMENT_SERVER_PORT:-9090}
       TOKEN_SWEEP_CRON: ${TOKEN_SWEEP_CRON:-0 15 3 * * *}
       BOOKING_EXPIRY_SWEEP_CRON: ${BOOKING_EXPIRY_SWEEP_CRON:-0 * * * * *}
       BOOKING_REMINDER_CRON: ${BOOKING_REMINDER_CRON:-0 */15 * * * *}
     ports:
       - "${API_PORT:-8080}:8080"
+      # The actuator, on its own port. /actuator/health and /actuator/prometheus live here and
+      # nowhere else — the API port answers 404 for both, which is the point of the split. The
+      # process binds every interface *inside the container*, so MANAGEMENT_SERVER_ADDRESS stays
+      # unset; what limits reach in production is the publish address, not the JVM bind.
+      - "${MANAGEMENT_PORT:-9090}:${MANAGEMENT_SERVER_PORT:-9090}"
     restart: unless-stopped
 
   # The SPA arrives with the frontend plans. Until then the Vite dev server on the host

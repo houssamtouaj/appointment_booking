@@ -62,6 +62,35 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: demo
 
+      # --- ports ------------------------------------------------------------------------
+      # Render routes exactly one port, and healthCheckPath above is probed on it. The actuator
+      # otherwise binds MANAGEMENT_SERVER_PORT (9090), where /actuator/health is the only place
+      # it lives — so the probe 404s against a perfectly healthy instance. Folding the two back
+      # together here is the fix, and it takes both keys: PORT pinned so this file knows the
+      # number, and MANAGEMENT_SERVER_PORT set to the same one.
+      #
+      # MANAGEMENT_SERVER_ADDRESS must stay unset for this to work. Spring asserts the management
+      # address is absent unless the management server has a port of its own, and the failure is
+      # a refusal to start rather than a warning; that is why application.yml does not default it.
+      #
+      # The consequence worth knowing: on Render the actuator answers on the public port.
+      # SecurityConfig permits /actuator/health and nothing wider, so /actuator/prometheus is
+      # authenticated rather than open. Anvil, where the metrics are actually scraped, keeps the
+      # two ports separate and firewalls the management one.
+      - key: PORT
+        value: '10000'
+      - key: MANAGEMENT_SERVER_PORT
+        value: '10000'
+      # Because the two ports are folded together here, the actuator answers on the public one.
+      # SecurityConfig permits /actuator/prometheus so that a firewalled management port can be
+      # scraped without a credential — which is the right trade on Anvil and the wrong one on a
+      # public port. Dropping `prometheus` from the exposure list means the endpoint does not
+      # exist on Render at all: a 404, not an unauthenticated metrics dump. Nothing scrapes this
+      # deployment, so nothing is lost. Spring's relaxed binding maps this name onto
+      # management.endpoints.web.exposure.include and overrides application.yml.
+      - key: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+        value: health,info
+
       # --- database ---------------------------------------------------------------------
       # JDBC URL, pasted once; see the header. The credentials below come from the database
       # above, so they are never in this file and rotate with it.

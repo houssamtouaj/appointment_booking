@@ -90,6 +90,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!-- The `prometheus` endpoint does not exist without a registry on the classpath.
+             Exposing it in configuration alone yields a 404 rather than an error, which is
+             the kind of thing you discover with a monitoring stack already half-built.
+             `runtime` because no source compiles against Micrometer's Prometheus types — the
+             registry is auto-configured by its presence. Version from the parent. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- ============================ Persistence and migrations ====================== -->
         <dependency>

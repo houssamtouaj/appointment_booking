@@ -84,12 +84,38 @@ logging:
     correlation: "[%X{requestId:-}] "
 
 management:
+  server:
+    # The management surface gets its own port so it can be firewalled independently of the API:
+    # a port is something a firewall rule can name, a URL prefix is not. Prometheus scrapes
+    # MANAGEMENT_SERVER_PORT/actuator/prometheus; nothing else should be able to reach it.
+    #
+    # Set this to the same value as the server port to fold the actuator back onto the API port,
+    # which is what a platform routing a single port (Render, Fly) needs. That only works while
+    # `management.server.address` is *absent* — see below.
+    port: ${MANAGEMENT_SERVER_PORT:9090}
+    # `management.server.address` is deliberately NOT declared here, and it is not an oversight.
+    #
+    # Spring asserts the address is null unless the management server is on a separate port
+    # (ManagementContextAutoConfiguration.verifyAddressConfiguration), and a placeholder with a
+    # default always resolves to *something* -- so giving `address` a defaulted placeholder here
+    # would make the application refuse to start on any platform that folds the two ports
+    # together. Not a warning: a refusal.
+    #
+    # Leaving the key out does not lose the knob: MANAGEMENT_SERVER_ADDRESS still binds to
+    # management.server.address through relaxed environment binding when it is set, and is simply
+    # absent when it is not. Nor does it lose much safety. Under Docker the process binds inside
+    # the container's own namespace, where 0.0.0.0 is not the host's interfaces -- with bridge
+    # networking the process *cannot* bind the host's private address, and the thing that actually
+    # restricts reach is the publish address (`-p <private-ip>:9090:9090`) plus the host firewall.
+    # slotflow-infrastructure's `app` role sets it there.
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
+      # Detailed output on a reachable endpoint names the database host and the mail relay.
+      # The deploy health check only reads "status":"UP", so there is nothing to gain by widening it.
       show-details: never
       probes:
         enabled: true

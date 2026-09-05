@@ -42,12 +42,16 @@ EXPOSE 8080
 # Containers get a slice of the host, not the whole machine: let the JVM see the cgroup limit.
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -Duser.timezone=UTC"
 
-# The port is resolved the same way application.yml resolves it - SERVER_PORT, then the
-# platform's PORT, then 8080 - because a probe that hardcodes 8080 reports a perfectly
-# healthy container as unhealthy the moment either variable is set, which is the normal
-# case on Railway, Render and Fly.
+# The actuator has its own port, so this probes the management port and not the API one -
+# /actuator/health is a 404 on the API port and a probe pointed there marks every healthy
+# container unhealthy. The chain mirrors how application.yml resolves it: MANAGEMENT_SERVER_PORT,
+# and 9090 when unset. Where a platform folds the two together by setting MANAGEMENT_SERVER_PORT
+# to the routed port, this follows it to the same place.
+#
+# `localhost` regardless of MANAGEMENT_SERVER_ADDRESS: the probe runs inside the container, so it
+# reaches a loopback bind and an all-interfaces one alike.
 HEALTHCHECK --interval=15s --timeout=3s --start-period=45s --retries=5 \
-    CMD wget -qO- "http://localhost:${SERVER_PORT:-${PORT:-8080}}/actuator/health" \
+    CMD wget -qO- "http://localhost:${MANAGEMENT_SERVER_PORT:-9090}/actuator/health" \
         | grep -q '"status":"UP"' || exit 1
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
