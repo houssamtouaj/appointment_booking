@@ -6,6 +6,14 @@
 once and takes online appointments with deposit payments. Multi-tenant, with double booking
 made impossible by the database rather than by careful code.**
 
+The machines this is built to run on are defined in
+[`slotflow-infrastructure`](https://github.com/houssamtouaj/slotflow-infrastructure) — Terraform,
+cloud-init and Ansible for a five-VM Hetzner topology, provisioned from nothing and deployed by
+moving one immutable image tag. The two repositories are coupled by that tag and by nothing else:
+no submodules, no shared CI, no path dependencies. `git tag v1.4.2` here publishes
+`ghcr.io/houssamtouaj/slotflow-backend:v1.4.2` and `slotflow-frontend:v1.4.2`; bumping
+`slotflow_image_tag` there and running one playbook is the entire deploy.
+
 <!-- DEPLOY: replace the two placeholders below once the blueprint in ./render.yaml has been
      applied. They are the first thing a reader looks at, so leaving them wrong is worse than
      leaving them empty. -->

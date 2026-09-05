@@ -1,0 +1,111 @@
+name: Release
+
+# Publishes the two images a tag names, and that pair of tags is the entire seam between
+# this repository and the infrastructure that runs it:
+#
+#   git tag v1.4.2  ->  ghcr.io/houssamtouaj/slotflow-backend:v1.4.2
+#                       ghcr.io/houssamtouaj/slotflow-frontend:v1.4.2
+#                                     |
+#   slotflow-infrastructure: group_vars/app.yml -> slotflow_image_tag: "v1.4.2"
+#                            ansible-playbook deploy.yml
+#
+# No submodules, no shared CI, no path dependencies. Bumping one variable and running one
+# playbook is the whole deploy.
+#
+# This is a separate workflow rather than a job inside ci.yml, and it must stay that way.
+# ci.yml runs on branch pushes with no `paths:` filter, deliberately -- its own header
+# explains that main requires it as a status check, that releases are fast-forwards, and
+# that a filtered workflow produces no check run on the released SHA, which GitHub reads as
+# "not passed" rather than "not applicable". A tag push is a different event, so this file
+# sits beside that one without interfering with it. Do not merge them, and do not add a
+# filter to ci.yml to compensate for anything here.
+
+on:
+  push:
+    tags: ['v*']
+
+# `packages: write` is what lets GITHUB_TOKEN push to GHCR under the account that owns this
+# repository. No personal access token is needed, and creating one would be a credential to
+# rotate in exchange for nothing.
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # The two jobs share nothing and run in parallel. Chaining them would double the time a
+  # release takes to buy no ordering anyone needs.
+  backend:
+    name: backend image
+    runs-on: ubuntu-latest
+    # The image build runs `mvn clean package -DskipTests` -- the tests already ran in
+    # ci.yml on this SHA. If this starts taking twenty minutes, something has begun running
+    # them twice, and that is worth finding rather than waiting out.
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          # Matches docker-compose.yml's build context, which is what backend/Dockerfile
+          # and its .dockerignore are written against.
+          context: ./backend
+          push: true
+          # Two tags, both immutable, and neither is `latest`. `latest` makes a rollback
+          # ambiguous -- back to *what*? -- and makes a rolling deploy non-deterministic:
+          # under `serial: 1`, two hosts pulling it five minutes apart can legitimately land
+          # on different images, which is the exact failure a rolling deploy exists to
+          # prevent. The sha- tag is the escape hatch for the day someone moves a release
+          # tag anyway, because then it is the only record of what actually shipped.
+          tags: |
+            ghcr.io/houssamtouaj/slotflow-backend:${{ github.ref_name }}
+            ghcr.io/houssamtouaj/slotflow-backend:sha-${{ github.sha }}
+          # Scoped per repository and evicted after 7 days of disuse, so a first release
+          # after a quiet fortnight takes the full uncached time. That is not a failure.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  frontend:
+    name: frontend image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          # Named explicitly rather than relying on last-stage-wins. frontend/Dockerfile
+          # happens to end with `dist` today, and a stage appended later for some other
+          # purpose would otherwise silently change what gets published.
+          target: dist
+          push: true
+          # The image holds `dist/` and nothing else -- no shell, no entrypoint, no base.
+          # Ansible reads it with `docker create` + `docker cp`; `docker run` on it fails,
+          # by design. Note that `docker create` needs a command argument even though the
+          # container is never started, because a scratch image declares none.
+          #
+          # It is built with an empty VITE_API_BASE_URL, so it is environment-independent
+          # and the tag means one thing rather than one thing per domain. The empty value
+          # is load-bearing, not a placeholder: src/lib/env.ts reads it with `??` so that
+          # empty means same-origin, while unset still means localhost.
+          tags: |
+            ghcr.io/houssamtouaj/slotflow-frontend:${{ github.ref_name }}
+            ghcr.io/houssamtouaj/slotflow-frontend:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
